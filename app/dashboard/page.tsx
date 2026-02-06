@@ -182,7 +182,11 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-2 sm:space-x-8">
               {/* ロゴ + 会社名 */}
               <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg ${
+                  reportType === 'sales'
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
+                    : 'bg-gradient-to-br from-[#0E3091] to-[#1a4ab8]'
+                }`}>
                   <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div className="hidden sm:block">
@@ -207,7 +211,7 @@ export default function DashboardPage() {
                   onClick={() => setReportType('work')}
                   className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                     reportType === 'work'
-                      ? 'bg-white text-emerald-600 shadow'
+                      ? 'bg-white text-[#0E3091] shadow'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -219,12 +223,20 @@ export default function DashboardPage() {
             {/* 右側: アイコン + ユーザー情報 */}
             <div className="flex items-center space-x-1 sm:space-x-4">
               {/* 検索 */}
-              <button className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+              <button className={`p-2 text-gray-600 rounded-lg transition-colors ${
+                reportType === 'sales'
+                  ? 'hover:text-emerald-600 hover:bg-emerald-50'
+                  : 'hover:text-[#0E3091] hover:bg-blue-50'
+              }`}>
                 <Search className="w-5 h-5" />
               </button>
 
               {/* 通知 */}
-              <button className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors relative">
+              <button className={`p-2 text-gray-600 rounded-lg transition-colors relative ${
+                reportType === 'sales'
+                  ? 'hover:text-emerald-600 hover:bg-emerald-50'
+                  : 'hover:text-[#0E3091] hover:bg-blue-50'
+              }`}>
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
@@ -235,7 +247,11 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-gray-900">{currentUser?.name}</p>
                   <p className="text-xs text-gray-500">{currentUser?.position || '一般社員'}</p>
                 </div>
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white font-semibold">
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                  reportType === 'sales'
+                    ? 'bg-gradient-to-br from-emerald-400 to-teal-400'
+                    : 'bg-gradient-to-br from-[#0E3091] to-[#1a4ab8]'
+                }`}>
                   <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
@@ -281,10 +297,14 @@ export default function DashboardPage() {
               >
                 {/* 新規日報作成 */}
                 <Link
-                  href="/nippo-improved"
+                  href={reportType === 'sales' ? '/nippo-improved' : '/work-report/new'}
                   className="group relative overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl transition-transform group-hover:scale-105"></div>
+                  <div className={`absolute inset-0 rounded-xl transition-transform group-hover:scale-105 ${
+                    reportType === 'sales'
+                      ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
+                      : 'bg-gradient-to-br from-[#0E3091] to-[#1a4ab8]'
+                  }`}></div>
                   <div className="relative p-6 text-white">
                     <div className="flex items-center justify-between mb-4">
                       <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -298,7 +318,7 @@ export default function DashboardPage() {
                       </motion.div>
                     </div>
                     <h3 className="text-xl font-bold mb-2">新規日報作成</h3>
-                    <p className="text-emerald-100 text-sm">
+                    <p className={reportType === 'sales' ? 'text-emerald-100 text-sm' : 'text-blue-100 text-sm'}>
                       新しい{reportTypeName}を作成します
                     </p>
                   </div>
@@ -309,13 +329,21 @@ export default function DashboardPage() {
                   href="/nippo"
                   className="group relative overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-white rounded-xl border-2 border-slate-200 transition-all group-hover:border-emerald-300 group-hover:shadow-lg"></div>
+                  <div className={`absolute inset-0 bg-white rounded-xl border-2 border-slate-200 transition-all group-hover:shadow-lg ${
+                    reportType === 'sales' ? 'group-hover:border-emerald-300' : 'group-hover:border-[#0E3091]'
+                  }`}></div>
                   <div className="relative p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        reportType === 'sales'
+                          ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
+                          : 'bg-gradient-to-br from-[#0E3091] to-[#1a4ab8]'
+                      }`}>
                         <List className="w-6 h-6 text-white" />
                       </div>
-                      <FileText className="w-6 h-6 text-slate-300 group-hover:text-emerald-400 transition-colors" />
+                      <FileText className={`w-6 h-6 text-slate-300 transition-colors ${
+                        reportType === 'sales' ? 'group-hover:text-emerald-400' : 'group-hover:text-[#0E3091]'
+                      }`} />
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">日報一覧</h3>
                     <p className="text-gray-600 text-sm">
@@ -334,12 +362,16 @@ export default function DashboardPage() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                    <Calendar className="w-5 h-5 mr-2 text-emerald-600" />
+                    <Calendar className={`w-5 h-5 mr-2 ${reportType === 'sales' ? 'text-emerald-600' : 'text-[#0E3091]'}`} />
                     最近の日報
                   </h3>
                   <Link
                     href="/nippo"
-                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                    className={`text-sm font-medium ${
+                      reportType === 'sales'
+                        ? 'text-emerald-600 hover:text-emerald-700'
+                        : 'text-[#0E3091] hover:text-[#0a2470]'
+                    }`}
                   >
                     すべて表示 →
                   </Link>
@@ -358,15 +390,23 @@ export default function DashboardPage() {
                       >
                         <Link
                           href={`/nippo/${report.id}`}
-                          className="block p-4 rounded-lg border border-slate-200 hover:border-emerald-300 transition-all group"
+                          className={`block p-4 rounded-lg border border-slate-200 transition-all group ${
+                            reportType === 'sales' ? 'hover:border-emerald-300' : 'hover:border-[#0E3091]'
+                          }`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                reportType === 'sales'
+                                  ? 'bg-emerald-50 text-emerald-600'
+                                  : 'bg-blue-50 text-[#0E3091]'
+                              }`}>
                                 <FileText className="w-5 h-5" />
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900 group-hover:text-emerald-600 transition-colors">
+                                <p className={`font-medium text-gray-900 transition-colors ${
+                                  reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
+                                }`}>
                                   {formatDate(report.date)}の日報
                                 </p>
                                 {report.destination && (
@@ -394,7 +434,7 @@ export default function DashboardPage() {
                 className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"
               >
                 <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-emerald-600" />
+                  <TrendingUp className={`w-5 h-5 mr-2 ${reportType === 'sales' ? 'text-emerald-600' : 'text-[#0E3091]'}`} />
                   今月の実績
                 </h3>
 
@@ -403,14 +443,18 @@ export default function DashboardPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">作成済み</span>
-                      <span className="text-2xl font-bold text-emerald-600">{stats.thisMonth}</span>
+                      <span className={`text-2xl font-bold ${reportType === 'sales' ? 'text-emerald-600' : 'text-[#0E3091]'}`}>{stats.thisMonth}</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${(stats.thisMonth / 30) * 100}%` }}
                         transition={{ duration: 1, delay: 0.5 }}
-                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full"
+                        className={`h-2 rounded-full ${
+                          reportType === 'sales'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                            : 'bg-gradient-to-r from-[#0E3091] to-[#1a4ab8]'
+                        }`}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">目標: 月30件</p>
@@ -436,14 +480,18 @@ export default function DashboardPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">承認済み</span>
-                      <span className="text-2xl font-bold text-emerald-600">{stats.approved}</span>
+                      <span className={`text-2xl font-bold ${reportType === 'sales' ? 'text-emerald-600' : 'text-[#0E3091]'}`}>{stats.approved}</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${(stats.approved / stats.thisMonth) * 100}%` }}
                         transition={{ duration: 1, delay: 0.9 }}
-                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full"
+                        className={`h-2 rounded-full ${
+                          reportType === 'sales'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                            : 'bg-gradient-to-r from-[#0E3091] to-[#1a4ab8]'
+                        }`}
                       />
                     </div>
                   </div>
@@ -463,8 +511,12 @@ export default function DashboardPage() {
                     href="/settings"
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group"
                   >
-                    <Settings className="w-5 h-5 text-gray-400 group-hover:text-emerald-600 transition-colors" />
-                    <span className="text-gray-700 group-hover:text-emerald-600 transition-colors">
+                    <Settings className={`w-5 h-5 text-gray-400 transition-colors ${
+                      reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
+                    }`} />
+                    <span className={`text-gray-700 transition-colors ${
+                      reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
+                    }`}>
                       アカウント設定
                     </span>
                   </Link>
@@ -476,11 +528,19 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.5 }}
-                className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl p-6 shadow-lg text-white"
+                className={`rounded-xl p-6 shadow-lg text-white ${
+                  reportType === 'sales'
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
+                    : 'bg-gradient-to-br from-[#0E3091] to-[#1a4ab8]'
+                }`}
               >
-                <p className="text-emerald-100 text-sm mb-2">累計日報数</p>
+                <p className={`text-sm mb-2 ${
+                  reportType === 'sales' ? 'text-emerald-100' : 'text-blue-100'
+                }`}>累計日報数</p>
                 <p className="text-5xl font-bold mb-1">{stats.totalReports}</p>
-                <p className="text-emerald-100 text-sm">件</p>
+                <p className={`text-sm ${
+                  reportType === 'sales' ? 'text-emerald-100' : 'text-blue-100'
+                }`}>件</p>
               </motion.div>
             </div>
           </div>
