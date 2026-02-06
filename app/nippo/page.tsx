@@ -137,8 +137,19 @@ export default function NippoListPage() {
     }
   })
 
+  console.log('現在のソート順:', sortOrder)
+  console.log('日報件数:', sortedReports.length)
+  if (sortedReports.length > 0) {
+    console.log('最初の日報日付:', sortedReports[0].date)
+    console.log('最後の日報日付:', sortedReports[sortedReports.length - 1].date)
+  }
+
   const toggleSortOrder = () => {
-    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    setSortOrder(prev => {
+      const newOrder = prev === 'asc' ? 'desc' : 'asc'
+      console.log('並び替え:', prev, '->', newOrder)
+      return newOrder
+    })
   }
 
   // 承認ステータスを取得
@@ -249,66 +260,66 @@ export default function NippoListPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-4">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
+          <div className="flex justify-between items-center mb-3">
             {/* 左側：ロゴとタイトル */}
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center space-x-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">安島工業株式会社</h1>
-                <p className="text-sm text-gray-600">日報システム</p>
+              <div className="hidden sm:block">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">安島工業株式会社</h1>
+                <p className="text-xs sm:text-sm text-gray-600">日報システム</p>
               </div>
             </div>
 
             {/* 右側：メニュー */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1 sm:space-x-3">
               <Link
                 href="/dashboard"
-                className="text-sm text-emerald-600 hover:text-emerald-800 flex items-center space-x-1 font-medium"
+                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                title="TOP画面"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                <span>TOP画面</span>
               </Link>
               <button
                 onClick={handleSettings}
-                className="text-sm text-gray-600 hover:text-gray-900 flex items-center space-x-1"
+                className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                title="設定"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>設定</span>
               </button>
               <button
                 onClick={handleLogout}
-                className="text-sm text-red-600 hover:text-red-800 flex items-center space-x-1"
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="ログアウト"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                <span>ログアウト</span>
               </button>
               <button
                 onClick={handleBackButton}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="hidden sm:block text-sm text-gray-600 hover:text-gray-900 px-2"
               >
                 ← 戻る
               </button>
             </div>
           </div>
           {/* 日報タイプ切り替えボタン */}
-          <div className="flex bg-gray-100 rounded-lg p-1 w-fit">
+          <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1 w-fit">
             <button
               type="button"
               onClick={() => setReportType('sales')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 reportType === 'sales'
                   ? 'bg-white text-emerald-600 shadow'
                   : 'text-gray-600 hover:text-gray-900'
@@ -319,7 +330,7 @@ export default function NippoListPage() {
             <button
               type="button"
               onClick={() => setReportType('work')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 reportType === 'work'
                   ? 'bg-white text-emerald-600 shadow'
                   : 'text-gray-600 hover:text-gray-900'
@@ -331,24 +342,30 @@ export default function NippoListPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
         {/* ボタンエリア */}
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/nippo-improved"
-              className="inline-flex items-center px-6 py-3 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 font-medium shadow-sm"
-            >
-              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              新規日報作成
-            </Link>
+        <div className="mb-4 sm:mb-6 space-y-3">
+          {/* 上段：新規日報作成ボタン */}
+          <Link
+            href="/nippo-improved"
+            className="w-full inline-flex items-center justify-center px-5 py-3 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 font-medium shadow-sm text-base"
+          >
+            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            新規日報作成
+          </Link>
 
+          {/* 下段：並び替えと申請ボタン */}
+          <div className="flex gap-2">
             {/* 並び替えボタン */}
             <button
               onClick={toggleSortOrder}
-              className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium text-gray-700"
+              className={`flex-1 inline-flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-all ${
+                sortOrder === 'desc'
+                  ? 'bg-blue-500 text-white border border-blue-600'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
             >
               <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {sortOrder === 'desc' ? (
@@ -357,131 +374,204 @@ export default function NippoListPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
                 )}
               </svg>
-              {sortOrder === 'desc' ? '新しい順' : '古い順'}
+              <span className="whitespace-nowrap">{sortOrder === 'desc' ? '新しい順' : '古い順'}</span>
+            </button>
+
+            {/* 申請ボタン */}
+            <button
+              onClick={handleSubmit}
+              disabled={selectedReports.size === 0 || submitting}
+              className="flex-1 inline-flex items-center justify-center px-3 py-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium shadow-sm text-sm"
+            >
+              {submitting ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="whitespace-nowrap">申請中...</span>
+                </>
+              ) : (
+                <span className="whitespace-nowrap">新規申請{selectedReports.size > 0 && ` (${selectedReports.size})`}</span>
+              )}
             </button>
           </div>
-
-          {/* 申請ボタン */}
-          <button
-            onClick={handleSubmit}
-            disabled={selectedReports.size === 0 || submitting}
-            className="inline-flex items-center px-6 py-3 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium shadow-sm"
-          >
-            {submitting ? (
-              <>
-                <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                申請中...
-              </>
-            ) : (
-              <>
-                新規申請 {selectedReports.size > 0 && `(${selectedReports.size})`}
-              </>
-            )}
-          </button>
         </div>
 
-        {/* 日報一覧テーブル */}
+        {/* 日報一覧 */}
         {reports.length === 0 ? (
-          <div className="bg-white shadow rounded-lg p-8 text-center text-gray-500">
+          <div className="bg-white shadow rounded-lg p-6 sm:p-8 text-center text-gray-500">
             まだ日報が登録されていません
           </div>
         ) : (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="w-12 px-6 py-3 text-left">
-                      <input
-                        type="checkbox"
-                        checked={allDraftSelected}
-                        onChange={handleSelectAll}
-                        className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                        disabled={draftReportsCount === 0}
-                      />
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      作成日
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      申請日
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      訪問先
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      申請ステータス
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      承認者
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      承認日
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedReports.map((report) => {
-                    const status = getApprovalStatus(report)
-                    const isDraft = status === '下書き'
-                    const latestApproval = report.approvals[0]
-                    const destinations = report.visitRecords
-                      .map(v => v.destination)
-                      .filter(d => d)
-                      .join(', ')
+          <>
+            {/* モバイル用カードレイアウト */}
+            <div className="sm:hidden space-y-3">
+              {sortedReports.map((report) => {
+                const status = getApprovalStatus(report)
+                const isDraft = status === '下書き'
+                const latestApproval = report.approvals[0]
+                const destinations = report.visitRecords
+                  .map(v => v.destination)
+                  .filter(d => d)
+                  .join(', ')
 
-                    return (
-                      <tr key={report.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedReports.has(report.id)}
-                            onChange={() => handleSelectReport(report.id)}
-                            disabled={!isDraft}
-                            className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 disabled:opacity-30"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatDate(report.date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {latestApproval?.createdAt ? formatDate(latestApproval.createdAt) : '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {destinations || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`text-sm font-medium ${getStatusColor(status)}`}>
+                return (
+                  <div key={report.id} className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                    {/* カードヘッダー */}
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedReports.has(report.id)}
+                          onChange={() => handleSelectReport(report.id)}
+                          disabled={!isDraft}
+                          className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 disabled:opacity-30"
+                        />
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">{formatDate(report.date)}</div>
+                          <span className={`text-xs font-medium ${getStatusColor(status)}`}>
                             {status}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {latestApproval?.approver?.name || latestApproval?.approverRole || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {latestApproval?.approvedAt ? formatDate(latestApproval.approvedAt) : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <Link
-                            href={`/nippo/${report.id}`}
-                            className="inline-flex items-center px-3 py-1 border border-emerald-600 text-emerald-600 text-sm rounded hover:bg-emerald-50"
-                          >
-                            詳細
-                          </Link>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/nippo/${report.id}`}
+                        className="inline-flex items-center px-3 py-1.5 border border-emerald-600 text-emerald-600 text-xs rounded-md hover:bg-emerald-50"
+                      >
+                        詳細
+                      </Link>
+                    </div>
+
+                    {/* カード本体 */}
+                    <div className="px-4 py-3 space-y-2">
+                      {destinations && (
+                        <div>
+                          <div className="text-xs text-gray-500">訪問先</div>
+                          <div className="text-sm text-gray-900">{destinations}</div>
+                        </div>
+                      )}
+                      {latestApproval?.createdAt && (
+                        <div className="flex gap-4">
+                          <div className="flex-1">
+                            <div className="text-xs text-gray-500">申請日</div>
+                            <div className="text-sm text-gray-900">{formatDate(latestApproval.createdAt)}</div>
+                          </div>
+                          {latestApproval?.approvedAt && (
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-500">承認日</div>
+                              <div className="text-sm text-gray-900">{formatDate(latestApproval.approvedAt)}</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {latestApproval?.approver?.name && (
+                        <div>
+                          <div className="text-xs text-gray-500">承認者</div>
+                          <div className="text-sm text-gray-900">{latestApproval.approver.name}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </div>
+
+            {/* デスクトップ用テーブルレイアウト */}
+            <div className="hidden sm:block bg-white shadow rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="w-12 px-6 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={allDraftSelected}
+                          onChange={handleSelectAll}
+                          className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                          disabled={draftReportsCount === 0}
+                        />
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        作成日
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        申請日
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        訪問先
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        申請ステータス
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        承認者
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        承認日
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        操作
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {sortedReports.map((report) => {
+                      const status = getApprovalStatus(report)
+                      const isDraft = status === '下書き'
+                      const latestApproval = report.approvals[0]
+                      const destinations = report.visitRecords
+                        .map(v => v.destination)
+                        .filter(d => d)
+                        .join(', ')
+
+                      return (
+                        <tr key={report.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedReports.has(report.id)}
+                              onChange={() => handleSelectReport(report.id)}
+                              disabled={!isDraft}
+                              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 disabled:opacity-30"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(report.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {latestApproval?.createdAt ? formatDate(latestApproval.createdAt) : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {destinations || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`text-sm font-medium ${getStatusColor(status)}`}>
+                              {status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {latestApproval?.approver?.name || latestApproval?.approverRole || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {latestApproval?.approvedAt ? formatDate(latestApproval.approvedAt) : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <Link
+                              href={`/nippo/${report.id}`}
+                              className="inline-flex items-center px-3 py-1 border border-emerald-600 text-emerald-600 text-sm rounded hover:bg-emerald-50"
+                            >
+                              詳細
+                            </Link>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </main>
     </div>

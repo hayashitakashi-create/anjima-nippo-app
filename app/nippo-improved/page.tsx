@@ -207,7 +207,7 @@ export default function ImprovedNippoPage() {
   }
 
   const handleBack = () => {
-    router.push('/nippo')
+    router.push('/dashboard')
   }
 
   return (
@@ -241,7 +241,7 @@ export default function ImprovedNippoPage() {
               <button
                 onClick={() => {
                   setShowSuccessDialog(false)
-                  router.push('/nippo')
+                  router.push('/dashboard')
                 }}
                 className="w-full px-8 py-3 bg-gray-800 text-white text-base rounded-xl hover:bg-gray-900 font-bold transition-colors shadow-lg"
               >

@@ -162,18 +162,10 @@ export default function NewNippoPage() {
       // キャラクター表示
       setShowCharacter(true)
 
-      // 3秒後にキャラクターを非表示にしてリダイレクト
+      // 2秒後にダッシュボードに遷移
       setTimeout(() => {
-        setShowCharacter(false)
-        // 役割に応じてリダイレクト
-        setTimeout(() => {
-          if (currentUser?.role === 'admin') {
-            router.push('/admin/nippo')
-          } else {
-            router.push('/dashboard')
-          }
-        }, 500) // フェードアウト完了後にリダイレクト
-      }, 3000)
+        router.push('/dashboard')
+      }, 2000)
     } catch (error) {
       console.error('送信エラー:', error)
       alert('日報の作成に失敗しました')
