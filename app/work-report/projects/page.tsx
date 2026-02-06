@@ -59,9 +59,7 @@ export default function ProjectListPage() {
   const [newProject, setNewProject] = useState({
     name: '',
     projectType: '',
-    projectCode: '',
-    client: '',
-    location: ''
+    projectCode: ''
   })
   const [saving, setSaving] = useState(false)
 
@@ -123,7 +121,7 @@ export default function ProjectListPage() {
 
       const created = await res.json()
       setShowNewProjectModal(false)
-      setNewProject({ name: '', projectType: '', projectCode: '', client: '', location: '' })
+      setNewProject({ name: '', projectType: '', projectCode: '' })
 
       // 作成した物件の日報作成画面へ遷移
       router.push(`/work-report/new?projectId=${created.id}`)
@@ -229,30 +227,6 @@ export default function ProjectListPage() {
                   onChange={(e) => setNewProject(prev => ({ ...prev, projectCode: e.target.value }))}
                   className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   placeholder="工事番号"
-                />
-              </div>
-
-              {/* 発注者 */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">発注者</label>
-                <input
-                  type="text"
-                  value={newProject.client}
-                  onChange={(e) => setNewProject(prev => ({ ...prev, client: e.target.value }))}
-                  className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                  placeholder="発注者名"
-                />
-              </div>
-
-              {/* 現場住所 */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">現場住所</label>
-                <input
-                  type="text"
-                  value={newProject.location}
-                  onChange={(e) => setNewProject(prev => ({ ...prev, location: e.target.value }))}
-                  className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                  placeholder="現場住所"
                 />
               </div>
 
