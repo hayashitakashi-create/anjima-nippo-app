@@ -13,15 +13,15 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.0",
-    "@prisma/adapter-libsql": "^7.3.0",
-    "@prisma/client": "^5.22.0",
+    "@libsql/client": "0.6.0",
+    "@prisma/adapter-libsql": "5.22.0",
+    "@prisma/client": "5.22.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "lucide-react": "^0.563.0",
     "motion": "^12.33.0",
     "next": "16.1.6",
-    "prisma": "^5.22.0",
+    "prisma": "5.22.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
