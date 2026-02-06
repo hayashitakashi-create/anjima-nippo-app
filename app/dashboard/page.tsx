@@ -176,48 +176,48 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-50">
       {/* 固定トップナビ */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             {/* 左側: ロゴ + 会社名 + タブ */}
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-2 sm:space-x-8">
               {/* ロゴ + 会社名 */}
-              <Link href="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
-                  <Building2 className="w-6 h-6 text-white" />
+              <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                  <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <h1 className="text-xl font-bold text-gray-900">安島工業株式会社</h1>
                   <p className="text-xs text-gray-500">日報システム</p>
                 </div>
               </Link>
 
               {/* タブ切り替え */}
-              <div className="flex bg-slate-100 rounded-lg p-1">
+              <div className="flex bg-slate-100 rounded-lg p-0.5 sm:p-1">
                 <button
                   onClick={() => setReportType('sales')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                     reportType === 'sales'
                       ? 'bg-white text-emerald-600 shadow'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  営業日報
+                  営業<span className="hidden sm:inline">日報</span>
                 </button>
                 <button
                   onClick={() => setReportType('work')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                     reportType === 'work'
                       ? 'bg-white text-emerald-600 shadow'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  作業日報
+                  作業<span className="hidden sm:inline">日報</span>
                 </button>
               </div>
             </div>
 
             {/* 右側: アイコン + ユーザー情報 */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1 sm:space-x-4">
               {/* 検索 */}
               <button className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
                 <Search className="w-5 h-5" />
@@ -230,20 +230,20 @@ export default function DashboardPage() {
               </button>
 
               {/* ユーザー情報 */}
-              <div className="flex items-center space-x-3 pl-4 border-l border-slate-200">
-                <div className="text-right">
+              <div className="flex items-center space-x-2 sm:space-x-3 pl-2 sm:pl-4 border-l border-slate-200">
+                <div className="hidden md:block text-right">
                   <p className="text-sm font-medium text-gray-900">{currentUser?.name}</p>
                   <p className="text-xs text-gray-500">{currentUser?.position || '一般社員'}</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white font-semibold">
-                  <User className="w-5 h-5" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white font-semibold">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
 
               {/* ログアウト */}
               <button
                 onClick={handleLogout}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="hidden sm:block p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <LogOut className="w-5 h-5" />
               </button>
@@ -253,31 +253,31 @@ export default function DashboardPage() {
       </header>
 
       {/* メインコンテンツ */}
-      <main className="pt-24 pb-12 px-6">
+      <main className="pt-16 sm:pt-24 pb-12 px-3 sm:px-6">
         <div className="max-w-[1600px] mx-auto">
           {/* ウェルカムメッセージ */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-8"
+            className="mb-6 sm:mb-8"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
               おはようございます、{currentUser?.name}さん
             </h2>
-            <p className="text-gray-600">今日も一日頑張りましょう！</p>
+            <p className="text-sm sm:text-base text-gray-600">今日も一日頑張りましょう！</p>
           </motion.div>
 
           {/* 12列グリッド */}
-          <div className="grid grid-cols-12 gap-6">
+          <div className="grid grid-cols-12 gap-4 sm:gap-6">
             {/* 左8列 */}
-            <div className="col-span-12 lg:col-span-8 space-y-6">
+            <div className="col-span-12 lg:col-span-8 space-y-4 sm:space-y-6">
               {/* クイックアクション（2列） */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
               >
                 {/* 新規日報作成 */}
                 <Link
@@ -385,7 +385,7 @@ export default function DashboardPage() {
             </div>
 
             {/* 右4列 */}
-            <div className="col-span-12 lg:col-span-4 space-y-6">
+            <div className="col-span-12 lg:col-span-4 space-y-4 sm:space-y-6">
               {/* 統計カード */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
