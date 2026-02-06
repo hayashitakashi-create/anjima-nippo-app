@@ -217,7 +217,7 @@ export default function ImprovedNippoPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
             {/* キャラクター画像エリア - 一番上に単独配置 */}
-            <div className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-2 px-8">
+            <div className="bg-white pt-8 pb-2 px-8 rounded-t-2xl">
               <div className="mx-auto w-36 h-36 mb-4">
                 <Image
                   src="/character.png"
@@ -234,7 +234,7 @@ export default function ImprovedNippoPage() {
             <div className="h-8 bg-white"></div>
 
             {/* メッセージとボタンエリア - 完全に下部 */}
-            <div className="bg-white px-6 pb-6">
+            <div className="bg-white px-6 pb-6 rounded-b-2xl">
               <div className="bg-blue-600 rounded-lg py-3 px-4 mb-4">
                 <p className="text-sm text-white font-bold text-center">日報が正常に保存されました</p>
               </div>
