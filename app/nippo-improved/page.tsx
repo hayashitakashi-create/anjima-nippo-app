@@ -215,36 +215,38 @@ export default function ImprovedNippoPage() {
       {/* Success Dialog */}
       {showSuccessDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 overflow-hidden">
-            <div className="text-center">
-              {/* キャラクター画像エリア - 完全に独立 */}
-              <div className="bg-gradient-to-b from-blue-50 to-white px-8 pt-6 pb-8">
-                <div className="mx-auto relative w-40 h-40">
-                  <Image
-                    src="/character.png"
-                    alt="保存完了キャラクター"
-                    width={160}
-                    height={160}
-                    className="object-contain"
-                    priority
-                  />
-                </div>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+            {/* キャラクター画像エリア - 一番上に単独配置 */}
+            <div className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-2 px-8">
+              <div className="mx-auto w-36 h-36 mb-4">
+                <Image
+                  src="/character.png"
+                  alt="保存完了キャラクター"
+                  width={144}
+                  height={144}
+                  className="object-contain object-top"
+                  priority
+                />
               </div>
-              {/* メッセージとボタンエリア - 完全に下部 */}
-              <div className="bg-white px-6 pt-2 pb-6">
-                <div className="bg-blue-600 rounded-lg p-2 mb-4">
-                  <p className="text-sm text-white font-medium">日報が正常に保存されました</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowSuccessDialog(false)
-                    router.push('/nippo')
-                  }}
-                  className="w-full px-8 py-3 bg-gray-800 text-white text-base rounded-xl hover:bg-gray-900 font-bold transition-colors shadow-lg"
-                >
-                  閉じる
-                </button>
+            </div>
+
+            {/* 余白エリア - キャラクターとテキストを完全分離 */}
+            <div className="h-8 bg-white"></div>
+
+            {/* メッセージとボタンエリア - 完全に下部 */}
+            <div className="bg-white px-6 pb-6">
+              <div className="bg-blue-600 rounded-lg py-3 px-4 mb-4">
+                <p className="text-sm text-white font-bold text-center">日報が正常に保存されました</p>
               </div>
+              <button
+                onClick={() => {
+                  setShowSuccessDialog(false)
+                  router.push('/nippo')
+                }}
+                className="w-full px-8 py-3 bg-gray-800 text-white text-base rounded-xl hover:bg-gray-900 font-bold transition-colors shadow-lg"
+              >
+                閉じる
+              </button>
             </div>
           </div>
         </div>
