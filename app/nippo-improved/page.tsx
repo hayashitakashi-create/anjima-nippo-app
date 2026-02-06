@@ -26,7 +26,9 @@ import {
   X,
   AlertCircle,
   LogOut,
-  ArrowLeft
+  Home,
+  Settings,
+  Shield
 } from 'lucide-react'
 import VisitRecordCard, { VisitRecordData } from '@/components/VisitRecordCard'
 import { useVisitRecordValidation } from '@/hooks/useVisitRecordValidation'
@@ -254,34 +256,46 @@ export default function ImprovedNippoPage() {
 
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-6 py-4">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
+            <div className="flex items-center space-x-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-semibold text-gray-900">営業日報</h1>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">営業日報</h1>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-1 sm:space-x-3">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors font-medium"
+                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                title="TOP画面"
               >
-                <Building2 className="w-4 h-4" />
-                <span>TOP画面</span>
+                <Home className="h-5 w-5" />
+              </Link>
+              {currentUser?.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                  title="管理画面"
+                >
+                  <Shield className="h-5 w-5" />
+                </Link>
+              )}
+              <Link
+                href="/settings"
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="設定"
+              >
+                <Settings className="h-5 w-5" />
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="ログアウト"
               >
-                <LogOut className="w-4 h-4" />
-                <span>ログアウト</span>
-              </button>
-              <button
-                onClick={handleBack}
-                className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                戻る
+                <LogOut className="h-5 w-5" />
               </button>
             </div>
           </div>

@@ -13,6 +13,8 @@ import {
   Home,
   MapPin,
   Clock,
+  Building2,
+  Shield,
 } from 'lucide-react'
 
 interface Approval {
@@ -353,14 +355,12 @@ export default function NippoListPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center space-x-2">
               <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${themeBg}`}>
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">安島工業株式会社</h1>
@@ -376,13 +376,22 @@ export default function NippoListPage() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              <button
-                onClick={() => router.push('/settings')}
-                className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              {currentUser?.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                  title="管理画面"
+                >
+                  <Shield className="h-5 w-5" />
+                </Link>
+              )}
+              <Link
+                href="/settings"
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 title="設定"
               >
                 <Settings className="h-5 w-5" />
-              </button>
+              </Link>
               <button
                 onClick={handleLogout}
                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"

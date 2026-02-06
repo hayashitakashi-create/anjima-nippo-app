@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Home, LogOut, Building2, Shield } from 'lucide-react'
 
 interface User {
   id: string
   name: string
   username: string
   position?: string
+  role: string
 }
 
 export default function SettingsPage() {
@@ -121,30 +123,65 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">設定</h1>
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/dashboard"
-              className="text-sm text-emerald-600 hover:text-emerald-800 flex items-center space-x-1 font-medium"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              <span>TOP画面</span>
-            </Link>
-            <button
-              onClick={() => router.push('/')}
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              ← 戻る
-            </button>
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">設定</h1>
+              </div>
+            </div>
+            <div className="flex items-center space-x-1 sm:space-x-3">
+              <Link
+                href="/dashboard"
+                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                title="TOP画面"
+              >
+                <Home className="h-5 w-5" />
+              </Link>
+              {currentUser?.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                  title="管理画面"
+                >
+                  <Shield className="h-5 w-5" />
+                </Link>
+              )}
+              <button
+                onClick={async () => {
+                  try {
+                    await fetch('/api/auth/logout', { method: 'POST' })
+                    router.push('/login')
+                  } catch (error) {
+                    console.error('ログアウトエラー:', error)
+                  }
+                }}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="ログアウト"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        {/* TOP画面に戻るボタン */}
+        <div className="mb-6">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+          >
+            <Home className="h-4 w-4" />
+            TOP画面に戻る
+          </Link>
+        </div>
+
         {/* メッセージ表示 */}
         {message && (
           <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">

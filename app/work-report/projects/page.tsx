@@ -16,7 +16,10 @@ import {
   User,
   X,
   Save,
-  Briefcase
+  Briefcase,
+  Home,
+  Settings,
+  Shield
 } from 'lucide-react'
 
 interface Project {
@@ -265,20 +268,36 @@ export default function ProjectListPage() {
                 <p className="text-xs text-gray-500 hidden sm:block">現場を選択して日報を作成</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center space-x-1 sm:space-x-3">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-[#0E3091] hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                className="p-2 text-[#0E3091] hover:bg-blue-50 rounded-lg transition-colors"
+                title="TOP画面"
               >
-                <Building2 className="w-4 h-4" />
-                <span className="hidden sm:inline">TOP画面</span>
+                <Home className="h-5 w-5" />
+              </Link>
+              {currentUser?.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                  title="管理画面"
+                >
+                  <Shield className="h-5 w-5" />
+                </Link>
+              )}
+              <Link
+                href="/settings"
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="設定"
+              >
+                <Settings className="h-5 w-5" />
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="ログアウト"
               >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">ログアウト</span>
+                <LogOut className="h-5 w-5" />
               </button>
             </div>
           </div>
