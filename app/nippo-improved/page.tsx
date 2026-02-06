@@ -415,30 +415,30 @@ export default function ImprovedNippoPage() {
 
           {/* フッター */}
           <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-            <div className="flex flex-col gap-4">
-              {/* 会社名 */}
-              <div className="text-center sm:text-left">
-                <p className="text-sm text-gray-600 font-medium">安島工業株式会社</p>
-              </div>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* 保存ボタン */}
+              <button
+                type="submit"
+                disabled={loading || !isValid}
+                className="w-full sm:w-auto order-1 sm:order-none inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+              >
+                <Save className="w-5 h-5" />
+                <span>{loading ? '保存中...' : '保存'}</span>
+              </button>
 
-              {/* ボタングループ */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 text-lg font-bold transition-all shadow-sm"
-                >
-                  <X className="w-5 h-5" />
-                  <span>キャンセル</span>
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !isValid}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                >
-                  <Save className="w-5 h-5" />
-                  <span>{loading ? '保存中...' : '保存'}</span>
-                </button>
+              {/* キャンセルボタン */}
+              <button
+                type="button"
+                onClick={handleBack}
+                className="w-full sm:w-auto order-2 sm:order-none inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 text-lg font-bold transition-all shadow-sm"
+              >
+                <X className="w-5 h-5" />
+                <span>キャンセル</span>
+              </button>
+
+              {/* 会社名 */}
+              <div className="order-3 sm:order-none">
+                <p className="text-sm text-gray-600 font-medium whitespace-nowrap">安島工業株式会社</p>
               </div>
             </div>
           </div>
