@@ -90,11 +90,17 @@ export default function ProjectListPage() {
     fetch('/api/projects?status=active')
       .then(res => res.json())
       .then(data => {
-        setProjects(data)
+        if (Array.isArray(data)) {
+          setProjects(data)
+        } else {
+          console.error('物件データが不正です:', data)
+          setProjects([])
+        }
         setLoading(false)
       })
       .catch(error => {
         console.error('物件取得エラー:', error)
+        setProjects([])
         setLoading(false)
       })
   }
