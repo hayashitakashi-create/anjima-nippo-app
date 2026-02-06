@@ -414,16 +414,19 @@ export default function ImprovedNippoPage() {
           </div>
 
           {/* フッター */}
-          <div className="mt-8 border-t border-gray-200 pt-6">
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600 font-medium">
-                安島工業株式会社
+          <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col gap-4">
+              {/* 会社名 */}
+              <div className="text-center sm:text-left">
+                <p className="text-sm text-gray-600 font-medium">安島工業株式会社</p>
               </div>
-              <div className="flex gap-3">
+
+              {/* ボタングループ */}
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-lg font-medium transition-colors"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 text-lg font-bold transition-all shadow-sm"
                 >
                   <X className="w-5 h-5" />
                   <span>キャンセル</span>
@@ -431,7 +434,7 @@ export default function ImprovedNippoPage() {
                 <button
                   type="submit"
                   disabled={loading || !isValid}
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-lg font-medium shadow-sm hover:shadow-md transition-all"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-lg font-bold shadow-lg hover:shadow-xl transition-all"
                 >
                   <Save className="w-5 h-5" />
                   <span>{loading ? '保存中...' : '保存'}</span>
