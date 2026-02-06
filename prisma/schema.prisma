@@ -71,14 +71,31 @@ model Approval {
   updatedAt       DateTime @updatedAt
 }
 
+// 物件（現場）マスタ
+model Project {
+  id          String   @id @default(cuid())
+  name        String   // 工事名
+  projectType String?  // 工事種別
+  projectCode String?  // 工事番号
+  client      String?  // 発注者
+  location    String?  // 現場住所
+  status      String   @default("active") // active, completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workReports WorkReport[]
+}
+
 // 作業日報
 model WorkReport {
   id                   String   @id @default(cuid())
   date                 DateTime // 作業日付
-  userId               String   // 作成者
-  projectName          String   // 工事名
+  userId               String   // 作成者（代表者）
+  projectRefId         String?  // 物件マスタへの参照
+  project              Project? @relation(fields: [projectRefId], references: [id])
+  projectName          String   // 工事名（物件マスタから自動入力）
   projectType          String?  // 工事種別
-  projectId            String?  // 工事ID
+  projectId            String?  // 工事番号
   weather              String?  // 天候
   contactNotes         String?  // 連絡事項
   remoteDepartureTime  String?  // 遠隔地出発時刻

@@ -12,8 +12,8 @@
  * 6. 連絡事項
  */
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -108,11 +108,14 @@ const generateTimeOptions = (): string[] => {
 }
 const TIME_OPTIONS = generateTimeOptions()
 
-export default function WorkReportNewPage() {
+function WorkReportNewPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const projectRefId = searchParams.get('projectId') // URLパラメータから物件IDを取得
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [projectLoaded, setProjectLoaded] = useState(false)
 
   // 基本情報
   const [date, setDate] = useState('')
@@ -192,7 +195,27 @@ export default function WorkReportNewPage() {
     const today = new Date()
     const formatted = today.toISOString().split('T')[0]
     setDate(formatted)
-  }, [router])
+
+    // 物件IDがURLパラメータにある場合、物件情報を取得して自動入力
+    if (projectRefId) {
+      fetch(`/api/projects/${projectRefId}`)
+        .then(res => {
+          if (res.ok) return res.json()
+          return null
+        })
+        .then(project => {
+          if (project) {
+            setProjectName(project.name || '')
+            setProjectType(project.projectType || '')
+            setProjectId(project.projectCode || '')
+            setProjectLoaded(true)
+          }
+        })
+        .catch(error => {
+          console.error('物件情報取得エラー:', error)
+        })
+    }
+  }, [router, projectRefId])
 
   // 作業者記録の追加
   const handleAddWorkerRecord = () => {
@@ -292,6 +315,7 @@ export default function WorkReportNewPage() {
         body: JSON.stringify({
           date: new Date(date),
           userId: currentUser?.id,
+          projectRefId: projectRefId || undefined,
           projectName,
           projectType,
           projectId,
@@ -358,7 +382,11 @@ export default function WorkReportNewPage() {
   }
 
   const handleBack = () => {
-    router.push('/dashboard')
+    if (projectRefId) {
+      router.push('/work-report/projects')
+    } else {
+      router.push('/dashboard')
+    }
   }
 
   // 金額合計を計算
@@ -387,15 +415,51 @@ export default function WorkReportNewPage() {
               <div className="bg-[#0E3091] rounded-lg py-3 px-4 mb-4">
                 <p className="text-sm text-white font-bold text-center">作業日報が正常に保存されました</p>
               </div>
-              <button
-                onClick={() => {
-                  setShowSuccessDialog(false)
-                  router.push('/dashboard')
-                }}
-                className="w-full px-8 py-3 bg-gray-800 text-white text-base rounded-xl hover:bg-gray-900 font-bold transition-colors shadow-lg"
-              >
-                閉じる
-              </button>
+              {projectRefId ? (
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setShowSuccessDialog(false)
+                      router.push(`/work-report/new?projectId=${projectRefId}`)
+                      // フォームをリセット
+                      setWorkerRecords([{ id: '1', name: '', startTime: '08:00', endTime: '17:00', workType: '', details: '' }])
+                      setMaterialRecords([{ id: '1', name: '', volume: '', volumeUnit: 'ℓ', quantity: 0, unitPrice: 0, subcontractor: '' }])
+                      setSubcontractorRecords([{ id: '1', name: '', workerCount: 0, workContent: '' }])
+                      setWeather('')
+                      setContactNotes('')
+                      setRemoteDepartureTime('')
+                      setRemoteArrivalTime('')
+                      setRemoteDepartureTime2('')
+                      setRemoteArrivalTime2('')
+                      setTrafficGuardCount(0)
+                      setTrafficGuardStart('')
+                      setTrafficGuardEnd('')
+                    }}
+                    className="w-full px-8 py-3 bg-[#0E3091] text-white text-base rounded-xl hover:bg-[#0a2470] font-bold transition-colors shadow-lg"
+                  >
+                    同じ物件で続けて作成
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSuccessDialog(false)
+                      router.push('/work-report/projects')
+                    }}
+                    className="w-full px-8 py-3 bg-gray-800 text-white text-base rounded-xl hover:bg-gray-900 font-bold transition-colors shadow-lg"
+                  >
+                    物件一覧に戻る
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowSuccessDialog(false)
+                    router.push('/dashboard')
+                  }}
+                  className="w-full px-8 py-3 bg-gray-800 text-white text-base rounded-xl hover:bg-gray-900 font-bold transition-colors shadow-lg"
+                >
+                  閉じる
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -502,14 +566,20 @@ export default function WorkReportNewPage() {
                     <span>工事名</span>
                     <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
-                    placeholder="工事名を入力してください"
-                    required
-                  />
+                  {projectLoaded ? (
+                    <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
+                      {projectName}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
+                      placeholder="工事名を入力してください"
+                      required
+                    />
+                  )}
                 </div>
 
                 {/* 工事種別 */}
@@ -517,30 +587,42 @@ export default function WorkReportNewPage() {
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                     <span>工事種別</span>
                   </label>
-                  <select
-                    value={projectType}
-                    onChange={(e) => setProjectType(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
-                  >
-                    <option value="">選択してください</option>
-                    {PROJECT_TYPES.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
+                  {projectLoaded ? (
+                    <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
+                      {projectType || '未設定'}
+                    </div>
+                  ) : (
+                    <select
+                      value={projectType}
+                      onChange={(e) => setProjectType(e.target.value)}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
+                    >
+                      <option value="">選択してください</option>
+                      {PROJECT_TYPES.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 {/* 工事ID */}
                 <div className="sm:col-span-2 lg:col-span-1">
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <span>工事ID</span>
+                    <span>工事番号</span>
                   </label>
-                  <input
-                    type="text"
-                    value={projectId}
-                    onChange={(e) => setProjectId(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
-                    placeholder="工事IDを入力"
-                  />
+                  {projectLoaded ? (
+                    <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
+                      {projectId || '未設定'}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={projectId}
+                      onChange={(e) => setProjectId(e.target.value)}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
+                      placeholder="工事番号を入力"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -1117,5 +1199,17 @@ export default function WorkReportNewPage() {
         </form>
       </main>
     </div>
+  )
+}
+
+export default function WorkReportNewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <p className="text-gray-600 text-lg">読み込み中...</p>
+      </div>
+    }>
+      <WorkReportNewPageContent />
+    </Suspense>
   )
 }

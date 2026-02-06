@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 export interface WorkReportInput {
   date: string | Date
   userId: string
+  projectRefId?: string
   projectName: string
   projectType?: string
   projectId?: string
@@ -54,10 +55,15 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
+    const projectRefId = searchParams.get('projectRefId')
     const where: any = {}
 
     if (userId) {
       where.userId = userId
+    }
+
+    if (projectRefId) {
+      where.projectRefId = projectRefId
     }
 
     if (startDate && endDate) {
@@ -110,6 +116,7 @@ export async function POST(request: NextRequest) {
       data: {
         date: new Date(body.date),
         userId: body.userId,
+        projectRefId: body.projectRefId,
         projectName: body.projectName,
         projectType: body.projectType,
         projectId: body.projectId,

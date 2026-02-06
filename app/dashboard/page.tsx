@@ -297,7 +297,7 @@ export default function DashboardPage() {
               >
                 {/* 新規日報作成 */}
                 <Link
-                  href={reportType === 'sales' ? '/nippo-improved' : '/work-report/new'}
+                  href={reportType === 'sales' ? '/nippo-improved' : '/work-report/projects'}
                   className="group relative overflow-hidden"
                 >
                   <div className={`absolute inset-0 rounded-xl transition-transform group-hover:scale-105 ${
@@ -317,9 +317,9 @@ export default function DashboardPage() {
                         <Plus className="w-6 h-6 text-white/60" />
                       </motion.div>
                     </div>
-                    <h3 className="text-xl font-bold mb-2">新規日報作成</h3>
+                    <h3 className="text-xl font-bold mb-2">{reportType === 'work' ? '物件一覧・日報作成' : '新規日報作成'}</h3>
                     <p className={reportType === 'sales' ? 'text-emerald-100 text-sm' : 'text-blue-100 text-sm'}>
-                      新しい{reportTypeName}を作成します
+                      {reportType === 'work' ? '物件を選んで作業日報を作成' : `新しい${reportTypeName}を作成します`}
                     </p>
                   </div>
                 </Link>
