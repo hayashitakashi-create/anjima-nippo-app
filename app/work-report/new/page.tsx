@@ -31,7 +31,8 @@ import {
   Trash2,
   Users,
   Package,
-  Briefcase
+  Briefcase,
+  Copy
 } from 'lucide-react'
 
 interface User {
@@ -46,8 +47,11 @@ interface WorkerRecord {
   name: string
   startTime: string
   endTime: string
+  manHours: number    // 工数
   workType: string
   details: string
+  dailyHours: number  // 工数 当日
+  totalHours: number  // 工数 累計
 }
 
 interface MaterialRecord {
@@ -93,7 +97,7 @@ const SUBCONTRACTORS = [
   '森下塗装', '鳥島工業', '岩佐塗装', '恒松塗装'
 ]
 
-const WEATHER_OPTIONS = ['晴れ', '曇り', '雨', '雪', '台風']
+const WEATHER_OPTIONS = ['晴れ', '曇り', '晴れ後曇り', '曇り後晴れ', '雨', '雪']
 
 // 30分刻みの時刻リストを生成（00:00-23:30）
 const generateTimeOptions = (): string[] => {
@@ -131,8 +135,11 @@ function WorkReportNewPageContent() {
       name: '',
       startTime: '08:00',
       endTime: '17:00',
+      manHours: 0,
       workType: '',
-      details: ''
+      details: '',
+      dailyHours: 0,
+      totalHours: 0
     }
   ])
 
@@ -170,6 +177,9 @@ function WorkReportNewPageContent() {
 
   // 連絡事項
   const [contactNotes, setContactNotes] = useState('')
+
+  // 前日コピー用
+  const [copyLoading, setCopyLoading] = useState('')
 
   // 初期化
   useEffect(() => {
@@ -231,8 +241,11 @@ function WorkReportNewPageContent() {
         name: '',
         startTime: '08:00',
         endTime: '17:00',
+        manHours: 0,
         workType: '',
-        details: ''
+        details: '',
+        dailyHours: 0,
+        totalHours: 0
       }
     ])
   }
@@ -332,8 +345,11 @@ function WorkReportNewPageContent() {
             name: record.name,
             startTime: record.startTime,
             endTime: record.endTime,
+            manHours: record.manHours,
             workType: record.workType,
             details: record.details,
+            dailyHours: record.dailyHours,
+            totalHours: record.totalHours,
             order: index
           })),
           materialRecords: materialRecords.map((record, index) => ({
@@ -389,6 +405,111 @@ function WorkReportNewPageContent() {
     }
   }
 
+  // 前日の日報データを取得
+  const fetchPreviousReport = async () => {
+    if (!currentUser?.id || !date) return null
+    try {
+      const params = new URLSearchParams({
+        userId: currentUser.id,
+        date: date,
+      })
+      if (projectRefId) {
+        params.set('projectRefId', projectRefId)
+      }
+      const res = await fetch(`/api/work-report/previous?${params}`)
+      if (!res.ok) return null
+      const data = await res.json()
+      return data
+    } catch (error) {
+      console.error('前日日報取得エラー:', error)
+      return null
+    }
+  }
+
+  // 作業者記録の前日コピー
+  const handleCopyWorkerRecords = async () => {
+    setCopyLoading('worker')
+    const prev = await fetchPreviousReport()
+    if (!prev || !prev.workerRecords || prev.workerRecords.length === 0) {
+      alert('前日の作業者記録が見つかりません')
+      setCopyLoading('')
+      return
+    }
+    const copied: WorkerRecord[] = prev.workerRecords.map((r: any, i: number) => ({
+      id: (i + 1).toString(),
+      name: r.name || '',
+      startTime: r.startTime || '08:00',
+      endTime: r.endTime || '17:00',
+      manHours: r.workHours || 0,
+      workType: r.workType || '',
+      details: r.details || '',
+      dailyHours: r.dailyHours || 0,
+      totalHours: r.totalHours || 0,
+    }))
+    setWorkerRecords(copied)
+    setCopyLoading('')
+  }
+
+  // 使用材料の前日コピー
+  const handleCopyMaterialRecords = async () => {
+    setCopyLoading('material')
+    const prev = await fetchPreviousReport()
+    if (!prev || !prev.materialRecords || prev.materialRecords.length === 0) {
+      alert('前日の使用材料記録が見つかりません')
+      setCopyLoading('')
+      return
+    }
+    const copied: MaterialRecord[] = prev.materialRecords.map((r: any, i: number) => ({
+      id: (i + 1).toString(),
+      name: r.name || '',
+      volume: r.volume || '',
+      volumeUnit: r.volumeUnit || 'ℓ',
+      quantity: r.quantity || 0,
+      unitPrice: r.unitPrice || 0,
+      subcontractor: r.subcontractor || '',
+    }))
+    setMaterialRecords(copied)
+    setCopyLoading('')
+  }
+
+  // 外注先の前日コピー
+  const handleCopySubcontractorRecords = async () => {
+    setCopyLoading('subcontractor')
+    const prev = await fetchPreviousReport()
+    if (!prev || !prev.subcontractorRecords || prev.subcontractorRecords.length === 0) {
+      alert('前日の外注先記録が見つかりません')
+      setCopyLoading('')
+      return
+    }
+    const copied: SubcontractorRecord[] = prev.subcontractorRecords.map((r: any, i: number) => ({
+      id: (i + 1).toString(),
+      name: r.name || '',
+      workerCount: r.workerCount || 0,
+      workContent: r.workContent || '',
+    }))
+    setSubcontractorRecords(copied)
+    setCopyLoading('')
+  }
+
+  // 遠隔地・交通誘導警備員の前日コピー
+  const handleCopyRemoteTraffic = async () => {
+    setCopyLoading('remote')
+    const prev = await fetchPreviousReport()
+    if (!prev) {
+      alert('前日の日報が見つかりません')
+      setCopyLoading('')
+      return
+    }
+    setRemoteDepartureTime(prev.remoteDepartureTime || '')
+    setRemoteArrivalTime(prev.remoteArrivalTime || '')
+    setRemoteDepartureTime2(prev.remoteDepartureTime2 || '')
+    setRemoteArrivalTime2(prev.remoteArrivalTime2 || '')
+    setTrafficGuardCount(prev.trafficGuardCount || 0)
+    setTrafficGuardStart(prev.trafficGuardStart || '')
+    setTrafficGuardEnd(prev.trafficGuardEnd || '')
+    setCopyLoading('')
+  }
+
   // 金額合計を計算
   const totalAmount = materialRecords.reduce((sum, record) => sum + (record.quantity * record.unitPrice), 0)
 
@@ -422,7 +543,7 @@ function WorkReportNewPageContent() {
                       setShowSuccessDialog(false)
                       router.push(`/work-report/new?projectId=${projectRefId}`)
                       // フォームをリセット
-                      setWorkerRecords([{ id: '1', name: '', startTime: '08:00', endTime: '17:00', workType: '', details: '' }])
+                      setWorkerRecords([{ id: '1', name: '', startTime: '08:00', endTime: '17:00', manHours: 0, workType: '', details: '', dailyHours: 0, totalHours: 0 }])
                       setMaterialRecords([{ id: '1', name: '', volume: '', volumeUnit: 'ℓ', quantity: 0, unitPrice: 0, subcontractor: '' }])
                       setSubcontractorRecords([{ id: '1', name: '', workerCount: 0, workContent: '' }])
                       setWeather('')
@@ -509,56 +630,6 @@ function WorkReportNewPageContent() {
 
             <div className="p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {/* 日付 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span>日付</span>
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
-                    required
-                  />
-                </div>
-
-                {/* 氏名 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <User className="w-4 h-4 text-gray-500" />
-                    <span>氏名</span>
-                  </label>
-                  <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50">
-                    {currentUser ? (
-                      <span className="text-gray-900">
-                        {currentUser.name} {currentUser.position ? `(${currentUser.position})` : ''}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">読み込み中...</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 天候 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <span>天候</span>
-                  </label>
-                  <select
-                    value={weather}
-                    onChange={(e) => setWeather(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
-                  >
-                    <option value="">選択してください</option>
-                    {WEATHER_OPTIONS.map(w => (
-                      <option key={w} value={w}>{w}</option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* 工事名 */}
                 <div className="sm:col-span-2">
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
@@ -605,8 +676,8 @@ function WorkReportNewPageContent() {
                   )}
                 </div>
 
-                {/* 工事ID */}
-                <div className="sm:col-span-2 lg:col-span-1">
+                {/* 工事番号 */}
+                <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                     <span>工事番号</span>
                   </label>
@@ -624,6 +695,56 @@ function WorkReportNewPageContent() {
                     />
                   )}
                 </div>
+
+                {/* 氏名 */}
+                <div className="lg:col-span-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <span>氏名</span>
+                  </label>
+                  <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50">
+                    {currentUser ? (
+                      <span className="text-gray-900">
+                        {currentUser.name} {currentUser.position ? `(${currentUser.position})` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">読み込み中...</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 日付 */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span>日付</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
+                    required
+                  />
+                </div>
+
+                {/* 天候 */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <span>天候</span>
+                  </label>
+                  <select
+                    value={weather}
+                    onChange={(e) => setWeather(e.target.value)}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
+                  >
+                    <option value="">選択してください</option>
+                    {WEATHER_OPTIONS.map(w => (
+                      <option key={w} value={w}>{w}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -640,15 +761,26 @@ function WorkReportNewPageContent() {
                   </div>
                   <p className="text-xs sm:text-sm text-gray-600">作業者の情報を入力してください</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddWorkerRecord}
-                  disabled={workerRecords.length >= 11}
-                  className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">追加</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyWorkerRecords}
+                    disabled={copyLoading === 'worker'}
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">{copyLoading === 'worker' ? '取得中...' : '前日コピー'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddWorkerRecord}
+                    disabled={workerRecords.length >= 11}
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">追加</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -667,9 +799,10 @@ function WorkReportNewPageContent() {
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {/* 上段: 氏名 | 作業時間(開始〜終了) | 工数 | 工種 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-12 gap-3 sm:gap-4">
                     {/* 氏名 */}
-                    <div>
+                    <div className="col-span-2 sm:col-span-1 lg:col-span-3">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">氏名</label>
                       <select
                         value={record.name}
@@ -678,7 +811,7 @@ function WorkReportNewPageContent() {
                           newRecords[index].name = e.target.value
                           setWorkerRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                       >
                         <option value="">選択してください</option>
                         {WORKER_NAMES.map(name => (
@@ -687,48 +820,62 @@ function WorkReportNewPageContent() {
                       </select>
                     </div>
 
-                    {/* 開始時刻 */}
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">開始時刻</label>
-                      <select
-                        value={record.startTime}
-                        onChange={(e) => {
-                          const newRecords = [...workerRecords]
-                          newRecords[index].startTime = e.target.value
-                          setWorkerRecords(newRecords)
-                        }}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
-                      >
-                        <option value="">--:--</option>
-                        {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
-                        ))}
-                      </select>
+                    {/* 作業時間（開始〜終了） */}
+                    <div className="col-span-2 sm:col-span-1 lg:col-span-4">
+                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">作業時間</label>
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={record.startTime}
+                          onChange={(e) => {
+                            const newRecords = [...workerRecords]
+                            newRecords[index].startTime = e.target.value
+                            setWorkerRecords(newRecords)
+                          }}
+                          className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        >
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                        <span className="text-gray-500 text-sm flex-shrink-0">〜</span>
+                        <select
+                          value={record.endTime}
+                          onChange={(e) => {
+                            const newRecords = [...workerRecords]
+                            newRecords[index].endTime = e.target.value
+                            setWorkerRecords(newRecords)
+                          }}
+                          className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        >
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    {/* 終了時刻 */}
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">終了時刻</label>
-                      <select
-                        value={record.endTime}
+                    {/* 工数 */}
+                    <div className="col-span-1 lg:col-span-2">
+                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数</label>
+                      <input
+                        type="number"
+                        value={record.manHours || ''}
                         onChange={(e) => {
                           const newRecords = [...workerRecords]
-                          newRecords[index].endTime = e.target.value
+                          newRecords[index].manHours = parseFloat(e.target.value) || 0
                           setWorkerRecords(newRecords)
                         }}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
-                      >
-                        <option value="">--:--</option>
-                        {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
-                        ))}
-                      </select>
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        placeholder="0"
+                        step="0.5"
+                        min="0"
+                      />
                     </div>
 
                     {/* 工種 */}
-                    <div>
+                    <div className="col-span-1 lg:col-span-3">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工種</label>
                       <input
                         type="text"
@@ -738,14 +885,53 @@ function WorkReportNewPageContent() {
                           newRecords[index].workType = e.target.value
                           setWorkerRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="工種"
                       />
                     </div>
+                  </div>
 
-                    {/* 内訳 */}
-                    <div className="sm:col-span-2 lg:col-span-4">
-                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">作業内容・内訳</label>
+                  {/* 下段: 工数当日 | 工数累計 | 内容 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-12 gap-3 sm:gap-4 mt-3">
+                    {/* 工数 当日 */}
+                    <div className="col-span-1 lg:col-span-2">
+                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 当日</label>
+                      <input
+                        type="number"
+                        value={record.dailyHours || ''}
+                        onChange={(e) => {
+                          const newRecords = [...workerRecords]
+                          newRecords[index].dailyHours = parseFloat(e.target.value) || 0
+                          setWorkerRecords(newRecords)
+                        }}
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        placeholder="0"
+                        step="0.5"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* 工数 累計 */}
+                    <div className="col-span-1 lg:col-span-2">
+                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 累計</label>
+                      <input
+                        type="number"
+                        value={record.totalHours || ''}
+                        onChange={(e) => {
+                          const newRecords = [...workerRecords]
+                          newRecords[index].totalHours = parseFloat(e.target.value) || 0
+                          setWorkerRecords(newRecords)
+                        }}
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        placeholder="0"
+                        step="0.5"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* 作業内容・内訳 */}
+                    <div className="col-span-2 sm:col-span-2 lg:col-span-8">
+                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">内容</label>
                       <textarea
                         value={record.details}
                         onChange={(e) => {
@@ -776,15 +962,26 @@ function WorkReportNewPageContent() {
                   </div>
                   <p className="text-xs sm:text-sm text-gray-600">使用した材料や消耗品を入力してください</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddMaterialRecord}
-                  disabled={materialRecords.length >= 5}
-                  className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">追加</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyMaterialRecords}
+                    disabled={copyLoading === 'material'}
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">{copyLoading === 'material' ? '取得中...' : '前日コピー'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddMaterialRecord}
+                    disabled={materialRecords.length >= 5}
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">追加</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -801,9 +998,10 @@ function WorkReportNewPageContent() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                  {/* 上段: 材料名 | 容量 | 単位 | 数量 | 単価 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-12 gap-3 sm:gap-4">
                     {/* 材料名 */}
-                    <div className="col-span-2">
+                    <div className="col-span-2 sm:col-span-4">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">材料名</label>
                       <input
                         type="text"
@@ -813,13 +1011,13 @@ function WorkReportNewPageContent() {
                           newRecords[index].name = e.target.value
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="材料名"
                       />
                     </div>
 
                     {/* 容量 */}
-                    <div>
+                    <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">容量</label>
                       <input
                         type="text"
@@ -829,13 +1027,13 @@ function WorkReportNewPageContent() {
                           newRecords[index].volume = e.target.value
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="容量"
                       />
                     </div>
 
                     {/* 単位 */}
-                    <div>
+                    <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単位</label>
                       <select
                         value={record.volumeUnit}
@@ -844,7 +1042,7 @@ function WorkReportNewPageContent() {
                           newRecords[index].volumeUnit = e.target.value
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                       >
                         {VOLUME_UNITS.map(unit => (
                           <option key={unit} value={unit}>{unit}</option>
@@ -853,7 +1051,7 @@ function WorkReportNewPageContent() {
                     </div>
 
                     {/* 数量 */}
-                    <div>
+                    <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">数量</label>
                       <input
                         type="number"
@@ -863,14 +1061,14 @@ function WorkReportNewPageContent() {
                           newRecords[index].quantity = parseFloat(e.target.value) || 0
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="0"
                         step="0.1"
                       />
                     </div>
 
                     {/* 単価 */}
-                    <div>
+                    <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単価(円)</label>
                       <input
                         type="number"
@@ -880,13 +1078,16 @@ function WorkReportNewPageContent() {
                           newRecords[index].unitPrice = parseFloat(e.target.value) || 0
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="0"
                       />
                     </div>
+                  </div>
 
+                  {/* 下段: 外注先 | 金額 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-12 gap-3 sm:gap-4 mt-3">
                     {/* 外注先 */}
-                    <div className="col-span-2 sm:col-span-3 lg:col-span-2">
+                    <div className="col-span-2 sm:col-span-4">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">外注先</label>
                       <select
                         value={record.subcontractor}
@@ -895,7 +1096,7 @@ function WorkReportNewPageContent() {
                           newRecords[index].subcontractor = e.target.value
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                       >
                         <option value="">選択してください</option>
                         {SUBCONTRACTORS.map(sub => (
@@ -905,7 +1106,7 @@ function WorkReportNewPageContent() {
                     </div>
 
                     {/* 金額（自動計算） */}
-                    <div className="col-span-2 sm:col-span-3 lg:col-span-4 flex items-end">
+                    <div className="col-span-2 sm:col-span-8 flex items-end pb-1">
                       <div className="text-sm text-gray-700">
                         金額: <span className="font-bold text-lg text-[#0E3091]">{(record.quantity * record.unitPrice).toLocaleString()}円</span>
                       </div>
@@ -938,15 +1139,26 @@ function WorkReportNewPageContent() {
                   </div>
                   <p className="text-xs sm:text-sm text-gray-600">外注先の情報を入力してください</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddSubcontractorRecord}
-                  disabled={subcontractorRecords.length >= 10}
-                  className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">追加</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopySubcontractorRecords}
+                    disabled={copyLoading === 'subcontractor'}
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">{copyLoading === 'subcontractor' ? '取得中...' : '前日コピー'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddSubcontractorRecord}
+                    disabled={subcontractorRecords.length >= 10}
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">追加</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -974,7 +1186,7 @@ function WorkReportNewPageContent() {
                           newRecords[index].name = e.target.value
                           setSubcontractorRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                       >
                         <option value="">選択してください</option>
                         {SUBCONTRACTORS.map(sub => (
@@ -994,7 +1206,7 @@ function WorkReportNewPageContent() {
                           newRecords[index].workerCount = parseInt(e.target.value) || 0
                           setSubcontractorRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="人数"
                         min="0"
                       />
@@ -1011,7 +1223,7 @@ function WorkReportNewPageContent() {
                           newRecords[index].workContent = e.target.value
                           setSubcontractorRecords(newRecords)
                         }}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="作業内容を入力"
                       />
                     </div>
@@ -1024,11 +1236,24 @@ function WorkReportNewPageContent() {
           {/* 遠隔地・交通誘導警備員カード */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200/50">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg border-b">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-5 h-5 text-[#0E3091]" />
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">遠隔地・交通誘導警備員</h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Clock className="w-5 h-5 text-[#0E3091]" />
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900">遠隔地・交通誘導警備員</h2>
+                  </div>
+                  <p className="text-xs sm:text-sm text-gray-600">遠隔地の移動時間や交通誘導警備員の情報を入力してください</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyRemoteTraffic}
+                  disabled={copyLoading === 'remote'}
+                  className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span className="hidden sm:inline">{copyLoading === 'remote' ? '取得中...' : '前日コピー'}</span>
+                </button>
               </div>
-              <p className="text-xs sm:text-sm text-gray-600">遠隔地の移動時間や交通誘導警備員の情報を入力してください</p>
             </div>
 
             <div className="p-4 sm:p-6">
@@ -1042,12 +1267,11 @@ function WorkReportNewPageContent() {
                       <select
                         value={remoteDepartureTime}
                         onChange={(e) => setRemoteDepartureTime(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
+                        className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
                       >
                         <option value="">--:--</option>
                         {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
+                          <option key={time} value={time}>{time}</option>
                         ))}
                       </select>
                     </div>
@@ -1056,12 +1280,11 @@ function WorkReportNewPageContent() {
                       <select
                         value={remoteArrivalTime}
                         onChange={(e) => setRemoteArrivalTime(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
+                        className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
                       >
                         <option value="">--:--</option>
                         {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
+                          <option key={time} value={time}>{time}</option>
                         ))}
                       </select>
                     </div>
@@ -1070,12 +1293,11 @@ function WorkReportNewPageContent() {
                       <select
                         value={remoteDepartureTime2}
                         onChange={(e) => setRemoteDepartureTime2(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
+                        className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
                       >
                         <option value="">--:--</option>
                         {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
+                          <option key={time} value={time}>{time}</option>
                         ))}
                       </select>
                     </div>
@@ -1084,12 +1306,11 @@ function WorkReportNewPageContent() {
                       <select
                         value={remoteArrivalTime2}
                         onChange={(e) => setRemoteArrivalTime2(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
+                        className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
                       >
                         <option value="">--:--</option>
                         {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
+                          <option key={time} value={time}>{time}</option>
                         ))}
                       </select>
                     </div>
@@ -1106,7 +1327,7 @@ function WorkReportNewPageContent() {
                         type="number"
                         value={trafficGuardCount || ''}
                         onChange={(e) => setTrafficGuardCount(parseInt(e.target.value) || 0)}
-                        className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="人数"
                       />
                     </div>
@@ -1115,12 +1336,11 @@ function WorkReportNewPageContent() {
                       <select
                         value={trafficGuardStart}
                         onChange={(e) => setTrafficGuardStart(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
+                        className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
                       >
                         <option value="">--:--</option>
                         {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
+                          <option key={time} value={time}>{time}</option>
                         ))}
                       </select>
                     </div>
@@ -1129,12 +1349,11 @@ function WorkReportNewPageContent() {
                       <select
                         value={trafficGuardEnd}
                         onChange={(e) => setTrafficGuardEnd(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
-                        style={{ fontSize: '22px', padding: '18px 16px', minHeight: '64px', lineHeight: '1.2' }}
+                        className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white"
                       >
                         <option value="">--:--</option>
                         {TIME_OPTIONS.map(time => (
-                          <option key={time} value={time} style={{ fontSize: '18px', padding: '12px' }}>{time}</option>
+                          <option key={time} value={time}>{time}</option>
                         ))}
                       </select>
                     </div>
@@ -1172,28 +1391,23 @@ function WorkReportNewPageContent() {
 
           {/* フッター */}
           <div className="mt-6 sm:mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto order-1 sm:order-none inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] text-white rounded-xl hover:from-[#0a2470] hover:to-[#0E3091] disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-base sm:text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] text-white rounded-xl hover:from-[#0a2470] hover:to-[#0E3091] disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-base sm:text-lg font-bold shadow-lg hover:shadow-xl transition-all"
               >
                 <Save className="w-5 h-5" />
                 <span>{loading ? '保存中...' : '保存'}</span>
               </button>
-
               <button
                 type="button"
                 onClick={handleBack}
-                className="w-full sm:w-auto order-2 sm:order-none inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 text-base sm:text-lg font-bold transition-all shadow-sm"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 text-base sm:text-lg font-bold transition-all shadow-sm"
               >
                 <X className="w-5 h-5" />
                 <span>キャンセル</span>
               </button>
-
-              <div className="order-3 sm:order-none">
-                <p className="text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap">安島工業株式会社</p>
-              </div>
             </div>
           </div>
         </form>
