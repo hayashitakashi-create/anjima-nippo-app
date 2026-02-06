@@ -89,25 +89,10 @@ export default function ImprovedNippoPage() {
         router.push('/login')
       })
 
-    // 最新日報の日付+1日を取得
-    fetch('/api/nippo/latest')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.date) {
-          setDate(data.date)
-        } else {
-          // エラー時は今日の日付
-          const today = new Date()
-          const formatted = today.toISOString().split('T')[0]
-          setDate(formatted)
-        }
-      })
-      .catch(() => {
-        // エラー時は今日の日付
-        const today = new Date()
-        const formatted = today.toISOString().split('T')[0]
-        setDate(formatted)
-      })
+    // 今日の日付をデフォルトに設定
+    const today = new Date()
+    const formatted = today.toISOString().split('T')[0]
+    setDate(formatted)
   }, [router])
 
   // 訪問記録の変更

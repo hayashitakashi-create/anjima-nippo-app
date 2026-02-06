@@ -96,22 +96,10 @@ export default function NewNippoPage() {
         router.push('/login')
       })
 
-    // 最新日報の日付+1日を取得
-    fetch('/api/nippo/latest')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.date) {
-          setFormData(prev => ({ ...prev, date: data.date }))
-        }
-      })
-      .catch(error => {
-        console.error('最新日報取得エラー:', error)
-        // エラー時は今月の21日を設定
-        const now = new Date()
-        const year = now.getFullYear()
-        const month = String(now.getMonth() + 1).padStart(2, '0')
-        setFormData(prev => ({ ...prev, date: `${year}-${month}-21` }))
-      })
+    // 今日の日付をデフォルトに設定
+    const today = new Date()
+    const formatted = today.toISOString().split('T')[0]
+    setFormData(prev => ({ ...prev, date: formatted }))
   }, [router])
 
   // 訪問記録を追加
