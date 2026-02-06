@@ -215,37 +215,30 @@ export default function ImprovedNippoPage() {
       {/* Success Dialog */}
       {showSuccessDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 overflow-hidden">
-            <div className="text-center">
-              <div className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-6">
-                <h3 className="text-2xl font-bold text-gray-900">お疲れ様でした！</h3>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+            <div className="text-center px-8 py-8">
+              <div className="mx-auto mb-6 relative w-48 h-48">
+                <Image
+                  src="/character.png"
+                  alt="保存完了キャラクター"
+                  width={192}
+                  height={192}
+                  className="object-contain"
+                  priority
+                />
               </div>
-              <div className="px-8 py-4">
-                <div className="mx-auto mb-2 relative w-40 h-40">
-                  <Image
-                    src="/character.png"
-                    alt="保存完了キャラクター"
-                    width={160}
-                    height={160}
-                    className="object-contain"
-                    priority
-                  />
-                </div>
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+                <p className="text-lg text-gray-800 font-bold">日報が正常に保存されました</p>
               </div>
-              <div className="px-8 pb-8">
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
-                  <p className="text-lg text-gray-800 font-bold">日報が正常に保存されました</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowSuccessDialog(false)
-                    router.push('/nippo')
-                  }}
-                  className="w-full px-12 py-4 bg-blue-600 text-white text-lg rounded-xl hover:bg-blue-700 font-bold transition-colors shadow-lg"
-                >
-                  閉じる
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setShowSuccessDialog(false)
+                  router.push('/nippo')
+                }}
+                className="w-full px-12 py-4 bg-blue-600 text-white text-lg rounded-xl hover:bg-blue-700 font-bold transition-colors shadow-lg"
+              >
+                閉じる
+              </button>
             </div>
           </div>
         </div>
