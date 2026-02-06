@@ -10,6 +10,8 @@ interface Approval {
   approverUserId?: string
   approvedAt?: string
   status: string
+  createdAt: string
+  updatedAt: string
   approver?: {
     name: string
     position?: string

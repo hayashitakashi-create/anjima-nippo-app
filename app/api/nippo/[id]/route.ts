@@ -5,7 +5,7 @@ import { DailyReportInput } from '@/lib/types'
 // 日報詳細取得
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = request.cookies.get('userId')?.value
@@ -17,8 +17,10 @@ export async function GET(
       )
     }
 
+    const { id } = await params
+
     const report = await prisma.dailyReport.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -60,7 +62,7 @@ export async function GET(
 // 日報更新
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = request.cookies.get('userId')?.value
@@ -72,11 +74,12 @@ export async function PUT(
       )
     }
 
+    const { id } = await params
     const body: DailyReportInput = await request.json()
 
     // 既存の日報を確認
     const existingReport = await prisma.dailyReport.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingReport) {
@@ -95,11 +98,11 @@ export async function PUT(
 
     // 既存の訪問記録を削除して新しいものを作成
     await prisma.visitRecord.deleteMany({
-      where: { dailyReportId: params.id }
+      where: { dailyReportId: id }
     })
 
     const updatedReport = await prisma.dailyReport.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         date: new Date(body.date),
         specialNotes: body.specialNotes,
