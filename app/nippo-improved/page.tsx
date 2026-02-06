@@ -214,30 +214,34 @@ export default function ImprovedNippoPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Success Dialog */}
       {showSuccessDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl p-8 max-w-sm mx-4 animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 overflow-hidden">
             <div className="text-center">
-              <div className="mx-auto mb-4 relative w-40 h-40">
-                <Image
-                  src="/character.png"
-                  alt="保存完了キャラクター"
-                  width={160}
-                  height={160}
-                  className="object-contain"
-                  priority
-                />
+              <div className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-4">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">お疲れ様でした！</h3>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">保存完了</h3>
-              <p className="text-gray-600 mb-6">日報が正常に保存されました</p>
-              <button
-                onClick={() => {
-                  setShowSuccessDialog(false)
-                  router.push('/nippo')
-                }}
-                className="w-full px-12 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-              >
-                閉じる
-              </button>
+              <div className="px-8 pb-6">
+                <div className="mx-auto mb-4 relative w-48 h-48">
+                  <Image
+                    src="/character.png"
+                    alt="保存完了キャラクター"
+                    width={192}
+                    height={192}
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+                <p className="text-lg text-gray-700 mb-6 font-medium">日報が正常に保存されました</p>
+                <button
+                  onClick={() => {
+                    setShowSuccessDialog(false)
+                    router.push('/nippo')
+                  }}
+                  className="w-full px-12 py-4 bg-blue-600 text-white text-lg rounded-xl hover:bg-blue-700 font-bold transition-colors shadow-lg"
+                >
+                  閉じる
+                </button>
+              </div>
             </div>
           </div>
         </div>
