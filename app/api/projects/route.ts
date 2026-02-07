@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// 物件一覧を取得
+// 物件一覧を取得（最適化版）
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -12,17 +12,17 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
+    // 物件一覧と、各物件の日報数・最新日報日を効率的に取得
     const projects = await prisma.project.findMany({
       where,
       include: {
+        _count: {
+          select: { workReports: true }
+        },
         workReports: {
-          select: {
-            id: true,
-            date: true,
-          },
-          orderBy: {
-            date: 'desc',
-          },
+          select: { date: true },
+          orderBy: { date: 'desc' },
+          take: 1, // 最新1件のみ取得（N+1対策）
         },
       },
       orderBy: {
@@ -32,8 +32,20 @@ export async function GET(request: NextRequest) {
 
     // 日報件数を追加
     const projectsWithCounts = projects.map(project => ({
-      ...project,
-      reportCount: project.workReports.length,
+      id: project.id,
+      name: project.name,
+      projectType: project.projectType,
+      projectCode: project.projectCode,
+      client: project.client,
+      location: project.location,
+      status: project.status,
+      progress: project.progress,
+      startDate: project.startDate,
+      endDate: project.endDate,
+      notes: project.notes,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      reportCount: project._count.workReports,
       lastReportDate: project.workReports[0]?.date || null,
     }))
 

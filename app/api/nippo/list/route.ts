@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-
-    if (!userId) {
+    // JWT認証に移行
+    const authUser = await getAuthFromRequest(request)
+    if (!authUser) {
       return NextResponse.json(
         { error: 'ログインしていません' },
         { status: 401 }
@@ -18,8 +19,13 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
+    // ページネーションパラメータ
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100) // 最大100件
+    const skip = (page - 1) * limit
+
     // where条件を構築
-    const where: any = { userId }
+    const where: any = { userId: authUser.id }
 
     // 期間フィルター
     if (startDate || endDate) {
@@ -50,35 +56,48 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // ユーザーの日報一覧を取得（新しい順）
-    const reports = await prisma.dailyReport.findMany({
-      where,
-      orderBy: { date: 'desc' },
-      include: {
-        user: {
-          select: {
-            name: true,
-            position: true,
-          }
-        },
-        visitRecords: {
-          orderBy: { order: 'asc' }
-        },
-        approvals: {
-          include: {
-            approver: {
-              select: {
-                name: true,
-                position: true,
-              }
+    // 総件数を取得（並列実行）
+    const [total, reports] = await Promise.all([
+      prisma.dailyReport.count({ where }),
+      prisma.dailyReport.findMany({
+        where,
+        orderBy: { date: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              name: true,
+              position: true,
             }
           },
-          orderBy: { createdAt: 'desc' }
+          visitRecords: {
+            orderBy: { order: 'asc' }
+          },
+          approvals: {
+            include: {
+              approver: {
+                select: {
+                  name: true,
+                  position: true,
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          }
         }
+      })
+    ])
+
+    return NextResponse.json({
+      reports,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       }
     })
-
-    return NextResponse.json({ reports })
   } catch (error) {
     console.error('日報一覧取得エラー:', error)
     return NextResponse.json(

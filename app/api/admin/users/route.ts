@@ -1,40 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-
-// 管理者権限チェック
-async function checkAdmin(request: NextRequest) {
-  const userId = request.cookies.get('userId')?.value
-
-  if (!userId) {
-    return { error: 'ログインしていません', status: 401 }
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true },
-  })
-
-  if (!user) {
-    return { error: 'ユーザーが見つかりません', status: 404 }
-  }
-
-  if (user.role !== 'admin') {
-    return { error: '管理者権限が必要です', status: 403 }
-  }
-
-  return { userId: user.id }
-}
+import { requireAdmin, authErrorResponse } from '@/lib/auth'
 
 // ユーザー一覧取得
 export async function GET(request: NextRequest) {
   try {
-    const auth = await checkAdmin(request)
-    if ('error' in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: auth.status }
-      )
+    // JWT認証
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const users = await prisma.user.findMany({
@@ -68,12 +43,10 @@ export async function GET(request: NextRequest) {
 // ユーザー新規作成
 export async function POST(request: NextRequest) {
   try {
-    const auth = await checkAdmin(request)
-    if ('error' in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: auth.status }
-      )
+    // JWT認証
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const body = await request.json()
@@ -140,12 +113,10 @@ export async function POST(request: NextRequest) {
 // ユーザー更新（権限変更など）
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await checkAdmin(request)
-    if ('error' in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: auth.status }
-      )
+    // JWT認証
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const body = await request.json()
@@ -191,13 +162,12 @@ export async function PUT(request: NextRequest) {
 // ユーザー削除
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await checkAdmin(request)
-    if ('error' in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: auth.status }
-      )
+    // JWT認証
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
+    const admin = authResult.user
 
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
@@ -210,7 +180,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 自分自身は削除できない
-    if (userId === auth.userId) {
+    if (userId === admin.id) {
       return NextResponse.json(
         { error: '自分自身は削除できません' },
         { status: 400 }

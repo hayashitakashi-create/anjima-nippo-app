@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { notifyReportSubmitted } from '@/lib/notifications'
+import { requireAuth, authErrorResponse } from '@/lib/auth'
 
 export interface WorkReportInput {
   date: string | Date
@@ -48,16 +49,27 @@ export interface WorkReportInput {
   }>
 }
 
-// 作業日報一覧を取得
+// 作業日報一覧を取得（ページネーション対応）
 export async function GET(request: NextRequest) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const searchParams = request.nextUrl.searchParams
     const userId = searchParams.get('userId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const keyword = searchParams.get('keyword')?.trim() || ''
-
     const projectRefId = searchParams.get('projectRefId')
+
+    // ページネーション
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
+    const skip = (page - 1) * limit
+
     const where: any = {}
 
     if (userId) {
@@ -120,31 +132,45 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const workReports = await prisma.workReport.findMany({
-      where,
-      include: {
-        workerRecords: {
-          orderBy: {
-            order: 'asc',
+    // 総件数と一覧を並列取得
+    const [total, workReports] = await Promise.all([
+      prisma.workReport.count({ where }),
+      prisma.workReport.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          workerRecords: {
+            orderBy: {
+              order: 'asc',
+            },
+          },
+          materialRecords: {
+            orderBy: {
+              order: 'asc',
+            },
+          },
+          subcontractorRecords: {
+            orderBy: {
+              order: 'asc',
+            },
           },
         },
-        materialRecords: {
-          orderBy: {
-            order: 'asc',
-          },
+        orderBy: {
+          date: 'desc',
         },
-        subcontractorRecords: {
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-      orderBy: {
-        date: 'desc',
+      }),
+    ])
+
+    return NextResponse.json({
+      reports: workReports,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     })
-
-    return NextResponse.json(workReports)
   } catch (error) {
     console.error('作業日報取得エラー:', error)
     return NextResponse.json(

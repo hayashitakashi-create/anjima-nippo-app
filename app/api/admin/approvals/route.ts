@@ -1,39 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { notifyReportApproved, notifyReportRejected } from '@/lib/notifications'
-
-// 管理者チェック
-async function checkAdmin(request: NextRequest) {
-  const userId = request.cookies.get('userId')?.value
-  if (!userId) return null
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, position: true, role: true },
-  })
-
-  if (!user || user.role !== 'admin') return null
-  return user
-}
+import { requireAdmin, authErrorResponse } from '@/lib/auth'
 
 // 承認待ち日報一覧を取得（管理者用）
 export async function GET(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    // JWT認証
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status') || 'all' // all, pending, approved, rejected
     const includeSubmissionStatus = searchParams.get('includeSubmissionStatus') === 'true'
-    const calendarOffset = parseInt(searchParams.get('calendarOffset') || '0', 10) // 0: 今期, -1: 前期, -2: 前々期...
+    const calendarOffset = parseInt(searchParams.get('calendarOffset') || '0', 10)
 
-    // 承認レコード付きの営業日報を取得
+    // ページネーション対応（デフォルトは全件取得 - 既存フロントとの互換性のため）
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '500', 10), 500)
+    const usePagination = searchParams.get('paginate') === 'true'
+
+    // where条件構築（DBでフィルタリング）
+    const where: any = {}
+    if (status === 'pending') {
+      where.approvals = { some: { status: 'pending' } }
+    } else if (status === 'approved') {
+      where.approvals = { every: { status: 'approved' }, some: {} }
+    } else if (status === 'rejected') {
+      where.approvals = { some: { status: 'rejected' } }
+    }
+
+    // 総件数を取得
+    const total = await prisma.dailyReport.count({ where })
+
+    // 日報一覧を取得（ページネーション対応）
     const reports = await prisma.dailyReport.findMany({
+      where,
+      orderBy: { date: 'desc' },
+      ...(usePagination ? { skip: (page - 1) * limit, take: limit } : {}),
       include: {
         user: {
           select: {
@@ -64,66 +70,43 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { date: 'desc' },
     })
 
-    // ステータスフィルタリング
-    let filteredReports = reports
-    if (status === 'pending') {
-      filteredReports = reports.filter(r =>
-        r.approvals.some(a => a.status === 'pending')
-      )
-    } else if (status === 'approved') {
-      filteredReports = reports.filter(r =>
-        r.approvals.length > 0 && r.approvals.every(a => a.status === 'approved')
-      )
-    } else if (status === 'rejected') {
-      filteredReports = reports.filter(r =>
-        r.approvals.some(a => a.status === 'rejected')
-      )
-    }
-
     // 提出状況サマリーを返す（カレンダー用）
-    // 起算日: 毎月21日（前月21日〜当月20日を1期間とする）
     let submissionStatus = null
     if (includeSubmissionStatus) {
-      const activeUsers = await prisma.user.findMany({
-        where: { isActive: true, role: 'user' },
-        select: { id: true, name: true, position: true },
-        orderBy: { name: 'asc' },
-      })
-
-      // 起算日21日で期間を計算（calendarOffsetで期間をずらす）
+      // アクティブユーザーと期間内日報を並列取得
       const now = new Date()
       const currentDay = now.getDate()
 
       let basePeriodStart: Date
-
       if (currentDay >= 21) {
-        // 今月21日以降の場合: 今月21日が基準
         basePeriodStart = new Date(now.getFullYear(), now.getMonth(), 21)
       } else {
-        // 今月20日以前の場合: 前月21日が基準
         basePeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 21)
       }
 
-      // calendarOffsetを適用（負の値で過去の期間）
       const periodStart = new Date(basePeriodStart.getFullYear(), basePeriodStart.getMonth() + calendarOffset, 21)
       const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 20, 23, 59, 59, 999)
       const displayYear = periodStart.getFullYear()
       const displayMonth = periodStart.getMonth() + 1
 
-      const periodReports = await prisma.dailyReport.findMany({
-        where: {
-          date: {
-            gte: periodStart,
-            lte: periodEnd,
+      // 並列でクエリ実行
+      const [activeUsers, periodReports] = await Promise.all([
+        prisma.user.findMany({
+          where: { isActive: true, role: 'user' },
+          select: { id: true, name: true, position: true },
+          orderBy: { name: 'asc' },
+        }),
+        prisma.dailyReport.findMany({
+          where: {
+            date: { gte: periodStart, lte: periodEnd },
           },
-        },
-        select: { userId: true, date: true },
-      })
+          select: { userId: true, date: true },
+        }),
+      ])
 
-      // ユーザーID→日付→bool のマップを作成
+      // マップ作成
       const submissionMap: Record<string, Record<string, boolean>> = {}
       activeUsers.forEach(u => {
         submissionMap[u.id] = {}
@@ -145,7 +128,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ reports: filteredReports, submissionStatus })
+    return NextResponse.json({
+      reports,
+      submissionStatus,
+      ...(usePagination ? {
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        }
+      } : {}),
+    })
   } catch (error) {
     console.error('承認一覧取得エラー:', error)
     return NextResponse.json(
@@ -158,19 +152,17 @@ export async function GET(request: NextRequest) {
 // 承認・差戻し処理
 export async function PUT(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    // JWT認証
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
+    const admin = authResult.user
 
     const body = await request.json()
     const { approvalId, action, reportId, reportIds } = body
-    // action: 'approve' | 'reject' | 'approve_all' | 'reject_all' | 'bulk_approve' | 'bulk_reject'
 
-    // 複数日報の一括承認/差戻し
+    // 複数日報の一括承認/差戻し（トランザクションで最適化）
     if (action === 'bulk_approve' || action === 'bulk_reject') {
       if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
         return NextResponse.json(
@@ -181,34 +173,33 @@ export async function PUT(request: NextRequest) {
 
       const newStatus = action === 'bulk_approve' ? 'approved' : 'rejected'
 
-      // 各日報の承認レコードを更新
-      for (const rId of reportIds) {
-        await prisma.approval.updateMany({
-          where: { dailyReportId: rId },
+      // トランザクションで一括処理
+      await prisma.$transaction(async (tx) => {
+        await tx.approval.updateMany({
+          where: { dailyReportId: { in: reportIds } },
           data: {
             status: newStatus,
             approverUserId: admin.id,
             approvedAt: newStatus === 'approved' ? new Date() : null,
           },
         })
+      })
 
-        // 通知: 日報作成者に承認/差戻しを通知
-        const report = await prisma.dailyReport.findUnique({
-          where: { id: rId },
-          include: {
-            user: { select: { id: true, name: true } },
-          },
-        })
-        if (report) {
-          const reportDate = new Date(report.date)
-          const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
-          if (action === 'bulk_approve') {
-            notifyReportApproved(report.user.id, dateStr, rId, admin.name).catch(() => {})
-          } else {
-            notifyReportRejected(report.user.id, dateStr, rId, admin.name).catch(() => {})
-          }
+      // 通知は非同期でバックグラウンド処理
+      const reports = await prisma.dailyReport.findMany({
+        where: { id: { in: reportIds } },
+        select: { id: true, date: true, userId: true },
+      })
+
+      reports.forEach(report => {
+        const reportDate = new Date(report.date)
+        const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
+        if (action === 'bulk_approve') {
+          notifyReportApproved(report.userId, dateStr, report.id, admin.name).catch(() => {})
+        } else {
+          notifyReportRejected(report.userId, dateStr, report.id, admin.name).catch(() => {})
         }
-      }
+      })
 
       return NextResponse.json({
         success: true,
@@ -218,7 +209,6 @@ export async function PUT(request: NextRequest) {
     }
 
     if (action === 'approve_all' || action === 'reject_all') {
-      // 日報の全承認レコードを一括更新
       if (!reportId) {
         return NextResponse.json(
           { error: 'reportId は必須です' },
@@ -237,7 +227,6 @@ export async function PUT(request: NextRequest) {
         },
       })
 
-      // 更新後のデータを取得
       const updatedReport = await prisma.dailyReport.findUnique({
         where: { id: reportId },
         include: {
@@ -255,7 +244,6 @@ export async function PUT(request: NextRequest) {
         },
       })
 
-      // 通知: 日報作成者に承認/差戻しを通知
       if (updatedReport) {
         const reportDate = new Date(updatedReport.date)
         const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
@@ -315,7 +303,6 @@ export async function PUT(request: NextRequest) {
       },
     })
 
-    // 通知: 日報作成者に個別承認/差戻しを通知
     const report = await prisma.dailyReport.findUnique({
       where: { id: approval.dailyReportId },
       select: { id: true, date: true, userId: true },

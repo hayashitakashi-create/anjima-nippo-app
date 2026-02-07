@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 
 // 通知一覧を取得
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    // JWT認証
+    const authUser = await getAuthFromRequest(request)
+    if (!authUser) {
       return NextResponse.json({ error: 'ログインしていません' }, { status: 401 })
     }
+    const userId = authUser.id
 
     const searchParams = request.nextUrl.searchParams
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
@@ -39,10 +42,12 @@ export async function GET(request: NextRequest) {
 // 通知を既読にする
 export async function PUT(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    // JWT認証
+    const authUser = await getAuthFromRequest(request)
+    if (!authUser) {
       return NextResponse.json({ error: 'ログインしていません' }, { status: 401 })
     }
+    const userId = authUser.id
 
     const body = await request.json()
     const { notificationId, markAllRead } = body
