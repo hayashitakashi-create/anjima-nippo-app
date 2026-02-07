@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import {
+  createToken,
+  setAuthCookie,
+  checkLoginAttempts,
+  recordLoginFailure,
+  resetLoginAttempts,
+} from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +17,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'ユーザー名とパスワードを入力してください' },
         { status: 400 }
+      )
+    }
+
+    // ログイン試行回数チェック（ユーザー名ベース）
+    const attemptCheck = checkLoginAttempts(username)
+    if (!attemptCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: `ログイン試行回数が上限を超えました。${Math.ceil(attemptCheck.remainingTime! / 60)}分後に再試行してください。`,
+          locked: true,
+          remainingTime: attemptCheck.remainingTime,
+        },
+        { status: 429 }
       )
     }
 
@@ -29,6 +49,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
+      recordLoginFailure(username)
       return NextResponse.json(
         { error: 'ユーザー名またはパスワードが正しくありません' },
         { status: 401 }
@@ -47,13 +68,24 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await bcrypt.compare(password, user.password)
 
     if (!isValidPassword) {
+      recordLoginFailure(username)
       return NextResponse.json(
         { error: 'ユーザー名またはパスワードが正しくありません' },
         { status: 401 }
       )
     }
 
-    // セッション情報をCookieに保存
+    // ログイン成功 - 試行回数リセット
+    resetLoginAttempts(username)
+
+    // JWT トークンを生成
+    const token = await createToken({
+      userId: user.id,
+      role: user.role,
+      name: user.name,
+    })
+
+    // レスポンスを作成
     const response = NextResponse.json({
       user: {
         id: user.id,
@@ -65,12 +97,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // HttpOnly Cookieでユーザー情報を保存（本番環境ではJWTなどを使用推奨）
+    // 新しいJWT Cookieを設定
+    setAuthCookie(response, token)
+
+    // 旧Cookie（userId）も設定（後方互換性のため、徐々に削除予定）
     response.cookies.set('userId', user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30日間
+      maxAge: 60 * 60 * 24 * 30,
+      path: '/',
     })
 
     return response
