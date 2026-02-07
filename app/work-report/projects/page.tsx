@@ -19,7 +19,11 @@ import {
   Briefcase,
   Home,
   Settings,
-  Shield
+  Shield,
+  Archive,
+  CheckCircle2,
+  TrendingUp,
+  Info,
 } from 'lucide-react'
 
 interface Project {
@@ -30,6 +34,7 @@ interface Project {
   client?: string
   location?: string
   status: string
+  progress: number
   reportCount: number
   lastReportDate?: string
 }
@@ -57,6 +62,7 @@ export default function ProjectListPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewProjectModal, setShowNewProjectModal] = useState(false)
+  const [statusTab, setStatusTab] = useState<'active' | 'completed' | 'archived'>('active')
 
   // 新規物件フォーム
   const [newProject, setNewProject] = useState({
@@ -84,11 +90,17 @@ export default function ProjectListPage() {
       .catch(() => router.push('/login'))
 
     // 物件一覧取得
-    fetchProjects()
+    fetchProjects('active')
   }, [router])
 
-  const fetchProjects = () => {
-    fetch('/api/projects?status=active')
+  // タブ切り替え時
+  useEffect(() => {
+    fetchProjects(statusTab)
+  }, [statusTab])
+
+  const fetchProjects = (status: string) => {
+    setLoading(true)
+    fetch(`/api/projects?status=${status}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -305,6 +317,37 @@ export default function ProjectListPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        {/* ステータスタブ */}
+        <div className="flex bg-gray-100 rounded-lg p-0.5 mb-4 w-fit">
+          <button
+            onClick={() => setStatusTab('active')}
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              statusTab === 'active' ? 'bg-white text-[#0E3091] shadow' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            進行中
+          </button>
+          <button
+            onClick={() => setStatusTab('completed')}
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              statusTab === 'completed' ? 'bg-white text-emerald-600 shadow' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            完了
+          </button>
+          <button
+            onClick={() => setStatusTab('archived')}
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              statusTab === 'archived' ? 'bg-white text-gray-700 shadow' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            アーカイブ
+          </button>
+        </div>
+
         {/* 検索 + 新規登録 */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="flex-1 relative">
@@ -374,6 +417,23 @@ export default function ProjectListPage() {
                           </div>
                         </div>
 
+                        {/* 進捗バー */}
+                        <div className="ml-12 mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  project.progress >= 80 ? 'bg-emerald-500' :
+                                  project.progress >= 50 ? 'bg-blue-500' :
+                                  project.progress >= 20 ? 'bg-amber-500' : 'bg-gray-400'
+                                }`}
+                                style={{ width: `${project.progress || 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-gray-600 w-10 text-right">{project.progress || 0}%</span>
+                          </div>
+                        </div>
+
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm text-gray-500 ml-12">
                           {project.projectCode && (
                             <span className="flex items-center gap-1">
@@ -407,15 +467,23 @@ export default function ProjectListPage() {
                         </div>
                       </div>
 
-                      {/* 右：日報作成ボタン */}
-                      <Link
-                        href={`/work-report/new?projectId=${project.id}`}
-                        className="flex-shrink-0 inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] text-white rounded-lg hover:from-[#0a2470] hover:to-[#0E3091] text-xs sm:text-sm font-bold shadow-md transition-all"
-                      >
-                        <FileText className="w-4 h-4" />
-                        <span className="hidden sm:inline">日報作成</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </Link>
+                      {/* 右：ボタン群 */}
+                      <div className="flex flex-col gap-2 flex-shrink-0">
+                        <Link
+                          href={`/work-report/projects/${project.id}`}
+                          className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs sm:text-sm font-medium transition-all"
+                        >
+                          <Info className="w-4 h-4" />
+                          <span className="hidden sm:inline">詳細</span>
+                        </Link>
+                        <Link
+                          href={`/work-report/new?projectId=${project.id}`}
+                          className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] text-white rounded-lg hover:from-[#0a2470] hover:to-[#0E3091] text-xs sm:text-sm font-bold shadow-md transition-all"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span className="hidden sm:inline">日報作成</span>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>

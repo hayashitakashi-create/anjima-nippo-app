@@ -10,7 +10,7 @@
  * 4. 将来の拡張性を考慮した設計
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -28,10 +28,12 @@ import {
   LogOut,
   Home,
   Settings,
-  Shield
+  Shield,
+  RotateCcw
 } from 'lucide-react'
 import VisitRecordCard, { VisitRecordData } from '@/components/VisitRecordCard'
 import { useVisitRecordValidation } from '@/hooks/useVisitRecordValidation'
+import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
 
 interface User {
   id: string
@@ -68,6 +70,50 @@ export default function ImprovedNippoPage() {
     date,
     visitRecords
   })
+
+  // 下書き保存用state
+  const [showDraftBanner, setShowDraftBanner] = useState(false)
+
+  // 下書き自動保存
+  const getFormData = useCallback(() => ({
+    date,
+    specialNotes,
+    visitRecords,
+  }), [date, specialNotes, visitRecords])
+
+  const {
+    hasDraft,
+    draftData,
+    lastSavedAt,
+    clearDraft,
+    dismissDraft,
+  } = useDraftSave('nippo_new', getFormData, !!currentUser)
+
+  // 下書き復元バナー表示
+  useEffect(() => {
+    if (hasDraft && draftData) {
+      setShowDraftBanner(true)
+    }
+  }, [hasDraft, draftData])
+
+  // 下書きを復元
+  const handleRestoreDraft = () => {
+    if (!draftData) return
+    const draft = draftData as { date: string; specialNotes: string; visitRecords: VisitRecordData[] }
+    if (draft.date) setDate(draft.date)
+    if (draft.specialNotes) setSpecialNotes(draft.specialNotes)
+    if (draft.visitRecords && draft.visitRecords.length > 0) {
+      setVisitRecords(draft.visitRecords)
+    }
+    setShowDraftBanner(false)
+    dismissDraft()
+  }
+
+  // 下書きを破棄
+  const handleDiscardDraft = () => {
+    clearDraft()
+    setShowDraftBanner(false)
+  }
 
   // 初期化
   useEffect(() => {
@@ -187,6 +233,9 @@ export default function ImprovedNippoPage() {
         throw new Error('日報の作成に失敗しました')
       }
 
+      // 下書きをクリア
+      clearDraft()
+
       // 成功ダイアログを表示
       setShowSuccessDialog(true)
     } catch (error) {
@@ -304,6 +353,44 @@ export default function ImprovedNippoPage() {
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* 下書き復元バナー */}
+          {showDraftBanner && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <RotateCcw className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-800">前回の入力内容が見つかりました</h3>
+                    <p className="text-sm text-amber-700 mt-0.5">保存されていない下書きがあります。復元しますか？</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="text-amber-400 hover:text-amber-600 ml-2"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center gap-3 mt-3 ml-8">
+                <button
+                  type="button"
+                  onClick={handleRestoreDraft}
+                  className="px-4 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  復元する
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="px-4 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                >
+                  破棄する
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* エラー表示 */}
           {!isValid && errorCount > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -452,8 +539,13 @@ export default function ImprovedNippoPage() {
                 <span>キャンセル</span>
               </button>
 
-              {/* 会社名 */}
-              <div className="order-3 sm:order-none">
+              {/* 自動保存ステータス */}
+              <div className="order-3 sm:order-none text-right">
+                {lastSavedAt && (
+                  <p className="text-xs text-gray-400">
+                    自動保存: {formatDraftTime(lastSavedAt)}
+                  </p>
+                )}
                 <p className="text-sm text-gray-600 font-medium whitespace-nowrap">安島工業株式会社</p>
               </div>
             </div>

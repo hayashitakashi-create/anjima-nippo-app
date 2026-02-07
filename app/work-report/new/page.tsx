@@ -12,7 +12,7 @@
  * 6. 連絡事項
  */
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -35,8 +35,10 @@ import {
   Copy,
   Home,
   Settings,
-  Shield
+  Shield,
+  RotateCcw
 } from 'lucide-react'
+import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
 
 interface User {
   id: string
@@ -183,6 +185,75 @@ function WorkReportNewPageContent() {
 
   // 前日コピー用
   const [copyLoading, setCopyLoading] = useState('')
+
+  // 下書き保存用state
+  const [showDraftBanner, setShowDraftBanner] = useState(false)
+
+  // 下書き自動保存 - 物件IDごとにキーを分ける
+  const draftKey = projectRefId ? `work_report_${projectRefId}` : 'work_report_new'
+  const getFormData = useCallback(() => ({
+    date,
+    projectName,
+    projectType,
+    projectId,
+    weather,
+    workerRecords,
+    materialRecords,
+    subcontractorRecords,
+    remoteDepartureTime,
+    remoteArrivalTime,
+    remoteDepartureTime2,
+    remoteArrivalTime2,
+    trafficGuardCount,
+    trafficGuardStart,
+    trafficGuardEnd,
+    contactNotes,
+  }), [date, projectName, projectType, projectId, weather, workerRecords, materialRecords, subcontractorRecords, remoteDepartureTime, remoteArrivalTime, remoteDepartureTime2, remoteArrivalTime2, trafficGuardCount, trafficGuardStart, trafficGuardEnd, contactNotes])
+
+  const {
+    hasDraft,
+    draftData,
+    lastSavedAt,
+    clearDraft,
+    dismissDraft,
+  } = useDraftSave(draftKey, getFormData, !!currentUser)
+
+  // 下書き復元バナー表示
+  useEffect(() => {
+    if (hasDraft && draftData) {
+      setShowDraftBanner(true)
+    }
+  }, [hasDraft, draftData])
+
+  // 下書きを復元
+  const handleRestoreDraft = () => {
+    if (!draftData) return
+    const draft = draftData as any
+    if (draft.date) setDate(draft.date)
+    if (draft.projectName && !projectLoaded) setProjectName(draft.projectName)
+    if (draft.projectType && !projectLoaded) setProjectType(draft.projectType)
+    if (draft.projectId && !projectLoaded) setProjectId(draft.projectId)
+    if (draft.weather) setWeather(draft.weather)
+    if (draft.workerRecords?.length > 0) setWorkerRecords(draft.workerRecords)
+    if (draft.materialRecords?.length > 0) setMaterialRecords(draft.materialRecords)
+    if (draft.subcontractorRecords?.length > 0) setSubcontractorRecords(draft.subcontractorRecords)
+    if (draft.remoteDepartureTime) setRemoteDepartureTime(draft.remoteDepartureTime)
+    if (draft.remoteArrivalTime) setRemoteArrivalTime(draft.remoteArrivalTime)
+    if (draft.remoteDepartureTime2) setRemoteDepartureTime2(draft.remoteDepartureTime2)
+    if (draft.remoteArrivalTime2) setRemoteArrivalTime2(draft.remoteArrivalTime2)
+    if (draft.trafficGuardCount) setTrafficGuardCount(draft.trafficGuardCount)
+    if (draft.trafficGuardStart) setTrafficGuardStart(draft.trafficGuardStart)
+    if (draft.trafficGuardEnd) setTrafficGuardEnd(draft.trafficGuardEnd)
+    if (draft.contactNotes) setContactNotes(draft.contactNotes)
+    setShowDraftBanner(false)
+    dismissDraft()
+  }
+
+  // 下書きを破棄
+  const handleDiscardDraft = () => {
+    clearDraft()
+    setShowDraftBanner(false)
+  }
 
   // 初期化
   useEffect(() => {
@@ -379,6 +450,9 @@ function WorkReportNewPageContent() {
       if (!response.ok) {
         throw new Error('作業日報の作成に失敗しました')
       }
+
+      // 下書きをクリア
+      clearDraft()
 
       setShowSuccessDialog(true)
     } catch (error) {
@@ -637,6 +711,44 @@ function WorkReportNewPageContent() {
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          {/* 下書き復元バナー */}
+          {showDraftBanner && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <RotateCcw className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-800">前回の入力内容が見つかりました</h3>
+                    <p className="text-sm text-amber-700 mt-0.5">保存されていない下書きがあります。復元しますか？</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="text-amber-400 hover:text-amber-600 ml-2"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center gap-3 mt-3 ml-8">
+                <button
+                  type="button"
+                  onClick={handleRestoreDraft}
+                  className="px-4 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  復元する
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="px-4 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                >
+                  破棄する
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* 基本情報カード */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200/50">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg border-b">
@@ -1410,6 +1522,11 @@ function WorkReportNewPageContent() {
 
           {/* フッター */}
           <div className="mt-6 sm:mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            {lastSavedAt && (
+              <p className="text-xs text-gray-400 text-center mb-3">
+                自動保存: {formatDraftTime(lastSavedAt)}
+              </p>
+            )}
             <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <button
                 type="submit"

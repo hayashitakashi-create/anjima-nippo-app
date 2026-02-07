@@ -23,8 +23,9 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  dailyReports DailyReport[]
-  approvals    Approval[]
+  dailyReports  DailyReport[]
+  approvals     Approval[]
+  notifications Notification[]
 }
 
 // 日報
@@ -79,7 +80,11 @@ model Project {
   projectCode String?  // 工事番号
   client      String?  // 発注者
   location    String?  // 現場住所
-  status      String   @default("active") // active, completed
+  status      String   @default("active") // active, completed, archived
+  progress    Int      @default(0) // 進捗率 (0-100)
+  startDate   DateTime? // 工期開始日
+  endDate     DateTime? // 工期終了日
+  notes       String?  // 備考
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -160,4 +165,17 @@ model SubcontractorRecord {
   order         Int        // 表示順序
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+}
+
+// 通知
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   // 通知先ユーザー
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // report_submitted, report_approved, report_rejected, reminder
+  title     String   // 通知タイトル
+  message   String   // 通知メッセージ
+  linkUrl   String?  // リンク先URL
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

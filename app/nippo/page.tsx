@@ -15,6 +15,10 @@ import {
   Clock,
   Building2,
   Shield,
+  Search,
+  X,
+  Filter,
+  Calendar,
 } from 'lucide-react'
 
 interface Approval {
@@ -100,6 +104,17 @@ export default function NippoListPage() {
   const [loading, setLoading] = useState(true)
   const [reportType, setReportType] = useState<'sales' | 'work'>('work')
 
+  // 検索状態
+  const [viewMode, setViewMode] = useState<'calendar' | 'search'>('calendar')
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [searchStartDate, setSearchStartDate] = useState('')
+  const [searchEndDate, setSearchEndDate] = useState('')
+  const [searchResults, setSearchResults] = useState<{
+    sales: DailyReport[]
+    work: WorkReport[]
+  }>({ sales: [], work: [] })
+  const [searching, setSearching] = useState(false)
+
   // カレンダー状態
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date()
@@ -168,6 +183,46 @@ export default function NippoListPage() {
     } catch (error) {
       console.error('ログアウトエラー:', error)
     }
+  }
+
+  // 検索実行
+  const handleSearch = async () => {
+    if (!currentUser) return
+    setSearching(true)
+
+    try {
+      const params = new URLSearchParams()
+      if (searchKeyword) params.set('keyword', searchKeyword)
+      if (searchStartDate) params.set('startDate', searchStartDate)
+      if (searchEndDate) params.set('endDate', searchEndDate)
+
+      // 営業日報検索
+      const salesRes = await fetch(`/api/nippo/list?${params.toString()}`)
+      const salesData = await salesRes.json()
+
+      // 作業日報検索
+      params.set('userId', currentUser.id)
+      const workRes = await fetch(`/api/work-report?${params.toString()}`)
+      const workData = await workRes.json()
+
+      setSearchResults({
+        sales: salesData?.reports || [],
+        work: Array.isArray(workData) ? workData : [],
+      })
+      setViewMode('search')
+    } catch (error) {
+      console.error('検索エラー:', error)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const clearSearch = () => {
+    setSearchKeyword('')
+    setSearchStartDate('')
+    setSearchEndDate('')
+    setSearchResults({ sales: [], work: [] })
+    setViewMode('calendar')
   }
 
   // カレンダーの日付配列を生成
@@ -431,6 +486,237 @@ export default function NippoListPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-3 py-4 sm:px-6 sm:py-6">
+        {/* 検索バー */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 p-4">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSearch() }}
+            className="space-y-3"
+          >
+            {/* キーワード検索 */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                placeholder={reportType === 'sales' ? '訪問先、営業内容、面接者で検索...' : '案件名、工種、作業者名で検索...'}
+                className="w-full pl-10 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              {(searchKeyword || searchStartDate || searchEndDate) && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* 期間指定 */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <input
+                  type="date"
+                  value={searchStartDate}
+                  onChange={(e) => setSearchStartDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="開始日"
+                />
+              </div>
+              <span className="text-gray-400 text-sm">〜</span>
+              <div className="flex-1">
+                <input
+                  type="date"
+                  value={searchEndDate}
+                  onChange={(e) => setSearchEndDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="終了日"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={searching || (!searchKeyword && !searchStartDate && !searchEndDate)}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${
+                  reportType === 'sales' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-[#0E3091] hover:bg-[#0a2470]'
+                }`}
+              >
+                {searching ? '...' : '検索'}
+              </button>
+            </div>
+          </form>
+
+          {/* 検索モード時: カレンダーに戻るボタン */}
+          {viewMode === 'search' && (
+            <button
+              onClick={clearSearch}
+              className="mt-3 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+            >
+              <Calendar className="w-4 h-4" />
+              カレンダー表示に戻る
+            </button>
+          )}
+        </div>
+
+        {/* 検索結果表示 */}
+        {viewMode === 'search' && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-gray-700 flex items-center gap-1">
+                <Search className="w-4 h-4" />
+                検索結果:
+                {reportType === 'sales'
+                  ? ` ${searchResults.sales.length}件`
+                  : ` ${searchResults.work.length}件`
+                }
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              {reportType === 'sales' ? (
+                searchResults.sales.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                    <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">条件に一致する営業日報はありません</p>
+                  </div>
+                ) : (
+                  searchResults.sales.map((report) => {
+                    const status = getApprovalStatus(report)
+                    const destinations = report.visitRecords
+                      .map(v => v.destination)
+                      .filter(Boolean)
+
+                    return (
+                      <Link
+                        key={report.id}
+                        href={`/nippo/${report.id}`}
+                        className={`block bg-white rounded-xl border border-gray-200 overflow-hidden transition-all hover:shadow-md hover:${themeBorder}`}
+                      >
+                        <div className={`h-1 ${themeBg}`} />
+                        <div className="p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <p className="text-base font-bold text-gray-900">
+                                {formatDateDisplay(report.date)}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">{report.user.name}</p>
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusStyle(status)}`}>
+                              {status}
+                            </span>
+                          </div>
+
+                          {destinations.length > 0 && (
+                            <div className="mt-3 space-y-1.5">
+                              {destinations.map((dest, i) => {
+                                const visit = report.visitRecords[i]
+                                return (
+                                  <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                                    <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                    <span>{dest}</span>
+                                    {visit?.startTime && visit?.endTime && (
+                                      <span className="flex items-center gap-1 text-xs text-gray-400 ml-auto">
+                                        <Clock className="w-3 h-3" />
+                                        {visit.startTime}〜{visit.endTime}
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {report.specialNotes && (
+                            <p className="mt-2 text-xs text-gray-500 line-clamp-2 bg-gray-50 rounded-lg p-2">
+                              {report.specialNotes}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    )
+                  })
+                )
+              ) : (
+                searchResults.work.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                    <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">条件に一致する作業日報はありません</p>
+                  </div>
+                ) : (
+                  searchResults.work.map((report) => (
+                    <Link
+                      key={report.id}
+                      href={`/work-report/${report.id}`}
+                      className="block bg-white rounded-xl border border-gray-200 overflow-hidden transition-all hover:shadow-md hover:border-[#0E3091]"
+                    >
+                      <div className={`h-1 ${themeBg}`} />
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="text-base font-bold text-gray-900">
+                              {report.projectName}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {formatDateDisplay(report.date)}
+                              {report.weather && ` / ${report.weather}`}
+                            </p>
+                          </div>
+                          {report.projectType && (
+                            <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-50 text-[#0E3091]">
+                              {report.projectType}
+                            </span>
+                          )}
+                        </div>
+
+                        {report.workerRecords.length > 0 && (
+                          <div className="mt-3">
+                            <div className="flex flex-wrap gap-1.5">
+                              {report.workerRecords.slice(0, 5).map((worker) => (
+                                <span
+                                  key={worker.id}
+                                  className="inline-flex items-center text-xs bg-gray-100 text-gray-700 rounded-full px-2 py-0.5"
+                                >
+                                  {worker.name}
+                                </span>
+                              ))}
+                              {report.workerRecords.length > 5 && (
+                                <span className="text-xs text-gray-400">
+                                  +{report.workerRecords.length - 5}名
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {report.contactNotes && (
+                          <p className="mt-2 text-xs text-gray-500 line-clamp-2 bg-gray-50 rounded-lg p-2">
+                            {report.contactNotes}
+                          </p>
+                        )}
+
+                        <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
+                          {report.workerRecords.length > 0 && (
+                            <span>作業者 {report.workerRecords.length}名</span>
+                          )}
+                          {report.materialRecords.length > 0 && (
+                            <span>材料 {report.materialRecords.length}件</span>
+                          )}
+                          {report.subcontractorRecords.length > 0 && (
+                            <span>外注 {report.subcontractorRecords.length}件</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                )
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* カレンダー（検索モードでない時のみ表示） */}
+        {viewMode === 'calendar' && (
+        <>
         {/* カレンダー */}
         <div
           className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden"
@@ -619,9 +905,10 @@ export default function NippoListPage() {
               </div>
             ) : (
               selectedDateWorkReports.map((report) => (
-                <div
+                <Link
                   key={report.id}
-                  className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+                  href={`/work-report/${report.id}`}
+                  className="block bg-white rounded-xl border border-gray-200 overflow-hidden transition-all hover:shadow-md hover:border-[#0E3091]"
                 >
                   <div className={`h-1 ${themeBg}`} />
                   <div className="p-4">
@@ -683,11 +970,13 @@ export default function NippoListPage() {
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))
             )
           )}
         </div>
+        </>
+        )}
       </main>
     </div>
   )

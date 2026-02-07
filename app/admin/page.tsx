@@ -14,6 +14,8 @@ import {
   ChevronUp,
   Save,
   UserCog,
+  CheckCircle,
+  FileText,
 } from 'lucide-react'
 
 interface User {
@@ -275,6 +277,38 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 管理メニュー */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+          <Link
+            href="/admin/approvals"
+            className="group bg-white rounded-xl border border-slate-200 p-4 sm:p-5 hover:shadow-md hover:border-purple-300 transition-all"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">承認管理</p>
+                <p className="text-xs text-gray-500">営業日報の承認・差戻し</p>
+              </div>
+            </div>
+          </Link>
+          <Link
+            href="/nippo"
+            className="group bg-white rounded-xl border border-slate-200 p-4 sm:p-5 hover:shadow-md hover:border-purple-300 transition-all"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">日報一覧</p>
+                <p className="text-xs text-gray-500">すべての日報を確認</p>
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* ユーザー一覧 */}

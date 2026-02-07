@@ -19,7 +19,8 @@ import {
   LogOut,
   User,
   Building2,
-  Shield
+  Shield,
+  BarChart3
 } from 'lucide-react'
 
 interface User {
@@ -45,6 +46,11 @@ interface Stats {
   approved: number
 }
 
+interface UnsubmittedData {
+  salesUnsubmitted: Array<{ id: string; name: string }>
+  workUnsubmitted: Array<{ id: string; name: string }>
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -64,6 +70,8 @@ export default function DashboardPage() {
     pendingApproval: 0,
     approved: 0
   })
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [unsubmitted, setUnsubmitted] = useState<UnsubmittedData | null>(null)
 
   useEffect(() => {
     // ユーザー情報取得
@@ -123,11 +131,29 @@ export default function DashboardPage() {
       .catch(error => {
         console.error('営業日報取得エラー:', error)
       })
+
+    // 通知の未読数取得
+    fetch('/api/notifications?limit=1')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) setUnreadCount(data.unreadCount || 0)
+      })
+      .catch(() => {})
   }, [router])
 
-  // 作業日報取得（ユーザー情報取得後）
+  // 作業日報取得 + 管理者向け未提出者情報取得（ユーザー情報取得後）
   useEffect(() => {
     if (!currentUser) return
+
+    // 管理者なら未提出者情報を取得
+    if (currentUser.role === 'admin') {
+      fetch('/api/notifications/unsubmitted')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) setUnsubmitted(data)
+        })
+        .catch(() => {})
+    }
 
     fetch(`/api/work-report?userId=${currentUser.id}`)
       .then(res => {
@@ -286,6 +312,18 @@ export default function DashboardPage() {
                 </Link>
               )}
               <Link
+                href="/notifications"
+                className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="通知"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+              <Link
                 href="/settings"
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 title="設定"
@@ -319,6 +357,51 @@ export default function DashboardPage() {
             </h2>
             <p className="text-sm sm:text-base text-gray-600">今日も一日頑張りましょう！</p>
           </motion.div>
+
+          {/* 管理者向け: 未提出リマインダー */}
+          {currentUser?.role === 'admin' && unsubmitted && (
+            (unsubmitted.salesUnsubmitted.length > 0 || unsubmitted.workUnsubmitted.length > 0) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+                className="mb-6 bg-orange-50 border border-orange-200 rounded-xl p-4 sm:p-5"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-orange-800 mb-2">本日の日報未提出者</h3>
+                    <div className="space-y-2">
+                      {unsubmitted.salesUnsubmitted.length > 0 && (
+                        <div>
+                          <span className="text-sm font-medium text-orange-700">営業日報: </span>
+                          <span className="text-sm text-orange-600">
+                            {unsubmitted.salesUnsubmitted.map(u => u.name).join('、')}
+                          </span>
+                          <span className="text-xs text-orange-500 ml-1">
+                            ({unsubmitted.salesUnsubmitted.length}名)
+                          </span>
+                        </div>
+                      )}
+                      {unsubmitted.workUnsubmitted.length > 0 && (
+                        <div>
+                          <span className="text-sm font-medium text-orange-700">作業日報: </span>
+                          <span className="text-sm text-orange-600">
+                            {unsubmitted.workUnsubmitted.map(u => u.name).join('、')}
+                          </span>
+                          <span className="text-xs text-orange-500 ml-1">
+                            ({unsubmitted.workUnsubmitted.length}名)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )
+          )}
 
           {/* 12列グリッド */}
           <div className="grid grid-cols-12 gap-4 sm:gap-6">
@@ -452,9 +535,12 @@ export default function DashboardPage() {
                           transition={{ duration: 0.3, delay: index * 0.05 }}
                         >
                           {isWork ? (
-                            <div className="p-4 rounded-lg border border-slate-200 bg-white">
+                            <Link
+                              href={`/work-report/${report.id}`}
+                              className={`block p-4 rounded-lg border border-slate-200 transition-all group hover:border-[#0E3091]`}
+                            >
                               {content}
-                            </div>
+                            </Link>
                           ) : (
                             <Link
                               href={`/nippo/${report.id}`}
@@ -556,6 +642,39 @@ export default function DashboardPage() {
               >
                 <h3 className="text-lg font-bold text-gray-900 mb-4">クイックリンク</h3>
                 <div className="space-y-2">
+                  <Link
+                    href="/notifications"
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors group"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Bell className={`w-5 h-5 text-gray-400 transition-colors ${
+                        reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
+                      }`} />
+                      <span className={`text-gray-700 transition-colors ${
+                        reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
+                      }`}>
+                        通知
+                      </span>
+                    </div>
+                    {unreadCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                  <Link
+                    href="/analytics"
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group"
+                  >
+                    <BarChart3 className={`w-5 h-5 text-gray-400 transition-colors ${
+                      reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
+                    }`} />
+                    <span className={`text-gray-700 transition-colors ${
+                      reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
+                    }`}>
+                      分析ダッシュボード
+                    </span>
+                  </Link>
                   <Link
                     href="/settings"
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group"

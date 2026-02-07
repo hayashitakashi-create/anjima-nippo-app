@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { notifyReportSubmitted } from '@/lib/notifications'
 
 export interface WorkReportInput {
   date: string | Date
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const keyword = searchParams.get('keyword')?.trim() || ''
 
     const projectRefId = searchParams.get('projectRefId')
     const where: any = {}
@@ -66,11 +68,56 @@ export async function GET(request: NextRequest) {
       where.projectRefId = projectRefId
     }
 
-    if (startDate && endDate) {
-      where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+    // 期間フィルター
+    if (startDate || endDate) {
+      where.date = {}
+      if (startDate) where.date.gte = new Date(startDate)
+      if (endDate) {
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59, 999)
+        where.date.lte = end
       }
+    }
+
+    // キーワード検索（案件名、工事種別、工事番号、連絡事項、作業者名、工種、材料名、外注先名）
+    if (keyword) {
+      where.OR = [
+        { projectName: { contains: keyword } },
+        { projectType: { contains: keyword } },
+        { projectId: { contains: keyword } },
+        { contactNotes: { contains: keyword } },
+        {
+          workerRecords: {
+            some: {
+              OR: [
+                { name: { contains: keyword } },
+                { workType: { contains: keyword } },
+                { details: { contains: keyword } },
+              ]
+            }
+          }
+        },
+        {
+          materialRecords: {
+            some: {
+              OR: [
+                { name: { contains: keyword } },
+                { subcontractor: { contains: keyword } },
+              ]
+            }
+          }
+        },
+        {
+          subcontractorRecords: {
+            some: {
+              OR: [
+                { name: { contains: keyword } },
+                { workContent: { contains: keyword } },
+              ]
+            }
+          }
+        },
+      ]
     }
 
     const workReports = await prisma.workReport.findMany({
@@ -182,6 +229,17 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // 通知: 管理者に日報提出を通知（非同期・エラーは握りつぶす）
+    const user = await prisma.user.findUnique({
+      where: { id: body.userId },
+      select: { name: true },
+    })
+    if (user) {
+      const reportDate = new Date(body.date)
+      const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
+      notifyReportSubmitted(user.name, dateStr, workReport.id, 'work').catch(() => {})
+    }
 
     return NextResponse.json(workReport, { status: 201 })
   } catch (error) {

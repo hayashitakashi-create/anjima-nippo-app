@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { DailyReportInput } from '@/lib/types'
+import { notifyReportSubmitted } from '@/lib/notifications'
 
 // 日報一覧を取得
 export async function GET(request: NextRequest) {
@@ -111,6 +112,16 @@ export async function POST(request: NextRequest) {
         approvals: true,
       },
     })
+
+    // 通知: 管理者に日報提出を通知（非同期・エラーは握りつぶす）
+    const reportDate = new Date(body.date)
+    const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
+    notifyReportSubmitted(
+      dailyReport.user.name,
+      dateStr,
+      dailyReport.id,
+      'sales'
+    ).catch(() => {})
 
     return NextResponse.json(dailyReport, { status: 201 })
   } catch (error) {

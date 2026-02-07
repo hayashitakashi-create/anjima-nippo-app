@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { VisitRecordInput } from '@/lib/types'
-import { Home, Settings, LogOut, Building2, Shield } from 'lucide-react'
+import { Home, Settings, LogOut, Building2, Shield, CheckCircle, XCircle, Clock, Trash2, Printer } from 'lucide-react'
 
 // CSSアニメーション定義用のスタイル
 const styles = `
@@ -48,6 +48,16 @@ export default function EditNippoPage() {
   const [loading, setLoading] = useState(false)
   const [reportType, setReportType] = useState<'sales' | 'work'>('work')
   const [showCharacter, setShowCharacter] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [approvals, setApprovals] = useState<Array<{
+    id: string
+    approverRole: string
+    status: string
+    approverUserId?: string
+    approvedAt?: string
+    approver?: { name: string; position?: string }
+  }>>([])
 
   const [formData, setFormData] = useState({
     date: '',
@@ -56,12 +66,7 @@ export default function EditNippoPage() {
   })
 
   const [visitRecords, setVisitRecords] = useState<VisitRecordInput[]>([
-    { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 0 },
-    { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 1 },
-    { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 2 },
-    { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 3 },
-    { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 4 },
-    { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 5 }
+    { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 0 }
   ])
 
   // 30分刻みの時刻オプションを生成（絶対に必要）
@@ -120,7 +125,7 @@ export default function EditNippoPage() {
           specialNotes: data.specialNotes || '',
         })
 
-        // 訪問記録を設定（最低6行を確保）
+        // 訪問記録を設定
         const loadedRecords = data.visitRecords.map((record: any, index: number) => ({
           destination: record.destination || '',
           contactPerson: record.contactPerson || '',
@@ -131,8 +136,8 @@ export default function EditNippoPage() {
           order: index
         }))
 
-        // 6行未満の場合は空行を追加
-        while (loadedRecords.length < 6) {
+        // 最低1行を確保
+        if (loadedRecords.length === 0) {
           loadedRecords.push({
             destination: '',
             contactPerson: '',
@@ -140,11 +145,16 @@ export default function EditNippoPage() {
             endTime: '09:00',
             content: '',
             expense: undefined,
-            order: loadedRecords.length
+            order: 0
           })
         }
 
         setVisitRecords(loadedRecords)
+
+        // 承認情報を設定
+        if (data.approvals) {
+          setApprovals(data.approvals)
+        }
       })
       .catch(error => {
         console.error('日報取得エラー:', error)
@@ -250,6 +260,26 @@ export default function EditNippoPage() {
     router.push('/settings')
   }
 
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/nippo/${reportId}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || '削除に失敗しました')
+      }
+      router.push('/nippo')
+    } catch (error: any) {
+      console.error('削除エラー:', error)
+      alert(error.message || '日報の削除に失敗しました')
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
   return (
     <>
       <style>{styles}</style>
@@ -271,6 +301,39 @@ export default function EditNippoPage() {
                 animation: 'fadeIn 0.5s ease-in'
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* 削除確認ダイアログ */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
+              <Trash2 className="w-7 h-7 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              日報を削除しますか？
+            </h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              この操作は取り消せません。訪問記録や承認情報も全て削除されます。
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="w-full px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {deleting ? '削除中...' : '削除する'}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -520,11 +583,87 @@ export default function EditNippoPage() {
             <div className="text-xs text-gray-500 mt-1 text-right">{(formData.specialNotes || '').length} / 500文字</div>
           </div>
 
+          {/* 承認ステータス */}
+          {approvals.length > 0 && (
+            <div className="bg-white shadow rounded-lg p-8">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">承認状況</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {approvals.map((approval) => {
+                  const roleLabels: Record<string, string> = {
+                    president: '社長',
+                    executive_vice_president: '専務',
+                    managing_director: '常務',
+                    department_manager: '部長',
+                  }
+                  const roleLabel = roleLabels[approval.approverRole] || approval.approverRole
+
+                  let statusIcon, statusLabel, statusStyle
+                  switch (approval.status) {
+                    case 'approved':
+                      statusIcon = <CheckCircle className="w-5 h-5 text-green-500" />
+                      statusLabel = '承認済み'
+                      statusStyle = 'bg-green-50 border-green-200 text-green-800'
+                      break
+                    case 'rejected':
+                      statusIcon = <XCircle className="w-5 h-5 text-red-500" />
+                      statusLabel = '差戻し'
+                      statusStyle = 'bg-red-50 border-red-200 text-red-800'
+                      break
+                    default:
+                      statusIcon = <Clock className="w-5 h-5 text-yellow-500" />
+                      statusLabel = '承認待ち'
+                      statusStyle = 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                  }
+
+                  return (
+                    <div
+                      key={approval.id}
+                      className={`flex items-center justify-between p-4 rounded-lg border ${statusStyle}`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        {statusIcon}
+                        <div>
+                          <div className="font-medium">{roleLabel}</div>
+                          {approval.approver && (
+                            <div className="text-xs opacity-75">
+                              {approval.approver.name}
+                              {approval.approvedAt && (
+                                <span className="ml-2">
+                                  ({new Date(approval.approvedAt).toLocaleDateString('ja-JP')})
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm font-medium">{statusLabel}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* フッター */}
           <div className="bg-white shadow rounded-lg p-8">
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                安島工業株式会社
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/nippo/${reportId}/print`}
+                  target="_blank"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  印刷 / PDF
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  削除
+                </button>
               </div>
               <div className="space-x-4">
                 <button
