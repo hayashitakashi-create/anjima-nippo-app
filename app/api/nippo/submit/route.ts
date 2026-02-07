@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { reportIds } = await request.json()
+    const body = await request.json()
+    const { reportIds, approvalRouteId } = body
 
     if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
       return NextResponse.json(
@@ -51,18 +52,58 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 承認ルートから承認者役職リストを取得
+    let approvalRoles: string[] = []
+    let routeId: string | undefined = undefined
+
+    if (approvalRouteId) {
+      const route = await prisma.approvalRoute.findUnique({
+        where: { id: approvalRouteId },
+      })
+      if (route && route.isActive) {
+        approvalRoles = JSON.parse(route.roles)
+        routeId = route.id
+      }
+    }
+
+    if (approvalRoles.length === 0) {
+      const defaultRoute = await prisma.approvalRoute.findFirst({
+        where: { isDefault: true, isActive: true },
+      })
+      if (defaultRoute) {
+        approvalRoles = JSON.parse(defaultRoute.roles)
+        routeId = defaultRoute.id
+      }
+    }
+
+    if (approvalRoles.length === 0) {
+      // フォールバック
+      approvalRoles = ['社長', '専務', '常務', '部長']
+    }
+
     // 各日報に対して承認レコードを作成
-    // TODO: 承認者の設定は今後管理画面で設定できるようにする
-    // 現在は仮で「部長」に申請する設定
-    const approvalRecords = reportIds.map(reportId => ({
-      dailyReportId: reportId,
-      approverRole: '部長',
-      status: 'pending',
-    }))
+    const approvalRecords: { dailyReportId: string; approverRole: string; status: string }[] = []
+    for (const reportId of reportIds) {
+      for (const role of approvalRoles) {
+        approvalRecords.push({
+          dailyReportId: reportId,
+          approverRole: role,
+          status: 'pending',
+        })
+      }
+    }
 
     await prisma.approval.createMany({
       data: approvalRecords
     })
+
+    // 承認ルートIDを日報に記録
+    if (routeId) {
+      await prisma.dailyReport.updateMany({
+        where: { id: { in: reportIds } },
+        data: { approvalRouteId: routeId },
+      })
+    }
 
     return NextResponse.json({
       success: true,

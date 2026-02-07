@@ -19,6 +19,7 @@ model User {
   password          String            // ハッシュ化されたパスワード
   position          String?           // 役職(社長、専務、常務、部長など)
   role              String   @default("user") // ユーザー権限 (admin/user)
+  isActive          Boolean  @default(true)   // アカウント有効/無効
   defaultReportType String   @default("work") // デフォルト日報タイプ (sales: 営業日報, work: 作業日報)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -30,13 +31,15 @@ model User {
 
 // 日報
 model DailyReport {
-  id            String   @id @default(cuid())
-  date          DateTime // 日報の日付
-  userId        String   // 作成者
-  user          User     @relation(fields: [userId], references: [id])
-  specialNotes  String?  // 特記事項
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  date            DateTime // 日報の日付
+  userId          String   // 作成者
+  user            User     @relation(fields: [userId], references: [id])
+  specialNotes    String?  // 特記事項
+  approvalRouteId String?  // 使用した承認ルート
+  approvalRoute   ApprovalRoute? @relation(fields: [approvalRouteId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   visitRecords  VisitRecord[]
   approvals     Approval[]
@@ -56,6 +59,20 @@ model VisitRecord {
   order           Int      // 表示順序
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// 承認ルート（承認フロー定義）
+model ApprovalRoute {
+  id          String   @id @default(cuid())
+  name        String   // ルート名（例: 「社長決裁」「部長決裁」）
+  roles       String   // JSON配列: 承認に含まれる役職リスト（例: '["社長","専務","常務","部長"]'）
+  isDefault   Boolean  @default(false) // デフォルトルートかどうか
+  order       Int      @default(0) // 表示順序
+  isActive    Boolean  @default(true) // 有効/無効
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dailyReports DailyReport[]
 }
 
 // 承認
@@ -167,6 +184,26 @@ model SubcontractorRecord {
   updatedAt     DateTime   @updatedAt
 }
 
+// 操作ログ
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String   // 操作者
+  action     String   // 操作種別 (user_created, user_updated, user_deleted, user_deactivated, project_created, etc.)
+  targetType String   // 対象タイプ (user, project, nippo, work_report, system)
+  targetId   String?  // 対象ID
+  details    String?  // 操作詳細 (JSON文字列)
+  ipAddress  String?  // IPアドレス
+  createdAt  DateTime @default(now())
+}
+
+// システム設定
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // 設定キー
+  value     String   // 設定値 (JSON文字列)
+  updatedAt DateTime @updatedAt
+}
+
 // 通知
 model Notification {
   id        String   @id @default(cuid())
@@ -178,4 +215,34 @@ model Notification {
   linkUrl   String?  // リンク先URL
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// 使用材料マスタ
+model Material {
+  id            String   @id @default(cuid())
+  name          String   // 材料名
+  defaultVolume String?  // デフォルト容量（例: 20kg, 14kg）
+  defaultUnit   String?  // デフォルト単位（ℓ、kg、m、本など）
+  isActive      Boolean  @default(true) // 有効/無効
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// 外注先マスタ
+model Subcontractor {
+  id        String   @id @default(cuid())
+  name      String   // 外注先名
+  isActive  Boolean  @default(true) // 有効/無効
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 工事種別マスタ
+model ProjectType {
+  id        String   @id @default(cuid())
+  name      String   // 工事種別名
+  order     Int      @default(0) // 表示順序
+  isActive  Boolean  @default(true) // 有効/無効
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

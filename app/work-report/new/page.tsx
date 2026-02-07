@@ -76,14 +76,13 @@ interface SubcontractorRecord {
   workContent: string
 }
 
-// マスタデータ
-const PROJECT_TYPES = [
+// マスタデータ（APIから取得できなかった場合のフォールバック）
+const DEFAULT_PROJECT_TYPES = [
   '建築塗装工事',
   '鋼橋塗装工事',
   '防水工事',
   '建築工事',
   '区画線工事',
-  'とび土工工事'
 ]
 
 const WORKER_NAMES = [
@@ -117,6 +116,13 @@ const generateTimeOptions = (): string[] => {
 }
 const TIME_OPTIONS = generateTimeOptions()
 
+// 全角数字を半角に変換
+const toHalfWidth = (str: string): string => {
+  return str.replace(/[０-９]/g, (s) => {
+    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
+  }).replace(/[．]/g, '.').replace(/[，]/g, ',')
+}
+
 function WorkReportNewPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -125,6 +131,12 @@ function WorkReportNewPageContent() {
   const [loading, setLoading] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [projectLoaded, setProjectLoaded] = useState(false)
+
+  // 使用材料マスタから取得したリスト
+  const [materialMasterList, setMaterialMasterList] = useState<string[]>([])
+
+  // 工事種別マスタから取得したリスト
+  const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
 
   // 基本情報
   const [date, setDate] = useState('')
@@ -274,6 +286,41 @@ function WorkReportNewPageContent() {
         console.error('ユーザー取得エラー:', error)
         router.push('/login')
       })
+
+    // 使用材料マスタを取得
+    fetch('/api/admin/materials')
+      .then(res => {
+        if (res.ok) return res.json()
+        return null
+      })
+      .then(data => {
+        if (data?.materials) {
+          setMaterialMasterList(
+            data.materials
+              .filter((m: any) => m.isActive)
+              .map((m: any) => m.name)
+          )
+        }
+      })
+      .catch(err => console.error('材料マスタ取得エラー:', err))
+
+    // 工事種別マスタを取得
+    fetch('/api/admin/project-types')
+      .then(res => {
+        if (res.ok) return res.json()
+        return null
+      })
+      .then(data => {
+        if (data?.projectTypes) {
+          const activeTypes = data.projectTypes
+            .filter((pt: any) => pt.isActive)
+            .map((pt: any) => pt.name)
+          if (activeTypes.length > 0) {
+            setProjectTypesList(activeTypes)
+          }
+        }
+      })
+      .catch(err => console.error('工事種別マスタ取得エラー:', err))
 
     // 今日の日付をデフォルトに設定
     const today = new Date()
@@ -710,7 +757,16 @@ function WorkReportNewPageContent() {
       </header>
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            // Enterキーでの送信を防止（textareaは除外）
+            if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'TEXTAREA') {
+              e.preventDefault()
+            }
+          }}
+          className="space-y-4 sm:space-y-6"
+        >
           {/* 下書き復元バナー */}
           {showDraftBanner && (
             <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-sm">
@@ -800,7 +856,7 @@ function WorkReportNewPageContent() {
                       className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
                     >
                       <option value="">選択してください</option>
-                      {PROJECT_TYPES.map(type => (
+                      {projectTypesList.map(type => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
@@ -991,17 +1047,17 @@ function WorkReportNewPageContent() {
                     <div className="col-span-1 lg:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={record.manHours || ''}
                         onChange={(e) => {
                           const newRecords = [...workerRecords]
-                          newRecords[index].manHours = parseFloat(e.target.value) || 0
+                          const halfWidth = toHalfWidth(e.target.value)
+                          newRecords[index].manHours = parseFloat(halfWidth) || 0
                           setWorkerRecords(newRecords)
                         }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="0"
-                        step="0.5"
-                        min="0"
                       />
                     </div>
 
@@ -1028,17 +1084,17 @@ function WorkReportNewPageContent() {
                     <div className="col-span-1 lg:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 当日</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={record.dailyHours || ''}
                         onChange={(e) => {
                           const newRecords = [...workerRecords]
-                          newRecords[index].dailyHours = parseFloat(e.target.value) || 0
+                          const halfWidth = toHalfWidth(e.target.value)
+                          newRecords[index].dailyHours = parseFloat(halfWidth) || 0
                           setWorkerRecords(newRecords)
                         }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="0"
-                        step="0.5"
-                        min="0"
                       />
                     </div>
 
@@ -1046,17 +1102,17 @@ function WorkReportNewPageContent() {
                     <div className="col-span-1 lg:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 累計</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={record.totalHours || ''}
                         onChange={(e) => {
                           const newRecords = [...workerRecords]
-                          newRecords[index].totalHours = parseFloat(e.target.value) || 0
+                          const halfWidth = toHalfWidth(e.target.value)
+                          newRecords[index].totalHours = parseFloat(halfWidth) || 0
                           setWorkerRecords(newRecords)
                         }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="0"
-                        step="0.5"
-                        min="0"
                       />
                     </div>
 
@@ -1136,6 +1192,7 @@ function WorkReportNewPageContent() {
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">材料名</label>
                       <input
                         type="text"
+                        list={`material-list-${record.id}`}
                         value={record.name}
                         onChange={(e) => {
                           const newRecords = [...materialRecords]
@@ -1143,8 +1200,13 @@ function WorkReportNewPageContent() {
                           setMaterialRecords(newRecords)
                         }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                        placeholder="材料名"
+                        placeholder="選択または入力"
                       />
+                      <datalist id={`material-list-${record.id}`}>
+                        {materialMasterList.map(name => (
+                          <option key={name} value={name} />
+                        ))}
+                      </datalist>
                     </div>
 
                     {/* 容量 */}
@@ -1166,35 +1228,40 @@ function WorkReportNewPageContent() {
                     {/* 単位 */}
                     <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単位</label>
-                      <select
+                      <input
+                        type="text"
+                        list={`unit-list-${record.id}`}
                         value={record.volumeUnit}
                         onChange={(e) => {
                           const newRecords = [...materialRecords]
                           newRecords[index].volumeUnit = e.target.value
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                      >
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        placeholder="選択または入力"
+                      />
+                      <datalist id={`unit-list-${record.id}`}>
                         {VOLUME_UNITS.map(unit => (
-                          <option key={unit} value={unit}>{unit}</option>
+                          <option key={unit} value={unit} />
                         ))}
-                      </select>
+                      </datalist>
                     </div>
 
                     {/* 数量 */}
                     <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">数量</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={record.quantity || ''}
                         onChange={(e) => {
                           const newRecords = [...materialRecords]
-                          newRecords[index].quantity = parseFloat(e.target.value) || 0
+                          const halfWidth = toHalfWidth(e.target.value)
+                          newRecords[index].quantity = parseFloat(halfWidth) || 0
                           setMaterialRecords(newRecords)
                         }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="0"
-                        step="0.1"
                       />
                     </div>
 
@@ -1202,11 +1269,14 @@ function WorkReportNewPageContent() {
                     <div className="col-span-1 sm:col-span-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単価(円)</label>
                       <input
-                        type="number"
-                        value={record.unitPrice || ''}
+                        type="text"
+                        inputMode="numeric"
+                        value={record.unitPrice ? record.unitPrice.toLocaleString() : ''}
                         onChange={(e) => {
                           const newRecords = [...materialRecords]
-                          newRecords[index].unitPrice = parseFloat(e.target.value) || 0
+                          const halfWidth = toHalfWidth(e.target.value)
+                          const rawValue = halfWidth.replace(/,/g, '')
+                          newRecords[index].unitPrice = parseFloat(rawValue) || 0
                           setMaterialRecords(newRecords)
                         }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
@@ -1215,32 +1285,10 @@ function WorkReportNewPageContent() {
                     </div>
                   </div>
 
-                  {/* 下段: 外注先 | 金額 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-12 gap-3 sm:gap-4 mt-3">
-                    {/* 外注先 */}
-                    <div className="col-span-2 sm:col-span-4">
-                      <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">外注先</label>
-                      <select
-                        value={record.subcontractor}
-                        onChange={(e) => {
-                          const newRecords = [...materialRecords]
-                          newRecords[index].subcontractor = e.target.value
-                          setMaterialRecords(newRecords)
-                        }}
-                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                      >
-                        <option value="">選択してください</option>
-                        {SUBCONTRACTORS.map(sub => (
-                          <option key={sub} value={sub}>{sub}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* 金額（自動計算） */}
-                    <div className="col-span-2 sm:col-span-8 flex items-end pb-1">
-                      <div className="text-sm text-gray-700">
-                        金額: <span className="font-bold text-lg text-[#0E3091]">{(record.quantity * record.unitPrice).toLocaleString()}円</span>
-                      </div>
+                  {/* 金額（自動計算） */}
+                  <div className="mt-3">
+                    <div className="text-sm text-gray-700">
+                      金額: <span className="font-bold text-lg text-[#0E3091]">{(record.quantity * record.unitPrice).toLocaleString()}円</span>
                     </div>
                   </div>
                 </div>
@@ -1310,36 +1358,40 @@ function WorkReportNewPageContent() {
                     {/* 外注先名 */}
                     <div>
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">外注先名</label>
-                      <select
+                      <input
+                        type="text"
+                        list={`subcontractor-name-list-${record.id}`}
                         value={record.name}
                         onChange={(e) => {
                           const newRecords = [...subcontractorRecords]
                           newRecords[index].name = e.target.value
                           setSubcontractorRecords(newRecords)
                         }}
-                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                      >
-                        <option value="">選択してください</option>
+                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                        placeholder="選択または入力"
+                      />
+                      <datalist id={`subcontractor-name-list-${record.id}`}>
                         {SUBCONTRACTORS.map(sub => (
-                          <option key={sub} value={sub}>{sub}</option>
+                          <option key={sub} value={sub} />
                         ))}
-                      </select>
+                      </datalist>
                     </div>
 
                     {/* 人数 */}
                     <div>
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">人数</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={record.workerCount || ''}
                         onChange={(e) => {
                           const newRecords = [...subcontractorRecords]
-                          newRecords[index].workerCount = parseInt(e.target.value) || 0
+                          const halfWidth = toHalfWidth(e.target.value)
+                          newRecords[index].workerCount = parseInt(halfWidth) || 0
                           setSubcontractorRecords(newRecords)
                         }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="人数"
-                        min="0"
                       />
                     </div>
 
@@ -1455,9 +1507,13 @@ function WorkReportNewPageContent() {
                     <div className="col-span-2">
                       <label className="text-xs sm:text-sm text-gray-600 mb-1 block">人数</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={trafficGuardCount || ''}
-                        onChange={(e) => setTrafficGuardCount(parseInt(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const halfWidth = toHalfWidth(e.target.value)
+                          setTrafficGuardCount(parseInt(halfWidth) || 0)
+                        }}
                         className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                         placeholder="人数"
                       />

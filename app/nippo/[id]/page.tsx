@@ -98,7 +98,7 @@ export default function EditNippoPage() {
         if (data && data.user) {
           setCurrentUser(data.user)
           setFormData(prev => ({ ...prev, userId: data.user.id }))
-          setReportType(data.user.defaultReportType === 'sales' ? 'sales' : 'work')
+          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
         }
       })
       .catch(error => {

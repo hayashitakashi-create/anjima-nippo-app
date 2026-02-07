@@ -126,14 +126,14 @@ export default function SettingsPage() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
+            <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
                 <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">設定</h1>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center space-x-1 sm:space-x-3">
               <Link
                 href="/dashboard"

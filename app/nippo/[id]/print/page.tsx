@@ -32,14 +32,38 @@ interface ReportData {
 }
 
 const ROLE_LABELS: Record<string, string> = {
+  chairman: '会長',
   president: '社長',
+  vice_president: '副社長',
   executive_vice_president: '専務',
   managing_director: '常務',
+  director: '取締役',
+  auditor: '監査役',
+  general_manager: '本部長',
   department_manager: '部長',
+  deputy_manager: '次長',
+  section_manager: '課長',
+  subsection_chief: '係長',
+  chief: '主任',
+  branch_manager: '支店長',
+  plant_manager: '工場長',
+  office_manager: '所長',
+  会長: '会長',
   社長: '社長',
+  副社長: '副社長',
   専務: '専務',
   常務: '常務',
+  取締役: '取締役',
+  監査役: '監査役',
+  本部長: '本部長',
   部長: '部長',
+  次長: '次長',
+  課長: '課長',
+  係長: '係長',
+  主任: '主任',
+  支店長: '支店長',
+  工場長: '工場長',
+  所長: '所長',
 }
 
 export default function NippoPrintPage() {
@@ -162,9 +186,7 @@ export default function NippoPrintPage() {
                 </td>
                 <th style={{ width: '60px' }}>承認</th>
                 {/* 承認欄 */}
-                {['president', 'executive_vice_president', 'managing_director', 'department_manager', '社長', '専務', '常務', '部長'].filter(role =>
-                  report.approvals.some(a => a.approverRole === role)
-                ).length > 0 ? (
+                {report.approvals.length > 0 ? (
                   report.approvals.map(approval => (
                     <td key={approval.id} className="text-center" style={{ width: '80px' }}>
                       <div className="text-[10px] text-gray-500">{ROLE_LABELS[approval.approverRole] || approval.approverRole}</div>

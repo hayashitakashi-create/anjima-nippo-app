@@ -86,7 +86,7 @@ export default function DashboardPage() {
       .then(data => {
         if (data && data.user) {
           setCurrentUser(data.user)
-          setReportType(data.user.defaultReportType === 'sales' ? 'sales' : 'work')
+          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
         }
         setLoading(false)
       })

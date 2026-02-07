@@ -37,7 +37,7 @@ export default function AdminNippoPage() {
           }
           setCurrentUser(data.user)
           // デフォルトの日報タイプを設定
-          setReportType(data.user.defaultReportType === 'sales' ? 'sales' : 'work')
+          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
         }
         setLoading(false)
       })

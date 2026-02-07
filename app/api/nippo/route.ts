@@ -69,15 +69,60 @@ export async function GET(request: NextRequest) {
 // 日報を作成
 export async function POST(request: NextRequest) {
   try {
-    const body: DailyReportInput = await request.json()
+    const body = await request.json()
+    const { approvalRouteId } = body as { approvalRouteId?: string } & DailyReportInput
+
+    // 承認ルートから承認者役職リストを取得
+    let approvalRoles: string[] = []
+    let routeId: string | undefined = undefined
+
+    if (approvalRouteId) {
+      // 指定されたルートを使用
+      const route = await prisma.approvalRoute.findUnique({
+        where: { id: approvalRouteId },
+      })
+      if (route && route.isActive) {
+        approvalRoles = JSON.parse(route.roles)
+        routeId = route.id
+      }
+    }
+
+    if (approvalRoles.length === 0) {
+      // デフォルトルートを検索
+      const defaultRoute = await prisma.approvalRoute.findFirst({
+        where: { isDefault: true, isActive: true },
+      })
+      if (defaultRoute) {
+        approvalRoles = JSON.parse(defaultRoute.roles)
+        routeId = defaultRoute.id
+      }
+    }
+
+    if (approvalRoles.length === 0) {
+      // ルートが一つもない場合、最初の有効ルートを使用
+      const firstRoute = await prisma.approvalRoute.findFirst({
+        where: { isActive: true },
+        orderBy: { order: 'asc' },
+      })
+      if (firstRoute) {
+        approvalRoles = JSON.parse(firstRoute.roles)
+        routeId = firstRoute.id
+      }
+    }
+
+    if (approvalRoles.length === 0) {
+      // フォールバック: ハードコード
+      approvalRoles = ['社長', '専務', '常務', '部長']
+    }
 
     const dailyReport = await prisma.dailyReport.create({
       data: {
         date: new Date(body.date),
         userId: body.userId,
         specialNotes: body.specialNotes,
+        approvalRouteId: routeId || null,
         visitRecords: {
-          create: body.visitRecords.map((record) => ({
+          create: body.visitRecords.map((record: any) => ({
             destination: record.destination,
             contactPerson: record.contactPerson,
             startTime: record.startTime,
@@ -88,12 +133,10 @@ export async function POST(request: NextRequest) {
           })),
         },
         approvals: {
-          create: [
-            { approverRole: '社長', status: 'pending' },
-            { approverRole: '専務', status: 'pending' },
-            { approverRole: '常務', status: 'pending' },
-            { approverRole: '部長', status: 'pending' },
-          ],
+          create: approvalRoles.map(role => ({
+            approverRole: role,
+            status: 'pending',
+          })),
         },
       },
       include: {
@@ -110,6 +153,12 @@ export async function POST(request: NextRequest) {
           },
         },
         approvals: true,
+        approvalRoute: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     })
 

@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
         password: true,
         position: true,
         role: true,
+        isActive: true,
         defaultReportType: true,
       },
     })
@@ -31,6 +32,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'ユーザー名またはパスワードが正しくありません' },
         { status: 401 }
+      )
+    }
+
+    // 無効化されたアカウントチェック
+    if (user.isActive === false) {
+      return NextResponse.json(
+        { error: 'このアカウントは無効化されています。管理者にお問い合わせください。' },
+        { status: 403 }
       )
     }
 

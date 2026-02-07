@@ -397,9 +397,9 @@ export default function ProjectDetailPage() {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#0E3091] to-[#1a4ab8] flex items-center justify-center">
+              <Link href="/dashboard" className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#0E3091] to-[#1a4ab8] flex items-center justify-center hover:opacity-80 transition-opacity">
                 <Building2 className="w-5 h-5 text-white" />
-              </div>
+              </Link>
               <div>
                 <h1 className="text-lg font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">
                   {project.name}

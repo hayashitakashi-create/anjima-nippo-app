@@ -113,8 +113,8 @@ export async function getUnsubmittedUsers(): Promise<{
       })).map(r => r.userId)
     )
 
-    const salesUsers = allUsers.filter(u => u.defaultReportType === 'sales')
-    const workUsers = allUsers.filter(u => u.defaultReportType === 'work')
+    const salesUsers = allUsers.filter(u => u.defaultReportType === 'sales' || u.defaultReportType === 'both')
+    const workUsers = allUsers.filter(u => u.defaultReportType === 'work' || u.defaultReportType === 'both')
 
     return {
       salesUnsubmitted: salesUsers

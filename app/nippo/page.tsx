@@ -139,7 +139,7 @@ export default function NippoListPage() {
       .then(data => {
         if (data && data.user) {
           setCurrentUser(data.user)
-          setReportType(data.user.defaultReportType === 'sales' ? 'sales' : 'work')
+          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
         }
       })
       .catch(error => {
@@ -413,7 +413,7 @@ export default function NippoListPage() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center space-x-2">
+            <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${themeBg}`}>
                 <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
@@ -421,7 +421,7 @@ export default function NippoListPage() {
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">安島工業株式会社</h1>
                 <p className="text-xs sm:text-sm text-gray-600">日報一覧</p>
               </div>
-            </div>
+            </Link>
 
             <div className="flex items-center space-x-1 sm:space-x-3">
               <Link

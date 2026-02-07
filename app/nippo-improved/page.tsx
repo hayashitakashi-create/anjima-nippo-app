@@ -29,7 +29,8 @@ import {
   Home,
   Settings,
   Shield,
-  RotateCcw
+  RotateCcw,
+  Route,
 } from 'lucide-react'
 import VisitRecordCard, { VisitRecordData } from '@/components/VisitRecordCard'
 import { useVisitRecordValidation } from '@/hooks/useVisitRecordValidation'
@@ -43,11 +44,22 @@ interface User {
   defaultReportType: string
 }
 
+interface ApprovalRouteOption {
+  id: string
+  name: string
+  roles: string[]
+  isDefault: boolean
+}
+
 export default function ImprovedNippoPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+
+  // 承認ルート
+  const [approvalRoutes, setApprovalRoutes] = useState<ApprovalRouteOption[]>([])
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('')
 
   // フォームデータ
   const [date, setDate] = useState('')
@@ -141,6 +153,23 @@ export default function ImprovedNippoPage() {
     const today = new Date()
     const formatted = today.toISOString().split('T')[0]
     setDate(formatted)
+
+    // 承認ルート取得
+    fetch('/api/approval-routes')
+      .then(res => res.json())
+      .then(data => {
+        if (data.routes && data.routes.length > 0) {
+          setApprovalRoutes(data.routes)
+          // デフォルトルートを自動選択
+          const defaultRoute = data.routes.find((r: ApprovalRouteOption) => r.isDefault)
+          if (defaultRoute) {
+            setSelectedRouteId(defaultRoute.id)
+          } else {
+            setSelectedRouteId(data.routes[0].id)
+          }
+        }
+      })
+      .catch(err => console.error('承認ルート取得エラー:', err))
   }, [router])
 
   // 訪問記録の変更
@@ -217,6 +246,7 @@ export default function ImprovedNippoPage() {
           date: new Date(date),
           userId: currentUser?.id,
           specialNotes,
+          approvalRouteId: selectedRouteId || undefined,
           visitRecords: visitRecords.map((record, index) => ({
             destination: record.destination,
             contactPerson: record.contactPerson,
@@ -457,6 +487,52 @@ export default function ImprovedNippoPage() {
                   </div>
                 </div>
               </div>
+
+              {/* 承認ルート選択 */}
+              {approvalRoutes.length > 0 && (
+                <div className="mt-6">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <Route className="w-4 h-4 text-gray-500" />
+                    <span>承認ルート</span>
+                  </label>
+                  <div className="space-y-2">
+                    {approvalRoutes.map(route => (
+                      <label
+                        key={route.id}
+                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
+                          selectedRouteId === route.id
+                            ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="approvalRoute"
+                          value={route.id}
+                          checked={selectedRouteId === route.id}
+                          onChange={() => setSelectedRouteId(route.id)}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">{route.name}</span>
+                            {route.isDefault && (
+                              <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">デフォルト</span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {route.roles.map((role, i) => (
+                              <span key={i} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                {role}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
