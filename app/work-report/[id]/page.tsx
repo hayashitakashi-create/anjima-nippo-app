@@ -93,9 +93,9 @@ const WORKER_NAMES = [
   '田中　剛士', '小林　敬博', '福代　司', '池野　大樹', '中谷　凜大', '安部　倫太朗'
 ]
 
-const VOLUME_UNITS = ['ℓ', 'mℓ', 'm', '㎝']
+const DEFAULT_VOLUME_UNITS = ['ℓ', 'mℓ', 'm', '㎝']
 
-const SUBCONTRACTORS = [
+const DEFAULT_SUBCONTRACTORS = [
   'キョウワビルト工業', '広野組', '又川工業', '景山工業',
   '森下塗装', '鳥島工業', '岩佐塗装', '恒松塗装'
 ]
@@ -140,6 +140,12 @@ export default function WorkReportDetailPage() {
 
   // 工事種別マスタから取得したリスト
   const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
+
+  // 外注先マスタから取得したリスト
+  const [subcontractorMasterList, setSubcontractorMasterList] = useState<string[]>(DEFAULT_SUBCONTRACTORS)
+
+  // 単位マスタから取得したリスト
+  const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
 
   // 基本情報
   const [date, setDate] = useState('')
@@ -218,6 +224,42 @@ export default function WorkReportDetailPage() {
         }
       })
       .catch(err => console.error('工事種別マスタ取得エラー:', err))
+
+    // 外注先マスタを取得
+    fetch('/api/admin/subcontractors')
+      .then(res => {
+        if (res.ok) return res.json()
+        return null
+      })
+      .then(data => {
+        if (data?.subcontractors) {
+          const activeNames = data.subcontractors
+            .filter((s: any) => s.isActive)
+            .map((s: any) => s.name)
+          if (activeNames.length > 0) {
+            setSubcontractorMasterList(activeNames)
+          }
+        }
+      })
+      .catch(err => console.error('外注先マスタ取得エラー:', err))
+
+    // 単位マスタを取得
+    fetch('/api/admin/units')
+      .then(res => {
+        if (res.ok) return res.json()
+        return null
+      })
+      .then(data => {
+        if (data?.units) {
+          const activeUnits = data.units
+            .filter((u: any) => u.isActive)
+            .map((u: any) => u.name)
+          if (activeUnits.length > 0) {
+            setUnitMasterList(activeUnits)
+          }
+        }
+      })
+      .catch(err => console.error('単位マスタ取得エラー:', err))
 
     // 作業日報データ取得
     fetch(`/api/work-report/${reportId}`)
@@ -1119,7 +1161,7 @@ export default function WorkReportDetailPage() {
                               placeholder="選択または入力"
                             />
                             <datalist id={`unit-list-${record.id}`}>
-                              {VOLUME_UNITS.map(unit => (
+                              {unitMasterList.map(unit => (
                                 <option key={unit} value={unit} />
                               ))}
                             </datalist>
@@ -1260,7 +1302,7 @@ export default function WorkReportDetailPage() {
                             placeholder="選択または入力"
                           />
                           <datalist id={`subcontractor-name-list-${record.id}`}>
-                            {SUBCONTRACTORS.map(sub => (
+                            {subcontractorMasterList.map(sub => (
                               <option key={sub} value={sub} />
                             ))}
                           </datalist>

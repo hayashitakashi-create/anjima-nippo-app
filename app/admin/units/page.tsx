@@ -8,7 +8,7 @@ import {
   Settings,
   LogOut,
   Shield,
-  Package,
+  Ruler,
   Plus,
   Trash2,
   Save,
@@ -22,38 +22,27 @@ interface User {
   role: string
 }
 
-interface Material {
+interface Unit {
   id: string
   name: string
+  order: number
   isActive: boolean
   createdAt: string
   updatedAt: string
 }
 
-export default function MaterialsPage() {
+export default function UnitsPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [materials, setMaterials] = useState<Material[]>([])
+  const [units, setUnits] = useState<Unit[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  // 新規材料追加フォーム
-  const [newMaterial, setNewMaterial] = useState('')
+  // 新規単位追加フォーム
+  const [newUnit, setNewUnit] = useState('')
   const [addingNew, setAddingNew] = useState(false)
-
-  // デフォルト材料リスト
-  const defaultMaterials = [
-    'キクテック キクスイライン KL-115 白',
-    'キクテック キクスイライン KL-215 黄',
-    'キクテック ユニピースUB-108L',
-    'トウペ トアライナー M用プライマー',
-    'トウペ トアライナー P 黒',
-    'トウペ トアライナーMR+α 黄NL',
-    '昌和ペイント ラッカーシンナー 80シンナー',
-    '大和ブロック 車止めブロック',
-  ]
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -78,69 +67,65 @@ export default function MaterialsPage() {
 
   useEffect(() => {
     if (!currentUser) return
-    fetchMaterials()
+    fetchUnits()
   }, [currentUser])
 
   // 初回ロード時にデフォルトデータがなければ自動登録
   useEffect(() => {
-    if (materials.length === 0 && !loading) {
+    if (units.length === 0 && !loading) {
       loadDefaultsAutomatically()
     }
-  }, [materials, loading])
+  }, [units, loading])
 
   const loadDefaultsAutomatically = async () => {
     try {
-      const res = await fetch('/api/admin/materials/load-defaults', {
+      const res = await fetch('/api/admin/units/load-defaults', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ materials: defaultMaterials }),
       })
       if (res.ok) {
-        await fetchMaterials()
+        await fetchUnits()
       }
     } catch (err) {
-      console.error('デフォルト材料自動登録エラー:', err)
+      console.error('デフォルト単位自動登録エラー:', err)
     }
   }
 
-  const fetchMaterials = async () => {
+  const fetchUnits = async () => {
     try {
-      const res = await fetch('/api/admin/materials')
+      const res = await fetch('/api/admin/units')
       if (res.ok) {
         const data = await res.json()
-        setMaterials(data.materials)
+        setUnits(data.units)
       } else if (res.status === 403) {
         router.push('/dashboard')
       }
     } catch (err) {
-      console.error('材料一覧取得エラー:', err)
+      console.error('単位一覧取得エラー:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddMaterial = async () => {
-    if (!newMaterial.trim()) {
-      setError('材料名を入力してください')
+  const handleAddUnit = async () => {
+    if (!newUnit.trim()) {
+      setError('単位名を入力してください')
       return
     }
 
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/materials', {
+      const res = await fetch('/api/admin/units', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newMaterial,
-        }),
+        body: JSON.stringify({ name: newUnit }),
       })
       if (res.ok) {
         const data = await res.json()
-        setMaterials(prev => [...prev, data.material])
-        setNewMaterial('')
+        setUnits(prev => [...prev, data.unit])
+        setNewUnit('')
         setAddingNew(false)
-        setMessage('材料を追加しました')
+        setMessage('単位を追加しました')
       } else {
         const data = await res.json()
         setError(data.error || '追加に失敗しました')
@@ -153,16 +138,16 @@ export default function MaterialsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('この材料を削除しますか？')) return
+    if (!confirm('この単位を削除しますか？')) return
 
     setError('')
     try {
-      const res = await fetch(`/api/admin/materials?id=${id}`, {
+      const res = await fetch(`/api/admin/units?id=${id}`, {
         method: 'DELETE',
       })
       if (res.ok) {
-        setMaterials(prev => prev.filter(m => m.id !== id))
-        setMessage('材料を削除しました')
+        setUnits(prev => prev.filter(u => u.id !== id))
+        setMessage('単位を削除しました')
       } else {
         const data = await res.json()
         setError(data.error || '削除に失敗しました')
@@ -175,16 +160,16 @@ export default function MaterialsPage() {
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     setError('')
     try {
-      const res = await fetch('/api/admin/materials', {
+      const res = await fetch('/api/admin/units', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, isActive: !currentActive }),
       })
       if (res.ok) {
-        setMaterials(prev =>
-          prev.map(m => (m.id === id ? { ...m, isActive: !currentActive } : m))
+        setUnits(prev =>
+          prev.map(u => (u.id === id ? { ...u, isActive: !currentActive } : u))
         )
-        setMessage(currentActive ? '材料を無効化しました' : '材料を有効化しました')
+        setMessage(currentActive ? '単位を無効化しました' : '単位を有効化しました')
       } else {
         const data = await res.json()
         setError(data.error || '更新に失敗しました')
@@ -218,12 +203,12 @@ export default function MaterialsPage() {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center">
             <Link href="/admin" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-cyan-600 flex items-center justify-center">
-                <Package className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-600 flex items-center justify-center">
+                <Ruler className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">使用材料管理</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">材料マスタの登録・管理</p>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">単位設定</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">単位マスタの登録・管理</p>
               </div>
             </Link>
             <div className="flex items-center space-x-1 sm:space-x-3">
@@ -274,21 +259,21 @@ export default function MaterialsPage() {
           </div>
         )}
 
-        {/* 材料リスト */}
+        {/* 単位リスト */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h2 className="text-lg font-bold text-gray-900 flex items-center">
-              <Package className="w-5 h-5 mr-2 text-cyan-600" />
-              使用材料リスト ({materials.length}件)
+              <Ruler className="w-5 h-5 mr-2 text-indigo-600" />
+              単位リスト ({units.length}件)
             </h2>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => {
                   setAddingNew(!addingNew)
-                  setNewMaterial('')
+                  setNewUnit('')
                   setError('')
                 }}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
+                className="inline-flex items-center px-3 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 新規追加
@@ -298,18 +283,18 @@ export default function MaterialsPage() {
 
           {/* 新規追加フォーム */}
           {addingNew && (
-            <div className="px-4 sm:px-6 py-4 bg-cyan-50 border-b border-cyan-200">
+            <div className="px-4 sm:px-6 py-4 bg-indigo-50 border-b border-indigo-200">
               <div className="flex flex-col sm:flex-row gap-3 mb-3">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    材料名 <span className="text-red-500">*</span>
+                    単位名 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={newMaterial}
-                    onChange={e => setNewMaterial(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-                    placeholder="例: キクテック キクスイライン KL-115 白"
+                    value={newUnit}
+                    onChange={e => setNewUnit(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    placeholder="例: kg, L, ml, m, 本"
                   />
                 </div>
               </div>
@@ -317,16 +302,16 @@ export default function MaterialsPage() {
                 <button
                   onClick={() => {
                     setAddingNew(false)
-                    setNewMaterial('')
+                    setNewUnit('')
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
                 >
                   キャンセル
                 </button>
                 <button
-                  onClick={handleAddMaterial}
+                  onClick={handleAddUnit}
                   disabled={saving}
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:bg-gray-400"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400"
                 >
                   <Save className="w-4 h-4 mr-1" />
                   {saving ? '保存中...' : '保存'}
@@ -340,56 +325,56 @@ export default function MaterialsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">材料名</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">単位名</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状態</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {materials.length === 0 ? (
+                {units.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="px-6 py-12 text-center">
-                      <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500 mb-2">材料が登録されていません</p>
+                      <Ruler className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 mb-2">単位が登録されていません</p>
                       <p className="text-sm text-gray-400">「新規追加」から登録してください</p>
                     </td>
                   </tr>
                 ) : (
-                  materials.map(material => (
+                  units.map(unit => (
                     <tr
-                      key={material.id}
+                      key={unit.id}
                       className={`hover:bg-gray-50 transition-colors ${
-                        !material.isActive ? 'opacity-50' : ''
+                        !unit.isActive ? 'opacity-50' : ''
                       }`}
                     >
                       <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-gray-900">{material.name}</span>
+                        <span className="text-sm font-medium text-gray-900">{unit.name}</span>
                       </td>
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            material.isActive
+                            unit.isActive
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}
                         >
-                          {material.isActive ? '有効' : '無効'}
+                          {unit.isActive ? '有効' : '無効'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={() => handleToggleActive(material.id, material.isActive)}
+                            onClick={() => handleToggleActive(unit.id, unit.isActive)}
                             className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-                              material.isActive
+                              unit.isActive
                                 ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                                 : 'bg-green-100 text-green-700 hover:bg-green-200'
                             }`}
                           >
-                            {material.isActive ? '無効化' : '有効化'}
+                            {unit.isActive ? '無効化' : '有効化'}
                           </button>
                           <button
-                            onClick={() => handleDelete(material.id)}
+                            onClick={() => handleDelete(unit.id)}
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="削除"
                           >

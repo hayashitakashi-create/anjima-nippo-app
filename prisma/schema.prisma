@@ -292,3 +292,16 @@ model ProjectType {
   @@index([isActive])
   @@index([order])
 }
+
+// 単位マスタ
+model Unit {
+  id        String   @id @default(cuid())
+  name      String   // 単位名（kg, L, ml, m, 本など）
+  order     Int      @default(0) // 表示順序
+  isActive  Boolean  @default(true) // 有効/無効
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
+}

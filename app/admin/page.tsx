@@ -28,6 +28,8 @@ import {
   Truck,
   Layers,
   Printer,
+  BarChart3,
+  Ruler,
 } from 'lucide-react'
 
 interface User {
@@ -402,7 +404,7 @@ export default function AdminPage() {
         </div>
 
         {/* 管理メニュー */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
           <Link href="/admin/approvals" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
             <div className="flex flex-col items-center text-center space-y-2">
               <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
@@ -488,6 +490,28 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">一括印刷</p>
                 <p className="text-xs text-gray-500 hidden sm:block">日報を一括印刷</p>
+              </div>
+            </div>
+          </Link>
+          <Link href="/admin/aggregation" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+            <div className="flex flex-col items-center text-center space-y-2">
+              <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center group-hover:bg-rose-200 transition-colors">
+                <BarChart3 className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">月次集計</p>
+                <p className="text-xs text-gray-500 hidden sm:block">労働・材料・外注</p>
+              </div>
+            </div>
+          </Link>
+          <Link href="/admin/units" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+            <div className="flex flex-col items-center text-center space-y-2">
+              <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors">
+                <Ruler className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">単位設定</p>
+                <p className="text-xs text-gray-500 hidden sm:block">単位マスタ管理</p>
               </div>
             </div>
           </Link>

@@ -46,7 +46,8 @@ interface CurrentUser {
   role: string
 }
 
-const PROJECT_TYPES = [
+// マスタデータ（APIから取得できなかった場合のフォールバック）
+const DEFAULT_PROJECT_TYPES = [
   '建築塗装工事',
   '鋼橋塗装工事',
   '防水工事',
@@ -63,6 +64,9 @@ export default function ProjectListPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewProjectModal, setShowNewProjectModal] = useState(false)
   const [statusTab, setStatusTab] = useState<'active' | 'completed' | 'archived'>('active')
+
+  // 工事種別マスタから取得したリスト
+  const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
 
   // 新規物件フォーム
   const [newProject, setNewProject] = useState({
@@ -88,6 +92,24 @@ export default function ProjectListPage() {
         }
       })
       .catch(() => router.push('/login'))
+
+    // 工事種別マスタを取得
+    fetch('/api/admin/project-types')
+      .then(res => {
+        if (res.ok) return res.json()
+        return null
+      })
+      .then(data => {
+        if (data?.projectTypes) {
+          const activeTypes = data.projectTypes
+            .filter((pt: any) => pt.isActive)
+            .map((pt: any) => pt.name)
+          if (activeTypes.length > 0) {
+            setProjectTypesList(activeTypes)
+          }
+        }
+      })
+      .catch(err => console.error('工事種別マスタ取得エラー:', err))
 
     // 物件一覧取得
     fetchProjects('active')
@@ -227,7 +249,7 @@ export default function ProjectListPage() {
                   className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                 >
                   <option value="">選択してください</option>
-                  {PROJECT_TYPES.map(type => (
+                  {projectTypesList.map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>

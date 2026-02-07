@@ -15,14 +15,14 @@ async function checkAdmin(request: NextRequest) {
   return user
 }
 
-// 外注先一覧取得
+// 外注先一覧取得（認証済みユーザーならアクセス可能）
 export async function GET(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
+    const userId = request.cookies.get('userId')?.value
+    if (!userId) {
       return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
+        { error: '認証が必要です' },
+        { status: 401 }
       )
     }
 
