@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - img "安島工業株式会社" [ref=e5]
+      - heading "日報システム" [level=1] [ref=e6]
+      - paragraph [ref=e7]: 安島工業株式会社
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - generic [ref=e12]: ユーザー名（メールアドレス）
+          - generic [ref=e13]:
+            - generic:
+              - img
+            - textbox "ユーザー名（メールアドレス）" [ref=e14]:
+              - /placeholder: "例: t-yasujima@yasujimakougyou.co.jp"
+        - generic [ref=e15]:
+          - generic [ref=e16]: パスワード
+          - generic [ref=e17]:
+            - generic:
+              - img
+            - textbox "パスワード" [ref=e18]:
+              - /placeholder: パスワードを入力
+            - button [ref=e19]:
+              - img [ref=e20]
+        - button "ログイン" [ref=e24]
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - link "プライバシーポリシー" [ref=e27]:
+            - /url: https://dandori-work.co.jp/privacy/
+          - generic [ref=e28]: "|"
+          - link "利用規約" [ref=e29]:
+            - /url: "#"
+          - generic [ref=e30]: "|"
+          - link "特定商取引法" [ref=e31]:
+            - /url: https://dandori-work.co.jp/security/
+          - generic [ref=e32]: "|"
+          - link "運営会社" [ref=e33]:
+            - /url: https://dandori-work.co.jp/company/
+        - paragraph [ref=e34]: © 2026 安島工業株式会社. All rights reserved.
+  - button "Open Next.js Dev Tools" [ref=e40] [cursor=pointer]:
+    - img [ref=e41]
+  - alert [ref=e46]
+```

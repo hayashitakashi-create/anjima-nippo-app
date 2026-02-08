@@ -965,16 +965,20 @@ export default function WorkReportDetailPage() {
                           </div>
                           <div className="col-span-1 lg:col-span-3">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工種</label>
-                            <input
-                              type="text"
+                            <select
                               value={record.workType}
                               onChange={(e) => {
                                 const newRecords = [...workerRecords]
                                 newRecords[index].workType = e.target.value
                                 setWorkerRecords(newRecords)
                               }}
-                              className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
-                            />
+                              className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
+                            >
+                              <option value="">選択してください</option>
+                              {projectTypesList.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                              ))}
+                            </select>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-12 gap-3 sm:gap-4 mt-3">
@@ -1148,23 +1152,20 @@ export default function WorkReportDetailPage() {
                           </div>
                           <div className="col-span-1 sm:col-span-2">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単位</label>
-                            <input
-                              type="text"
-                              list={`unit-list-${record.id}`}
+                            <select
                               value={record.volumeUnit}
                               onChange={(e) => {
                                 const newRecords = [...materialRecords]
                                 newRecords[index].volumeUnit = e.target.value
                                 setMaterialRecords(newRecords)
                               }}
-                              className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
-                              placeholder="選択または入力"
-                            />
-                            <datalist id={`unit-list-${record.id}`}>
+                              className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                            >
+                              <option value="">選択</option>
                               {unitMasterList.map(unit => (
-                                <option key={unit} value={unit} />
+                                <option key={unit} value={unit}>{unit}</option>
                               ))}
-                            </datalist>
+                            </select>
                           </div>
                           <div className="col-span-1 sm:col-span-2">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">数量</label>
@@ -1522,7 +1523,7 @@ export default function WorkReportDetailPage() {
           {/* フッター */}
           {isEditing && (
             <div className="mt-6 sm:mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-              <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
                 <button
                   type="submit"
                   disabled={saving}
