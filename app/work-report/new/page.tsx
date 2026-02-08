@@ -1235,23 +1235,20 @@ function WorkReportNewPageContent() {
                     {/* 材料名 */}
                     <div className="col-span-2 sm:col-span-4">
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">材料名</label>
-                      <input
-                        type="text"
-                        list={`material-list-${record.id}`}
+                      <select
                         value={record.name}
                         onChange={(e) => {
                           const newRecords = [...materialRecords]
                           newRecords[index].name = e.target.value
                           setMaterialRecords(newRecords)
                         }}
-                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                        placeholder="選択または入力"
-                      />
-                      <datalist id={`material-list-${record.id}`}>
+                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                      >
+                        <option value="">選択してください</option>
                         {materialMasterList.map(name => (
-                          <option key={name} value={name} />
+                          <option key={name} value={name}>{name}</option>
                         ))}
-                      </datalist>
+                      </select>
                     </div>
 
                     {/* 容量 */}
@@ -1400,23 +1397,20 @@ function WorkReportNewPageContent() {
                     {/* 外注先名 */}
                     <div>
                       <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">外注先名</label>
-                      <input
-                        type="text"
-                        list={`subcontractor-name-list-${record.id}`}
+                      <select
                         value={record.name}
                         onChange={(e) => {
                           const newRecords = [...subcontractorRecords]
                           newRecords[index].name = e.target.value
                           setSubcontractorRecords(newRecords)
                         }}
-                        className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                        placeholder="選択または入力"
-                      />
-                      <datalist id={`subcontractor-name-list-${record.id}`}>
+                        className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                      >
+                        <option value="">選択してください</option>
                         {subcontractorMasterList.map(sub => (
-                          <option key={sub} value={sub} />
+                          <option key={sub} value={sub}>{sub}</option>
                         ))}
-                      </datalist>
+                      </select>
                     </div>
 
                     {/* 人数 */}
