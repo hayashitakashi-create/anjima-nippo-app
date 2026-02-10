@@ -294,7 +294,7 @@ function WorkReportNewPageContent() {
       })
 
     // 使用材料マスタを取得
-    fetch('/api/admin/materials')
+    fetch('/api/admin/materials', { credentials: 'include' })
       .then(res => {
         if (res.ok) return res.json()
         return null
@@ -311,7 +311,7 @@ function WorkReportNewPageContent() {
       .catch(err => console.error('材料マスタ取得エラー:', err))
 
     // 工事種別マスタを取得
-    fetch('/api/admin/project-types')
+    fetch('/api/admin/project-types', { credentials: 'include' })
       .then(res => {
         if (res.ok) return res.json()
         return null
@@ -329,7 +329,7 @@ function WorkReportNewPageContent() {
       .catch(err => console.error('工事種別マスタ取得エラー:', err))
 
     // 外注先マスタを取得
-    fetch('/api/admin/subcontractors')
+    fetch('/api/admin/subcontractors', { credentials: 'include' })
       .then(res => {
         if (res.ok) return res.json()
         return null
@@ -347,7 +347,7 @@ function WorkReportNewPageContent() {
       .catch(err => console.error('外注先マスタ取得エラー:', err))
 
     // 単位マスタを取得
-    fetch('/api/admin/units')
+    fetch('/api/admin/units', { credentials: 'include' })
       .then(res => {
         if (res.ok) return res.json()
         return null
