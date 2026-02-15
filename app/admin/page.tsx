@@ -493,14 +493,14 @@ export default function AdminPage() {
               </div>
             </div>
           </Link>
-          <Link href="/admin/aggregation" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+          <Link href="/reports" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
             <div className="flex flex-col items-center text-center space-y-2">
               <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center group-hover:bg-rose-200 transition-colors">
                 <BarChart3 className="w-5 h-5 text-rose-600" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">月次集計</p>
-                <p className="text-xs text-gray-500 hidden sm:block">労働・材料・外注</p>
+                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">レポート</p>
+                <p className="text-xs text-gray-500 hidden sm:block">月次・材料・外注</p>
               </div>
             </div>
           </Link>

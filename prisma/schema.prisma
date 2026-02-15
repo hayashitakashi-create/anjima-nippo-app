@@ -305,3 +305,29 @@ model Unit {
   @@index([isActive])
   @@index([order])
 }
+
+// 作業日報テンプレート
+model WorkReportTemplate {
+  id                   String   @id @default(cuid())
+  userId               String   // 作成者
+  name                 String   // テンプレート名
+  projectRefId         String?  // 物件マスタへの参照
+  projectName          String?  // 工事名
+  projectType          String?  // 工事種別
+  remoteDepartureTime  String?  // 遠隔地出発時刻
+  remoteArrivalTime    String?  // 現場着時刻
+  remoteDepartureTime2 String?  // 現場発時刻
+  remoteArrivalTime2   String?  // 会社着時刻
+  trafficGuardCount    Int?     // 交通誘導警備員人数
+  trafficGuardStart    String?  // 交通誘導警備員開始時刻
+  trafficGuardEnd      String?  // 交通誘導警備員終了時刻
+  workerRecords        String?  // 作業者記録 (JSON)
+  materialRecords      String?  // 材料記録 (JSON)
+  subcontractorRecords String?  // 外注先記録 (JSON)
+  isShared             Boolean  @default(false) // 全員に共有
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isShared])
+}

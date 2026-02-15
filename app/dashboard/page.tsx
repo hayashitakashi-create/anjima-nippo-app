@@ -20,7 +20,9 @@ import {
   User,
   Building2,
   Shield,
-  BarChart3
+  BarChart3,
+  BookMarked,
+  CalendarPlus
 } from 'lucide-react'
 
 interface User {
@@ -662,8 +664,30 @@ export default function DashboardPage() {
                       </span>
                     )}
                   </Link>
+                  {reportType === 'work' && (
+                    <>
+                      <Link
+                        href="/templates"
+                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-amber-50 transition-colors group"
+                      >
+                        <BookMarked className="w-5 h-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
+                        <span className="text-gray-700 group-hover:text-amber-600 transition-colors">
+                          テンプレート管理
+                        </span>
+                      </Link>
+                      <Link
+                        href="/work-report/bulk"
+                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group"
+                      >
+                        <CalendarPlus className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                        <span className="text-gray-700 group-hover:text-purple-600 transition-colors">
+                          一括日報作成
+                        </span>
+                      </Link>
+                    </>
+                  )}
                   <Link
-                    href="/analytics"
+                    href="/reports"
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group"
                   >
                     <BarChart3 className={`w-5 h-5 text-gray-400 transition-colors ${
@@ -672,7 +696,7 @@ export default function DashboardPage() {
                     <span className={`text-gray-700 transition-colors ${
                       reportType === 'sales' ? 'group-hover:text-emerald-600' : 'group-hover:text-[#0E3091]'
                     }`}>
-                      分析ダッシュボード
+                      レポート・分析
                     </span>
                   </Link>
                   <Link
