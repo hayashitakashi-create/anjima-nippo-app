@@ -57,7 +57,8 @@ export function useWorkReportForm() {
       alert(`作業者記録は最大${MAX_WORKER_RECORDS}件までです`)
       return
     }
-    const newId = (Math.max(...workerRecords.map(r => parseInt(r.id))) + 1).toString()
+    const maxId = workerRecords.length > 0 ? Math.max(...workerRecords.map(r => parseInt(r.id) || 0)) : 0
+    const newId = (maxId + 1).toString()
     setWorkerRecords(prev => [
       ...prev,
       { ...INITIAL_WORKER_RECORD, id: newId }
@@ -79,7 +80,8 @@ export function useWorkReportForm() {
       alert(`使用材料記録は最大${MAX_MATERIAL_RECORDS}件までです`)
       return
     }
-    const newId = (Math.max(...materialRecords.map(r => parseInt(r.id))) + 1).toString()
+    const maxId = materialRecords.length > 0 ? Math.max(...materialRecords.map(r => parseInt(r.id) || 0)) : 0
+    const newId = (maxId + 1).toString()
     setMaterialRecords(prev => [
       ...prev,
       { ...INITIAL_MATERIAL_RECORD, id: newId }
@@ -97,7 +99,8 @@ export function useWorkReportForm() {
       alert(`外注先記録は最大${MAX_SUBCONTRACTOR_RECORDS}件までです`)
       return
     }
-    const newId = (Math.max(...subcontractorRecords.map(r => parseInt(r.id))) + 1).toString()
+    const maxId = subcontractorRecords.length > 0 ? Math.max(...subcontractorRecords.map(r => parseInt(r.id) || 0)) : 0
+    const newId = (maxId + 1).toString()
     setSubcontractorRecords(prev => [
       ...prev,
       { ...INITIAL_SUBCONTRACTOR_RECORD, id: newId }

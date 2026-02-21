@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getUnsubmittedUsers } from '@/lib/notifications'
+import { requireAdmin, authErrorResponse } from '@/lib/auth'
 
 // 未提出者リストを取得（管理者向け）
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
-      return NextResponse.json({ error: 'ログインしていません' }, { status: 401 })
-    }
-
-    // 管理者チェック
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
-    })
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 })
-    }
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) return authErrorResponse(authResult)
 
     const result = await getUnsubmittedUsers()
     return NextResponse.json(result)

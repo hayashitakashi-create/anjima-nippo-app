@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { getAuthFromRequest } from '@/lib/auth'
 
 export async function PUT(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-
-    if (!userId) {
+    const authUser = await getAuthFromRequest(request)
+    if (!authUser) {
       return NextResponse.json(
-        { error: 'ログインしていません' },
+        { error: '認証が必要です' },
         { status: 401 }
       )
     }
+    const userId = authUser.id
 
     const body = await request.json()
     const { currentPassword, newPassword, confirmPassword } = body

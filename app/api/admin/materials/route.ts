@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-// 管理者チェック
-async function checkAdmin(request: NextRequest) {
-  const userId = request.cookies.get('userId')?.value
-  if (!userId) return null
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, role: true },
-  })
-
-  if (!user || user.role !== 'admin') return null
-  return user
-}
+import { getAuthFromRequest, requireAdmin, authErrorResponse } from '@/lib/auth'
 
 // 材料一覧取得（認証済みユーザーならアクセス可能）
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json(
         { error: '認証が必要です' },
         { status: 401 }
@@ -48,12 +35,9 @@ export async function GET(request: NextRequest) {
 // 材料追加
 export async function POST(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const body = await request.json()
@@ -87,12 +71,9 @@ export async function POST(request: NextRequest) {
 // 材料更新（有効/無効切り替え）
 export async function PUT(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const body = await request.json()
@@ -123,12 +104,9 @@ export async function PUT(request: NextRequest) {
 // 材料削除
 export async function DELETE(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const { searchParams } = new URL(request.url)

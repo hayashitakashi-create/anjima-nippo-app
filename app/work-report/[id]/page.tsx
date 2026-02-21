@@ -670,7 +670,7 @@ export default function WorkReportDetailPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push('/dashboard')}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />

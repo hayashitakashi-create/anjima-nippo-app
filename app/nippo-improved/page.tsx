@@ -200,7 +200,8 @@ export default function ImprovedNippoPage() {
 
   // 訪問記録の追加
   const handleAddVisitRecord = () => {
-    const newId = (Math.max(...visitRecords.map(r => parseInt(r.id))) + 1).toString()
+    const maxId = visitRecords.length > 0 ? Math.max(...visitRecords.map(r => parseInt(r.id) || 0)) : 0
+    const newId = (maxId + 1).toString()
     // 最後の訪問記録の終了時間を取得
     const lastRecord = visitRecords[visitRecords.length - 1]
     const newStartTime = lastRecord?.endTime || '08:00'

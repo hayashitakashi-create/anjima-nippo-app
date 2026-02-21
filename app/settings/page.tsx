@@ -92,6 +92,12 @@ export default function SettingsPage() {
     setError('')
     setMessage('')
 
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError('新しいパスワードが一致しません')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/user/change-password', {
         method: 'PUT',

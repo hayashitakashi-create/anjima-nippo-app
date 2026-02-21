@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json(
-        { error: 'ログインしていません' },
+        { error: '認証が必要です' },
         { status: 401 }
       )
     }
-
-    // 管理者チェック
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    if (!user) {
-      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
-    }
+    const userId = user.id
 
     const isAdmin = user.role === 'admin'
 

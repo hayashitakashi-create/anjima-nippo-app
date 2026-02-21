@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
+    const userId = user.id
 
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())

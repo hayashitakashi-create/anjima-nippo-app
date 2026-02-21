@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
+    const userId = user.id
 
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
@@ -117,9 +119,11 @@ export async function GET(request: NextRequest) {
       totalSubcontractors: subcontractorData.length,
       totalWorkerCount: subcontractorData.reduce((sum, s) => sum + s.totalWorkerCount, 0),
       totalDays: subcontractorData.reduce((sum, s) => sum + s.totalDays, 0),
-      avgWorkerPerDay: dailyData.length > 0
-        ? Math.round((subcontractorData.reduce((sum, s) => sum + s.totalWorkerCount, 0) / dailyData.filter(d => d.totalWorkerCount > 0).length) * 10) / 10
-        : 0,
+      avgWorkerPerDay: (() => {
+        const activeDays = dailyData.filter(d => d.totalWorkerCount > 0).length
+        if (activeDays === 0) return 0
+        return Math.round((subcontractorData.reduce((sum, s) => sum + s.totalWorkerCount, 0) / activeDays) * 10) / 10
+      })(),
     }
 
     return NextResponse.json({

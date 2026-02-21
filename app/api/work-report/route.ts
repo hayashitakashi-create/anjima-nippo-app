@@ -83,11 +83,9 @@ export async function GET(request: NextRequest) {
     // 期間フィルター
     if (startDate || endDate) {
       where.date = {}
-      if (startDate) where.date.gte = new Date(startDate)
+      if (startDate) where.date.gte = new Date(startDate + 'T00:00:00.000Z')
       if (endDate) {
-        const end = new Date(endDate)
-        end.setHours(23, 59, 59, 999)
-        where.date.lte = end
+        where.date.lte = new Date(endDate + 'T23:59:59.999Z')
       }
     }
 

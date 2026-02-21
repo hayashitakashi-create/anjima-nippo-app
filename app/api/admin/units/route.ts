@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { getAuthFromRequest, requireAdmin, authErrorResponse } from '@/lib/auth'
 
 // 単位一覧取得（認証済みユーザーならアクセス可能）
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json(
         { error: '認証が必要です' },
         { status: 401 }

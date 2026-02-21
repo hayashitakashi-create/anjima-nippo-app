@@ -1,29 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-// 管理者チェック
-async function checkAdmin(request: NextRequest) {
-  const userId = request.cookies.get('userId')?.value
-  if (!userId) return null
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, role: true },
-  })
-
-  if (!user || user.role !== 'admin') return null
-  return user
-}
+import { requireAdmin, authErrorResponse } from '@/lib/auth'
 
 // GET: 承認ルート一覧を取得
 export async function GET(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const searchParams = request.nextUrl.searchParams
@@ -55,12 +39,9 @@ export async function GET(request: NextRequest) {
 // POST: 新規承認ルート作成
 export async function POST(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const body = await request.json()
@@ -119,12 +100,9 @@ export async function POST(request: NextRequest) {
 // PUT: 承認ルート更新
 export async function PUT(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const body = await request.json()
@@ -184,12 +162,9 @@ export async function PUT(request: NextRequest) {
 // DELETE: 承認ルート削除
 export async function DELETE(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const { searchParams } = new URL(request.url)

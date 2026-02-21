@@ -140,7 +140,7 @@ export default function DashboardPage() {
       .then(data => {
         if (data) setUnreadCount(data.unreadCount || 0)
       })
-      .catch(() => {})
+      .catch((err) => console.error('通知取得エラー:', err))
   }, [router])
 
   // 作業日報取得 + 管理者向け未提出者情報取得（ユーザー情報取得後）
@@ -154,7 +154,7 @@ export default function DashboardPage() {
         .then(data => {
           if (data) setUnsubmitted(data)
         })
-        .catch(() => {})
+        .catch((err) => console.error('未提出者情報取得エラー:', err))
     }
 
     fetch(`/api/work-report?userId=${currentUser.id}`)

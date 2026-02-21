@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 
 export async function PUT(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json(
-        { error: 'ログインしていません' },
+        { error: '認証が必要です' },
         { status: 401 }
       )
     }
+    const userId = user.id
 
     const body = await request.json()
     const { username } = body

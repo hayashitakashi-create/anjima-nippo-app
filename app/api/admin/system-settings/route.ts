@@ -1,29 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-// 管理者権限チェック
-async function checkAdmin(request: NextRequest) {
-  const userId = request.cookies.get('userId')?.value
-
-  if (!userId) {
-    return { error: 'ログインしていません', status: 401 }
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true },
-  })
-
-  if (!user) {
-    return { error: 'ユーザーが見つかりません', status: 404 }
-  }
-
-  if (user.role !== 'admin') {
-    return { error: '管理者権限が必要です', status: 403 }
-  }
-
-  return { userId: user.id }
-}
+import { requireAdmin, authErrorResponse } from '@/lib/auth'
 
 // デフォルト値の定義
 const DEFAULT_SETTINGS = {
@@ -47,12 +24,9 @@ const DEFAULT_SETTINGS = {
 // GET: 全設定または特定の設定を取得
 export async function GET(request: NextRequest) {
   try {
-    const auth = await checkAdmin(request)
-    if ('error' in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: auth.status }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const { searchParams } = new URL(request.url)
@@ -115,12 +89,9 @@ export async function GET(request: NextRequest) {
 // PUT: 設定を更新または作成
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await checkAdmin(request)
-    if ('error' in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: auth.status }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const body = await request.json()
