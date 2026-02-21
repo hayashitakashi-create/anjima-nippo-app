@@ -1,89 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin, authErrorResponse } from '@/lib/auth'
 
-// 管理者チェック
-async function checkAdmin(request: NextRequest) {
-  const userId = request.cookies.get('userId')?.value
-  if (!userId) return null
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, role: true },
-  })
-
-  if (!user || user.role !== 'admin') return null
-  return user
-}
-
-// 作業日報一括取得（ユーザー・期間で絞り込み）
+// 日報一括取得（作業日報 + 営業日報対応）
 export async function GET(request: NextRequest) {
   try {
-    const admin = await checkAdmin(request)
-    if (!admin) {
-      return NextResponse.json(
-        { error: '管理者権限が必要です' },
-        { status: 403 }
-      )
+    const authResult = await requireAdmin(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
     }
 
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const reportType = searchParams.get('reportType') || 'all' // 'work' | 'sales' | 'all'
+    const projectName = searchParams.get('projectName') || ''
 
-    const where: any = {}
-
-    if (userId) {
-      where.userId = userId
+    // 日付条件の組み立て
+    const dateFilter: any = {}
+    if (startDate) {
+      dateFilter.gte = new Date(startDate)
+    }
+    if (endDate) {
+      const end = new Date(endDate)
+      end.setHours(23, 59, 59, 999)
+      dateFilter.lte = end
     }
 
-    if (startDate || endDate) {
-      where.date = {}
-      if (startDate) {
-        where.date.gte = new Date(startDate)
+    const results: any[] = []
+
+    // 作業日報の取得
+    if (reportType === 'work' || reportType === 'all') {
+      const workWhere: any = {}
+      if (userId) workWhere.userId = userId
+      if (startDate || endDate) workWhere.date = dateFilter
+      if (projectName) {
+        workWhere.projectName = { contains: projectName }
       }
-      if (endDate) {
-        const end = new Date(endDate)
-        end.setHours(23, 59, 59, 999)
-        where.date.lte = end
-      }
+
+      const workReports = await prisma.workReport.findMany({
+        where: workWhere,
+        include: {
+          workerRecords: { orderBy: { order: 'asc' } },
+          materialRecords: { orderBy: { order: 'asc' } },
+          subcontractorRecords: { orderBy: { order: 'asc' } },
+        },
+        orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+      })
+
+      // ユーザー名マージ
+      const workUserIds = [...new Set(workReports.map(r => r.userId))]
+      const workUsers = workUserIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: workUserIds } },
+            select: { id: true, name: true },
+          })
+        : []
+      const workUserMap = new Map(workUsers.map(u => [u.id, u.name]))
+
+      workReports.forEach(report => {
+        results.push({
+          ...report,
+          reportType: 'work',
+          userName: workUserMap.get(report.userId) || '不明',
+        })
+      })
     }
 
-    const workReports = await prisma.workReport.findMany({
-      where,
-      include: {
-        workerRecords: {
-          orderBy: { order: 'asc' },
-        },
-        materialRecords: {
-          orderBy: { order: 'asc' },
-        },
-        subcontractorRecords: {
-          orderBy: { order: 'asc' },
-        },
-      },
-      orderBy: [
-        { date: 'asc' },
-        { createdAt: 'asc' },
-      ],
-    })
+    // 営業日報の取得
+    if (reportType === 'sales' || reportType === 'all') {
+      const salesWhere: any = {}
+      if (userId) salesWhere.userId = userId
+      if (startDate || endDate) salesWhere.date = dateFilter
 
-    // ユーザー情報を取得してマージ
-    const userIds = [...new Set(workReports.map(r => r.userId))]
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, name: true },
-    })
-    const userMap = new Map(users.map(u => [u.id, u.name]))
+      const dailyReports = await prisma.dailyReport.findMany({
+        where: salesWhere,
+        include: {
+          user: { select: { id: true, name: true, position: true } },
+          visitRecords: { orderBy: { order: 'asc' } },
+          approvals: {
+            include: {
+              approver: { select: { name: true, position: true } },
+            },
+          },
+        },
+        orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+      })
 
-    const reportsWithUserName = workReports.map(report => ({
-      ...report,
-      userName: userMap.get(report.userId) || '不明',
-    }))
+      dailyReports.forEach(report => {
+        results.push({
+          id: report.id,
+          date: report.date,
+          userId: report.userId,
+          reportType: 'sales',
+          userName: report.user.name,
+          userPosition: report.user.position,
+          specialNotes: report.specialNotes,
+          visitRecords: report.visitRecords,
+          approvals: report.approvals,
+        })
+      })
+    }
+
+    // 日付順でソート
+    results.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
     return NextResponse.json({
-      reports: reportsWithUserName,
-      count: reportsWithUserName.length,
+      reports: results,
+      count: results.length,
     })
   } catch (error) {
     console.error('一括日報取得エラー:', error)

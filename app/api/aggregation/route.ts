@@ -1,101 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, authErrorResponse } from '@/lib/auth'
-
-/**
- * 時刻文字列 "HH:MM" を分(minutes)に変換
- */
-function timeToMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number)
-  return h * 60 + (m || 0)
-}
-
-/**
- * 2つの時間範囲の重複部分を分で返す
- * [start1, end1] と [start2, end2] の重複（分単位）
- */
-function overlapMinutes(s1: number, e1: number, s2: number, e2: number): number {
-  const start = Math.max(s1, e1 > s1 ? s1 : s1, s2)
-  const end = Math.min(e1, e2)
-  const overlapStart = Math.max(s1, s2)
-  const overlapEnd = Math.min(e1, e2)
-  return Math.max(0, overlapEnd - overlapStart)
-}
-
-/**
- * 勤務時間を時間帯別に分類する
- * startTime, endTime: "HH:MM" 形式
- *
- * 返り値: { normal: 分, overtime: 分, lateNight: 分 }
- * - normal: 8:00~17:00 の範囲内の時間
- * - overtime: 8:00~17:00 外の時間（深夜除く）
- * - lateNight: 22:00~5:00 の時間（overtimeに含まれる分から抽出）
- */
-function classifyWorkHours(startTime: string, endTime: string): {
-  normal: number    // 8:00~17:00 の分
-  overtime: number  // 8:00~17:00外（深夜除く）の分
-  lateNight: number // 22:00~5:00 の分
-} {
-  const start = timeToMinutes(startTime)
-  let end = timeToMinutes(endTime)
-
-  // endがstartより小さい場合は翌日扱い（例: 22:00 ~ 2:00）
-  if (end <= start) {
-    end += 24 * 60
-  }
-
-  const totalMinutes = end - start
-  if (totalMinutes <= 0) return { normal: 0, overtime: 0, lateNight: 0 }
-
-  // 通常時間帯: 8:00(480) ~ 17:00(1020)
-  const normalStart = 8 * 60  // 480
-  const normalEnd = 17 * 60   // 1020
-
-  // 深夜時間帯: 22:00(1320) ~ 29:00(1740=翌5:00)
-  // と 0:00(0) ~ 5:00(300)
-  const lateNightStart1 = 22 * 60  // 1320
-  const lateNightEnd1 = 29 * 60    // 1740 (翌5:00)
-  const lateNightStart2 = 0
-  const lateNightEnd2 = 5 * 60     // 300
-
-  // 通常時間（8:00~17:00の重複）
-  const normal = overlapMinutes(start, end, normalStart, normalEnd)
-
-  // 深夜時間（22:00~翌5:00の重複）
-  let lateNight = overlapMinutes(start, end, lateNightStart1, lateNightEnd1)
-  // 日をまたがない場合の 0:00~5:00 もチェック
-  lateNight += overlapMinutes(start, end, lateNightStart2, lateNightEnd2)
-
-  // 時間外 = 合計 - 通常 - 深夜
-  const overtime = Math.max(0, totalMinutes - normal - lateNight)
-
-  return { normal, overtime, lateNight }
-}
-
-/**
- * 移動時間を計算（分）
- * remoteDepartureTime → remoteArrivalTime : 行きの移動
- * remoteDepartureTime2 → remoteArrivalTime2 : 帰りの移動
- */
-function calcTravelMinutes(
-  dep1: string | null,
-  arr1: string | null,
-  dep2: string | null,
-  arr2: string | null
-): number {
-  let total = 0
-  if (dep1 && arr1) {
-    const d = timeToMinutes(dep1)
-    const a = timeToMinutes(arr1)
-    if (a > d) total += a - d
-  }
-  if (dep2 && arr2) {
-    const d = timeToMinutes(dep2)
-    const a = timeToMinutes(arr2)
-    if (a > d) total += a - d
-  }
-  return total
-}
+import {
+  classifyWorkHours,
+  calcTravelMinutes,
+  minutesToHours,
+  calculatePeriod,
+  type LaborEntry,
+} from '@/lib/aggregation-utils'
 
 // 月次集計API（21日～翌月20日）
 export async function GET(request: NextRequest) {
@@ -111,27 +23,9 @@ export async function GET(request: NextRequest) {
     const projectFilter = searchParams.get('projectRefId') || ''
 
     // 21日～20日の期間計算
-    const now = new Date()
-    const currentDay = now.getDate()
-
-    let basePeriodStart: Date
-    if (currentDay >= 21) {
-      basePeriodStart = new Date(now.getFullYear(), now.getMonth(), 21)
-    } else {
-      basePeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 21)
-    }
-
-    const periodStart = new Date(
-      basePeriodStart.getFullYear(),
-      basePeriodStart.getMonth() + offset,
-      21
-    )
-    const periodEnd = new Date(
-      periodStart.getFullYear(),
-      periodStart.getMonth() + 1,
-      20,
-      23, 59, 59, 999
-    )
+    const period = calculatePeriod(offset)
+    const periodStart = period.start
+    const periodEnd = period.end
 
     // 作業日報のwhere条件
     const reportWhere: any = {
@@ -159,23 +53,6 @@ export async function GET(request: NextRequest) {
     ])
 
     // ① 労働時間集計: 作業員名でグループ化、曜日・時間帯別
-    interface LaborEntry {
-      name: string
-      // 月曜〜土曜
-      weekdayNormal: number      // 8:00~17:00 (分)
-      weekdayOvertime: number    // 8:00~17:00外 (分)
-      weekdayLateNight: number   // うち22:00~5:00 (分)
-      weekdaySubtotal: number    // 小計 (分)
-      // 日曜
-      sundayNormal: number
-      sundayOvertime: number
-      sundayLateNight: number
-      sundaySubtotal: number
-      // 合計・移動
-      total: number              // 合計 (分)
-      travelMinutes: number      // 移動時間 (分)
-    }
-
     const laborMap = new Map<string, LaborEntry>()
 
     workReports.forEach(report => {
@@ -246,9 +123,6 @@ export async function GET(request: NextRequest) {
         }
       })
     })
-
-    // 分→時間（小数2桁）に変換
-    const minutesToHours = (mins: number) => parseFloat((mins / 60).toFixed(2))
 
     const laborSummary = Array.from(laborMap.values())
       .map(entry => ({
@@ -336,14 +210,11 @@ export async function GET(request: NextRequest) {
       .map(({ name, totalWorkerCount, totalDays }) => ({ name, totalWorkerCount, totalDays }))
       .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
 
-    // 期間表示用
-    const periodLabel = `${periodStart.getFullYear()}/${periodStart.getMonth() + 1}/${periodStart.getDate()} - ${periodEnd.getFullYear()}/${periodEnd.getMonth() + 1}/${periodEnd.getDate()}`
-
     return NextResponse.json({
       period: {
         start: periodStart.toISOString(),
         end: periodEnd.toISOString(),
-        label: periodLabel,
+        label: period.label,
       },
       reportCount: workReports.length,
       labor: laborSummary,
