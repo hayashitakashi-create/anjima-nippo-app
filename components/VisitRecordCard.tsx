@@ -193,12 +193,14 @@ export default function VisitRecordCard({
               <span>支出経費（円）</span>
             </label>
             <input
-              type="number"
-              value={data.expense || 0}
-              onChange={(e) => handleFieldChange('expense', parseInt(e.target.value) || 0)}
+              type="tel"
+              value={data.expense || ''}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '')
+                handleFieldChange('expense', val === '' ? 0 : Number(val))
+              }}
               className="w-full px-4 py-3 text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
               placeholder="0"
-              min="0"
             />
           </div>
         </div>
