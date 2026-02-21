@@ -555,10 +555,11 @@ export default function EditNippoPage() {
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={record.expense ?? ''}
+                        pattern="[0-9]*"
+                        value={record.expense != null ? String(record.expense) : ''}
                         onChange={(e) => {
-                          const v = e.target.value.replace(/[^0-9]/g, '')
-                          updateVisitRecord(index, 'expense', v ? parseInt(v) : undefined)
+                          const raw = e.target.value.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '')
+                          updateVisitRecord(index, 'expense', raw === '' ? undefined : Number(raw))
                         }}
                         className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="0"
