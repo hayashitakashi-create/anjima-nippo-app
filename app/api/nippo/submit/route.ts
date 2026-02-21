@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         where: { id: approvalRouteId },
       })
       if (route && route.isActive) {
-        approvalRoles = JSON.parse(route.roles)
+        try { approvalRoles = JSON.parse(route.roles) } catch {}
         routeId = route.id
       }
     }
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         where: { isDefault: true, isActive: true },
       })
       if (defaultRoute) {
-        approvalRoles = JSON.parse(defaultRoute.roles)
+        try { approvalRoles = JSON.parse(defaultRoute.roles) } catch {}
         routeId = defaultRoute.id
       }
     }

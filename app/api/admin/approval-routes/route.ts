@@ -21,10 +21,11 @@ export async function GET(request: NextRequest) {
     })
 
     // roles を JSON パースして返す
-    const parsedRoutes = routes.map(route => ({
-      ...route,
-      roles: JSON.parse(route.roles),
-    }))
+    const parsedRoutes = routes.map(route => {
+      let roles: string[] = []
+      try { roles = JSON.parse(route.roles) } catch {}
+      return { ...route, roles }
+    })
 
     return NextResponse.json({ routes: parsedRoutes })
   } catch (error) {
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      route: { ...route, roles: JSON.parse(route.roles) },
+      route: { ...route, roles: (() => { try { return JSON.parse(route.roles) } catch { return [] } })() },
       message: '承認ルートを作成しました',
     }, { status: 201 })
   } catch (error) {
@@ -147,7 +148,7 @@ export async function PUT(request: NextRequest) {
     })
 
     return NextResponse.json({
-      route: { ...route, roles: JSON.parse(route.roles) },
+      route: { ...route, roles: (() => { try { return JSON.parse(route.roles) } catch { return [] } })() },
       message: '承認ルートを更新しました',
     })
   } catch (error) {

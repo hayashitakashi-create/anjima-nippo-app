@@ -18,12 +18,16 @@ export async function GET(request: NextRequest) {
       orderBy: { order: 'asc' },
     })
 
-    const parsedRoutes = routes.map(route => ({
-      id: route.id,
-      name: route.name,
-      roles: JSON.parse(route.roles),
-      isDefault: route.isDefault,
-    }))
+    const parsedRoutes = routes.map(route => {
+      let roles: string[] = []
+      try { roles = JSON.parse(route.roles) } catch {}
+      return {
+        id: route.id,
+        name: route.name,
+        roles,
+        isDefault: route.isDefault,
+      }
+    })
 
     return NextResponse.json({ routes: parsedRoutes })
   } catch (error) {
