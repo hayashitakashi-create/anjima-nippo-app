@@ -14,7 +14,9 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json(users)
+    return NextResponse.json(users, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+    })
   } catch (error) {
     console.error('ユーザー取得エラー:', error)
     return NextResponse.json(

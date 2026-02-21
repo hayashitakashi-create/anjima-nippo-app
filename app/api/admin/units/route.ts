@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       ],
     })
 
-    return NextResponse.json({ units })
+    return NextResponse.json({ units }, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+    })
   } catch (error) {
     console.error('単位一覧取得エラー:', error)
     return NextResponse.json(

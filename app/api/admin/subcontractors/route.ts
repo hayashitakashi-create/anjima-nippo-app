@@ -33,7 +33,9 @@ export async function GET(request: NextRequest) {
       ],
     })
 
-    return NextResponse.json({ subcontractors })
+    return NextResponse.json({ subcontractors }, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+    })
   } catch (error) {
     console.error('外注先一覧取得エラー:', error)
     return NextResponse.json(

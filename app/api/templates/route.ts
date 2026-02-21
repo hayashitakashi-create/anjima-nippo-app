@@ -23,7 +23,9 @@ export async function GET(request: NextRequest) {
       ],
     })
 
-    return NextResponse.json({ templates })
+    return NextResponse.json({ templates }, {
+      headers: { 'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300' },
+    })
   } catch (error) {
     console.error('テンプレート取得エラー:', error)
     return NextResponse.json({ error: 'テンプレートの取得に失敗しました' }, { status: 500 })

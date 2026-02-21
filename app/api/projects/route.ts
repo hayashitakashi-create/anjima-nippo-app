@@ -49,7 +49,9 @@ export async function GET(request: NextRequest) {
       lastReportDate: project.workReports[0]?.date || null,
     }))
 
-    return NextResponse.json(projectsWithCounts)
+    return NextResponse.json(projectsWithCounts, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+    })
   } catch (error) {
     console.error('物件取得エラー:', error)
     return NextResponse.json(
