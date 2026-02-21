@@ -553,13 +553,13 @@ export default function EditNippoPage() {
                         支出経費（円）
                       </label>
                       <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={record.expense != null ? String(record.expense) : ''}
+                        type="tel"
+                        value={record.expense !== undefined && record.expense !== null ? String(record.expense) : ''}
                         onChange={(e) => {
-                          const raw = e.target.value.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '')
-                          updateVisitRecord(index, 'expense', raw === '' ? undefined : Number(raw))
+                          const val = e.target.value.replace(/\D/g, '')
+                          const newRecords = [...visitRecords]
+                          newRecords[index] = { ...newRecords[index], expense: val === '' ? undefined : Number(val) }
+                          setVisitRecords(newRecords)
                         }}
                         className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="0"
