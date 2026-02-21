@@ -277,9 +277,9 @@ export default function ByProjectAggregationPage() {
       <main className="max-w-[1400px] mx-auto px-3 sm:px-6 py-6">
         {/* 戻るリンク */}
         <div className="mb-4">
-          <Link href="/admin/aggregation" className="inline-flex items-center text-sm text-gray-600 hover:text-purple-600 transition-colors">
+          <Link href="/admin" className="inline-flex items-center text-sm text-gray-600 hover:text-purple-600 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
-            月次集計に戻る
+            管理画面に戻る
           </Link>
         </div>
 

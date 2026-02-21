@@ -146,33 +146,40 @@ export function minutesToHours(mins: number): number {
 // ========== 期間計算 ==========
 
 /**
- * 21日～翌月20日の期間を計算
+ * 21日～翌月20日の期間を計算（UTC基準）
  * @param offset 月オフセット（0=今月、-1=前月、1=翌月）
  */
 export function calculatePeriod(offset: number): PeriodInfo {
   const now = new Date()
-  const currentDay = now.getDate()
+  // UTC基準で現在日付を取得（DB保存がUTCのため）
+  const currentDay = now.getUTCDate()
+  const currentMonth = now.getUTCMonth()
+  const currentYear = now.getUTCFullYear()
 
-  let basePeriodStart: Date
-  if (currentDay >= 21) {
-    basePeriodStart = new Date(now.getFullYear(), now.getMonth(), 21)
-  } else {
-    basePeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 21)
+  let baseYear = currentYear
+  let baseMonth = currentMonth
+  if (currentDay < 21) {
+    baseMonth -= 1
+    if (baseMonth < 0) {
+      baseMonth = 11
+      baseYear -= 1
+    }
   }
 
-  const start = new Date(
-    basePeriodStart.getFullYear(),
-    basePeriodStart.getMonth() + offset,
-    21
-  )
-  const end = new Date(
-    start.getFullYear(),
-    start.getMonth() + 1,
-    20,
-    23, 59, 59, 999
-  )
+  // offsetを適用
+  let startMonth = baseMonth + offset
+  let startYear = baseYear
+  while (startMonth < 0) { startMonth += 12; startYear -= 1 }
+  while (startMonth > 11) { startMonth -= 12; startYear += 1 }
 
-  const label = `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()} - ${end.getFullYear()}/${end.getMonth() + 1}/${end.getDate()}`
+  const start = new Date(Date.UTC(startYear, startMonth, 21, 0, 0, 0, 0))
+
+  let endMonth = startMonth + 1
+  let endYear = startYear
+  if (endMonth > 11) { endMonth = 0; endYear += 1 }
+  const end = new Date(Date.UTC(endYear, endMonth, 20, 23, 59, 59, 999))
+
+  const label = `${startYear}/${startMonth + 1}/${21} - ${endYear}/${endMonth + 1}/${20}`
 
   return { start, end, label }
 }

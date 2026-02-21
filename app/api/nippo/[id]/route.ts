@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 import { DailyReportInput } from '@/lib/types'
-
-// 管理者チェック
-async function isAdmin(userId: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  })
-  return user?.role === 'admin'
-}
 
 // 日報詳細取得
 export async function GET(
@@ -17,15 +9,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.cookies.get('userId')?.value
+    const user = await getAuthFromRequest(request)
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: 'ログインしていません' },
         { status: 401 }
       )
     }
 
+    const userId = user.id
     const { id } = await params
 
     const report = await prisma.dailyReport.findUnique({
@@ -61,8 +54,8 @@ export async function GET(
       )
     }
 
-    // 自分の日報か確認
-    if (report.userId !== userId) {
+    // 自分の日報か管理者か確認
+    if (report.userId !== userId && user.role !== 'admin') {
       return NextResponse.json(
         { error: 'この日報にアクセスする権限がありません' },
         { status: 403 }
@@ -85,15 +78,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.cookies.get('userId')?.value
+    const user = await getAuthFromRequest(request)
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: 'ログインしていません' },
         { status: 401 }
       )
     }
 
+    const userId = user.id
     const { id } = await params
     const body: DailyReportInput = await request.json()
 
@@ -167,15 +161,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = request.cookies.get('userId')?.value
+    const user = await getAuthFromRequest(request)
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { error: 'ログインしていません' },
         { status: 401 }
       )
     }
 
+    const userId = user.id
     const { id } = await params
 
     const existingReport = await prisma.dailyReport.findUnique({
@@ -190,8 +185,7 @@ export async function DELETE(
     }
 
     // 本人または管理者のみ削除可能
-    const admin = await isAdmin(userId)
-    if (existingReport.userId !== userId && !admin) {
+    if (existingReport.userId !== userId && user.role !== 'admin') {
       return NextResponse.json(
         { error: 'この日報を削除する権限がありません' },
         { status: 403 }

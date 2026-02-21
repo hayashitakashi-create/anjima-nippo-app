@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthFromRequest } from '@/lib/auth'
 
 // 一括日報作成
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
+    const userId = user.id
 
     const body = await request.json()
     const { dates, template } = body
@@ -147,10 +149,11 @@ export async function POST(request: NextRequest) {
 // 指定期間の日報存在チェック
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.cookies.get('userId')?.value
-    if (!userId) {
+    const user = await getAuthFromRequest(request)
+    if (!user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
+    const userId = user.id
 
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')

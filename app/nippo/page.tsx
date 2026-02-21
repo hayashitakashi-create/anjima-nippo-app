@@ -164,10 +164,12 @@ export default function NippoListPage() {
   // 作業日報取得（ユーザーIDが必要）
   useEffect(() => {
     if (!currentUser) return
-    fetch(`/api/work-report?userId=${currentUser.id}`)
+    fetch(`/api/work-report?userId=${currentUser.id}&limit=100`)
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
+        if (data && data.reports) {
+          setWorkReports(data.reports)
+        } else if (Array.isArray(data)) {
           setWorkReports(data)
         }
       })
@@ -207,7 +209,7 @@ export default function NippoListPage() {
 
       setSearchResults({
         sales: salesData?.reports || [],
-        work: Array.isArray(workData) ? workData : [],
+        work: workData?.reports || (Array.isArray(workData) ? workData : []),
       })
       setViewMode('search')
     } catch (error) {

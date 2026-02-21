@@ -382,12 +382,11 @@ export default function BulkCreatePage() {
                 return (
                   <button
                     key={i}
-                    onClick={() => !existing && toggleDate(dateStr)}
-                    disabled={!!existing}
+                    onClick={() => existing ? router.push(`/work-report/${existing.id}`) : toggleDate(dateStr)}
                     className={`
                       aspect-square rounded-lg flex flex-col items-center justify-center text-sm font-medium transition-all
                       ${existing
-                        ? 'bg-blue-100 text-blue-600 cursor-not-allowed'
+                        ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer'
                         : isSelected
                           ? 'bg-indigo-600 text-white'
                           : dow === 0
@@ -398,7 +397,7 @@ export default function BulkCreatePage() {
                       }
                       ${isToday && !existing && !isSelected ? 'ring-2 ring-indigo-400' : ''}
                     `}
-                    title={existing ? `日報あり: ${existing.projectName}` : undefined}
+                    title={existing ? `日報あり: ${existing.projectName}（クリックで表示）` : undefined}
                   >
                     <span>{item.date.getDate()}</span>
                     {existing && <span className="text-[10px]">済</span>}

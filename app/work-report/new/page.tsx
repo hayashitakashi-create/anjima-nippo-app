@@ -12,7 +12,7 @@
  * 6. 連絡事項
  */
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -23,12 +23,11 @@ import {
   Home,
   Settings,
   Shield,
-  BookMarked,
 } from 'lucide-react'
 import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
 
 // Types
-import { User, Template, WorkerRecord, MaterialRecord, SubcontractorRecord } from './types'
+import { User, WorkerRecord, MaterialRecord, SubcontractorRecord } from './types'
 import { DEFAULT_PROJECT_TYPES, DEFAULT_VOLUME_UNITS, DEFAULT_SUBCONTRACTORS } from './constants'
 
 // Components
@@ -39,8 +38,6 @@ import {
   SubcontractorCard,
   RemoteTrafficCard,
   ContactNotesCard,
-  TemplateMenu,
-  SaveTemplateModal,
   SuccessDialog,
   DraftBanner,
 } from './components'
@@ -52,7 +49,6 @@ function WorkReportNewPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectRefId = searchParams.get('projectId')
-  const templateId = searchParams.get('templateId')
 
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
@@ -64,14 +60,6 @@ function WorkReportNewPageContent() {
   const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
   const [subcontractorMasterList, setSubcontractorMasterList] = useState<string[]>(DEFAULT_SUBCONTRACTORS)
   const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
-
-  // テンプレート関連
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false)
-  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false)
-  const [templateName, setTemplateName] = useState('')
-  const [templateIsShared, setTemplateIsShared] = useState(false)
-  const [savingTemplate, setSavingTemplate] = useState(false)
 
   // 前日コピー
   const [copyLoading, setCopyLoading] = useState('')
@@ -156,8 +144,7 @@ function WorkReportNewPageContent() {
       fetch('/api/admin/project-types', { credentials: 'include' }),
       fetch('/api/admin/subcontractors', { credentials: 'include' }),
       fetch('/api/admin/units', { credentials: 'include' }),
-      fetch('/api/templates', { credentials: 'include' }),
-    ]).then(async ([materialsRes, projectTypesRes, subcontractorsRes, unitsRes, templatesRes]) => {
+    ]).then(async ([materialsRes, projectTypesRes, subcontractorsRes, unitsRes]) => {
       if (materialsRes.ok) {
         const data = await materialsRes.json()
         if (data?.materials) {
@@ -185,10 +172,6 @@ function WorkReportNewPageContent() {
           if (activeUnits.length > 0) setUnitMasterList(activeUnits)
         }
       }
-      if (templatesRes.ok) {
-        const data = await templatesRes.json()
-        if (data?.templates) setTemplates(data.templates)
-      }
     }).catch(err => console.error('マスタデータ取得エラー:', err))
 
     // 今日の日付をデフォルトに設定
@@ -211,93 +194,6 @@ function WorkReportNewPageContent() {
         .catch(error => console.error('物件情報取得エラー:', error))
     }
   }, [router, projectRefId])
-
-  // テンプレートIDがURLにある場合、テンプレートを読み込む
-  useEffect(() => {
-    if (templateId && templates.length > 0) {
-      const template = templates.find(t => t.id === templateId)
-      if (template) {
-        form.applyTemplate(template, projectLoaded)
-      }
-    }
-  }, [templateId, templates, projectLoaded])
-
-  // テンプレート選択時
-  const handleSelectTemplate = useCallback((template: Template) => {
-    form.applyTemplate(template, projectLoaded)
-    setShowTemplateMenu(false)
-  }, [form, projectLoaded])
-
-  // テンプレート保存
-  const handleSaveTemplate = async () => {
-    if (!templateName.trim()) {
-      alert('テンプレート名を入力してください')
-      return
-    }
-
-    setSavingTemplate(true)
-    try {
-      const res = await fetch('/api/templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: templateName,
-          projectRefId: projectRefId || null,
-          projectName: form.projectName || null,
-          projectType: form.projectType || null,
-          remoteDepartureTime: form.remoteDepartureTime || null,
-          remoteArrivalTime: form.remoteArrivalTime || null,
-          remoteDepartureTime2: form.remoteDepartureTime2 || null,
-          remoteArrivalTime2: form.remoteArrivalTime2 || null,
-          trafficGuardCount: form.trafficGuardCount || null,
-          trafficGuardStart: form.trafficGuardStart || null,
-          trafficGuardEnd: form.trafficGuardEnd || null,
-          workerRecords: form.workerRecords.filter(w => w.name).map(w => ({
-            name: w.name,
-            startTime: w.startTime,
-            endTime: w.endTime,
-            manHours: w.manHours,
-            workType: w.workType,
-            details: w.details,
-            dailyHours: w.dailyHours,
-            totalHours: w.totalHours,
-          })),
-          materialRecords: form.materialRecords.filter(m => m.name).map(m => ({
-            name: m.name,
-            volume: m.volume,
-            volumeUnit: m.volumeUnit,
-            quantity: m.quantity,
-            unitPrice: m.unitPrice,
-            subcontractor: m.subcontractor,
-          })),
-          subcontractorRecords: form.subcontractorRecords.filter(s => s.name).map(s => ({
-            name: s.name,
-            workerCount: s.workerCount,
-            workContent: s.workContent,
-          })),
-          isShared: templateIsShared,
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setTemplates(prev => [...prev, data.template])
-        setShowSaveTemplateModal(false)
-        setTemplateName('')
-        setTemplateIsShared(false)
-        alert('テンプレートを保存しました')
-      } else {
-        const data = await res.json()
-        alert(data.error || 'テンプレートの保存に失敗しました')
-      }
-    } catch (err) {
-      console.error('テンプレート保存エラー:', err)
-      alert('テンプレートの保存に失敗しました')
-    } finally {
-      setSavingTemplate(false)
-    }
-  }
 
   // 前日の日報データを取得
   const fetchPreviousReport = async () => {
@@ -523,12 +419,6 @@ function WorkReportNewPageContent() {
               <h1 className="text-lg sm:text-2xl font-semibold text-gray-900">作業日報</h1>
             </div>
             <div className="flex items-center space-x-1 sm:space-x-3">
-              <TemplateMenu
-                templates={templates}
-                showMenu={showTemplateMenu}
-                setShowMenu={setShowTemplateMenu}
-                onSelectTemplate={handleSelectTemplate}
-              />
               <Link
                 href="/dashboard"
                 className="p-2 text-[#0E3091] hover:bg-blue-50 rounded-lg transition-colors"
@@ -677,14 +567,6 @@ function WorkReportNewPageContent() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowSaveTemplateModal(true)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-amber-500 text-white rounded-xl hover:bg-amber-600 text-base sm:text-lg font-bold transition-all shadow-sm"
-              >
-                <BookMarked className="w-5 h-5" />
-                <span>テンプレート保存</span>
-              </button>
-              <button
-                type="button"
                 onClick={handleBack}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 text-base sm:text-lg font-bold transition-all shadow-sm"
               >
@@ -695,17 +577,6 @@ function WorkReportNewPageContent() {
           </div>
         </form>
 
-        {/* テンプレート保存モーダル */}
-        <SaveTemplateModal
-          show={showSaveTemplateModal}
-          onClose={() => setShowSaveTemplateModal(false)}
-          templateName={templateName}
-          setTemplateName={setTemplateName}
-          templateIsShared={templateIsShared}
-          setTemplateIsShared={setTemplateIsShared}
-          onSave={handleSaveTemplate}
-          saving={savingTemplate}
-        />
       </main>
     </div>
   )

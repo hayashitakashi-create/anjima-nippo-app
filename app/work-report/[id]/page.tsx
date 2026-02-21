@@ -965,7 +965,8 @@ export default function WorkReportDetailPage() {
                           </div>
                           <div className="col-span-1 lg:col-span-3">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工種</label>
-                            <select
+                            <input
+                              type="text"
                               value={record.workType}
                               onChange={(e) => {
                                 const newRecords = [...workerRecords]
@@ -973,12 +974,8 @@ export default function WorkReportDetailPage() {
                                 setWorkerRecords(newRecords)
                               }}
                               className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
-                            >
-                              <option value="">選択してください</option>
-                              {projectTypesList.map(type => (
-                                <option key={type} value={type}>{type}</option>
-                              ))}
-                            </select>
+                              placeholder="工種を入力"
+                            />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-12 gap-3 sm:gap-4 mt-3">

@@ -18,7 +18,6 @@ import {
   Calendar,
   ArrowLeft,
   Loader2,
-  Filter,
 } from 'lucide-react'
 
 interface LaborItem {
@@ -50,11 +49,6 @@ interface SubcontractorItem {
   totalDays: number
 }
 
-interface ProjectOption {
-  id: string
-  name: string
-}
-
 interface AggregationData {
   period: {
     start: string
@@ -65,7 +59,6 @@ interface AggregationData {
   labor: LaborItem[]
   materials: MaterialItem[]
   subcontractors: SubcontractorItem[]
-  projects: ProjectOption[]
   totals: {
     laborHours: number
     materialAmount: number
@@ -81,20 +74,13 @@ export default function AggregationPage() {
   const [data, setData] = useState<AggregationData | null>(null)
   const [offset, setOffset] = useState(0)
   const [activeTab, setActiveTab] = useState<TabType>('labor')
-  const [projectFilter, setProjectFilter] = useState('')
   const [error, setError] = useState('')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams({
-        offset: offset.toString(),
-      })
-      if (projectFilter) {
-        params.set('projectRefId', projectFilter)
-      }
-      const res = await fetch(`/api/aggregation?${params}`)
+      const res = await fetch(`/api/aggregation?offset=${offset}`)
       if (!res.ok) {
         if (res.status === 401) { router.push('/login'); return }
         if (res.status === 403) { router.push('/dashboard'); return }
@@ -107,7 +93,7 @@ export default function AggregationPage() {
     } finally {
       setLoading(false)
     }
-  }, [offset, projectFilter, router])
+  }, [offset, router])
 
   useEffect(() => {
     fetchData()
@@ -276,21 +262,6 @@ export default function AggregationPage() {
                   今月に戻る
                 </button>
               )}
-            </div>
-
-            {/* 物件フィルタ */}
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <select
-                value={projectFilter}
-                onChange={e => setProjectFilter(e.target.value)}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none max-w-[200px] sm:max-w-[280px]"
-              >
-                <option value="">全物件</option>
-                {data?.projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
             </div>
           </div>
         </div>

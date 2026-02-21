@@ -162,7 +162,7 @@ export default function ApprovalsPage() {
   const [selectedRole, setSelectedRole] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(true)
 
   // チェックボックス
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set())

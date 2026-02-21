@@ -525,9 +525,10 @@ export default function BulkPrintPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {reports.map(report => (
-                        <tr key={report.id} onClick={() => toggleSelect(report.id)}
+                        <tr key={report.id}
+                          onClick={() => router.push(report.reportType === 'work' ? `/work-report/${report.id}` : `/nippo/${report.id}`)}
                           className={`cursor-pointer transition-colors ${selectedIds.has(report.id) ? 'bg-teal-50 hover:bg-teal-100' : 'hover:bg-gray-50'}`}>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-4 py-4 text-center" onClick={(e) => { e.stopPropagation(); toggleSelect(report.id) }}>
                             {selectedIds.has(report.id) ? <CheckSquare className="w-5 h-5 text-teal-600 mx-auto" /> : <Square className="w-5 h-5 text-gray-400 mx-auto" />}
                           </td>
                           <td className="px-4 py-4 text-center">
@@ -582,9 +583,10 @@ export default function BulkPrintPage() {
                     </div>
                     <div className="divide-y divide-slate-100">
                       {reports.map(report => (
-                        <div key={report.id} onClick={() => toggleSelect(report.id)}
-                          className={`p-4 flex items-start gap-3 cursor-pointer transition-colors ${selectedIds.has(report.id) ? 'bg-teal-50' : ''}`}>
-                          <div className="pt-0.5 shrink-0">
+                        <div key={report.id}
+                          onClick={() => router.push(report.reportType === 'work' ? `/work-report/${report.id}` : `/nippo/${report.id}`)}
+                          className={`p-4 flex items-start gap-3 cursor-pointer transition-colors ${selectedIds.has(report.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}`}>
+                          <div className="pt-0.5 shrink-0" onClick={(e) => { e.stopPropagation(); toggleSelect(report.id) }}>
                             {selectedIds.has(report.id) ? <CheckSquare className="w-5 h-5 text-teal-600" /> : <Square className="w-5 h-5 text-gray-400" />}
                           </div>
                           <div className="min-w-0">

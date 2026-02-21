@@ -1,6 +1,6 @@
 'use client'
 
-import { Users, Plus, Copy, Trash2 } from 'lucide-react'
+import { Users, Plus, Copy, Trash2, UserPlus } from 'lucide-react'
 import { WorkerRecord } from '../types'
 import { WORKER_NAMES, TIME_OPTIONS, MAX_WORKER_RECORDS } from '../constants'
 import { toHalfWidth } from '../utils'
@@ -24,9 +24,68 @@ export function WorkerRecordsCard({
   copyLoading,
   projectTypesList,
 }: WorkerRecordsCardProps) {
+  // 工数を自動計算（1時間 = 0.125、昼休憩12:00-13:00を自動控除）
+  const calculateManHours = (startTime: string, endTime: string): number => {
+    if (!startTime || !endTime) return 0
+    const [startH, startM] = startTime.split(':').map(Number)
+    const [endH, endM] = endTime.split(':').map(Number)
+    const startMinutes = startH * 60 + startM
+    const endMinutes = endH * 60 + endM
+    if (endMinutes <= startMinutes) return 0
+
+    let totalMinutes = endMinutes - startMinutes
+
+    // 昼休憩（12:00-13:00）が作業時間に含まれる場合、1時間を引く
+    const lunchStart = 12 * 60
+    const lunchEnd = 13 * 60
+    if (startMinutes < lunchEnd && endMinutes > lunchStart) {
+      const overlapStart = Math.max(startMinutes, lunchStart)
+      const overlapEnd = Math.min(endMinutes, lunchEnd)
+      totalMinutes -= (overlapEnd - overlapStart)
+    }
+
+    const hours = totalMinutes / 60
+    return Number((hours * 0.125).toFixed(5))
+  }
+
   const updateRecord = (index: number, field: keyof WorkerRecord, value: any) => {
     const newRecords = [...workerRecords]
     ;(newRecords[index] as any)[field] = value
+    setWorkerRecords(newRecords)
+  }
+
+  // 作業時間変更時に工数を自動計算
+  const updateTimeAndCalculate = (index: number, field: 'startTime' | 'endTime', value: string) => {
+    const newRecords = [...workerRecords]
+    ;(newRecords[index] as any)[field] = value
+    const startTime = field === 'startTime' ? value : newRecords[index].startTime
+    const endTime = field === 'endTime' ? value : newRecords[index].endTime
+    newRecords[index].manHours = calculateManHours(startTime, endTime)
+    setWorkerRecords(newRecords)
+  }
+
+  // 工数の表示フォーマット（小数点第5位まで）
+  const formatManHours = (value: number): string => {
+    if (!value) return ''
+    return value.toFixed(5)
+  }
+
+  // 作業者1の内容（氏名以外）で新しい作業者を追加
+  const handleCopyWorker1 = () => {
+    if (workerRecords.length >= MAX_WORKER_RECORDS) return
+    const source = workerRecords[0]
+    const newId = (workerRecords.length + 1).toString()
+    const newRecords = [...workerRecords, {
+      id: newId,
+      name: '',
+      startTime: source.startTime,
+      endTime: source.endTime,
+      manHours: source.manHours,
+      workType: source.workType,
+      details: source.details,
+      dailyHours: source.dailyHours,
+      totalHours: source.totalHours,
+    }]
     setWorkerRecords(newRecords)
   }
 
@@ -43,6 +102,15 @@ export function WorkerRecordsCard({
             <p className="text-xs sm:text-sm text-gray-600">作業者の情報を入力してください</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyWorker1}
+              disabled={workerRecords.length >= MAX_WORKER_RECORDS}
+              className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">作業者1をコピー</span>
+            </button>
             <button
               type="button"
               onClick={onCopyPrevious}
@@ -104,7 +172,7 @@ export function WorkerRecordsCard({
                 <div className="flex items-center gap-1">
                   <select
                     value={record.startTime}
-                    onChange={(e) => updateRecord(index, 'startTime', e.target.value)}
+                    onChange={(e) => updateTimeAndCalculate(index, 'startTime', e.target.value)}
                     className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   >
                     <option value="">--:--</option>
@@ -115,7 +183,7 @@ export function WorkerRecordsCard({
                   <span className="text-gray-500 text-sm flex-shrink-0">〜</span>
                   <select
                     value={record.endTime}
-                    onChange={(e) => updateRecord(index, 'endTime', e.target.value)}
+                    onChange={(e) => updateTimeAndCalculate(index, 'endTime', e.target.value)}
                     className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   >
                     <option value="">--:--</option>
@@ -132,29 +200,26 @@ export function WorkerRecordsCard({
                 <input
                   type="text"
                   inputMode="decimal"
-                  value={record.manHours || ''}
+                  value={formatManHours(record.manHours)}
                   onChange={(e) => {
                     const halfWidth = toHalfWidth(e.target.value)
                     updateRecord(index, 'manHours', parseFloat(halfWidth) || 0)
                   }}
-                  className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                  placeholder="0"
+                  className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-blue-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                  placeholder="0.000"
                 />
               </div>
 
               {/* 工種 */}
               <div className="col-span-1 lg:col-span-3">
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工種</label>
-                <select
+                <input
+                  type="text"
                   value={record.workType}
                   onChange={(e) => updateRecord(index, 'workType', e.target.value)}
                   className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                >
-                  <option value="">選択してください</option>
-                  {projectTypesList.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
+                  placeholder="工種を入力"
+                />
               </div>
             </div>
 

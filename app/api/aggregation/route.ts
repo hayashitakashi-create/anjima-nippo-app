@@ -20,37 +20,24 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const offset = parseInt(searchParams.get('offset') || '0', 10)
-    const projectFilter = searchParams.get('projectRefId') || ''
 
     // 21日～20日の期間計算
     const period = calculatePeriod(offset)
     const periodStart = period.start
     const periodEnd = period.end
 
-    // 作業日報のwhere条件
-    const reportWhere: any = {
-      date: { gte: periodStart, lte: periodEnd },
-    }
-    if (projectFilter) {
-      reportWhere.projectRefId = projectFilter
-    }
-
     // 並列クエリ
-    const [workReports, projects] = await Promise.all([
-      prisma.workReport.findMany({
-        where: reportWhere,
-        include: {
-          workerRecords: { orderBy: { order: 'asc' } },
-          materialRecords: { orderBy: { order: 'asc' } },
-          subcontractorRecords: { orderBy: { order: 'asc' } },
-        },
-        orderBy: { date: 'asc' },
-      }),
-      prisma.project.findMany({
-        select: { id: true, name: true },
-        orderBy: { name: 'asc' },
-      }),
-    ])
+    const workReports = await prisma.workReport.findMany({
+      where: {
+        date: { gte: periodStart, lte: periodEnd },
+      },
+      include: {
+        workerRecords: { orderBy: { order: 'asc' } },
+        materialRecords: { orderBy: { order: 'asc' } },
+        subcontractorRecords: { orderBy: { order: 'asc' } },
+      },
+      orderBy: { date: 'asc' },
+    })
 
     // ① 労働時間集計: 作業員名でグループ化、曜日・時間帯別
     const laborMap = new Map<string, LaborEntry>()
@@ -220,7 +207,6 @@ export async function GET(request: NextRequest) {
       labor: laborSummary,
       materials: materialSummary,
       subcontractors: subcontractorSummary,
-      projects,
       totals: {
         laborHours: laborSummary.reduce((sum, l) => sum + l.total, 0),
         materialAmount: materialSummary.reduce((sum, m) => sum + m.totalAmount, 0),
