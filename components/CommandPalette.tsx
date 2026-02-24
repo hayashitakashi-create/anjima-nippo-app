@@ -15,6 +15,11 @@ interface UserInfo {
   role: string
 }
 
+// 外部からパレットを開くためのヘルパー
+export function openCommandPalette() {
+  window.dispatchEvent(new CustomEvent('open-command-palette'))
+}
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<UserInfo | null>(null)
@@ -54,6 +59,15 @@ export function CommandPalette() {
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [user])
+
+  // カスタムイベントで外部から開く
+  useEffect(() => {
+    const handleOpen = () => {
+      if (user) setOpen(true)
+    }
+    window.addEventListener('open-command-palette', handleOpen)
+    return () => window.removeEventListener('open-command-palette', handleOpen)
   }, [user])
 
   const runCommand = useCallback(

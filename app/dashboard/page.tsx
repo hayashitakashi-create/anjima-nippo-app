@@ -22,8 +22,10 @@ import {
   Shield,
   BarChart3,
   BookMarked,
-  CalendarPlus
+  CalendarPlus,
+  Command
 } from 'lucide-react'
+import { openCommandPalette } from '@/components/CommandPalette'
 
 interface User {
   id: string
@@ -301,6 +303,26 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
+
+            {/* 中央: 検索バー */}
+            <button
+              onClick={openCommandPalette}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 text-sm min-w-[280px] lg:min-w-[360px]"
+            >
+              <Search className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left">コマンドを検索...</span>
+              <kbd className="flex items-center gap-0.5 px-1.5 py-0.5 bg-white rounded text-[11px] text-gray-400 border border-gray-200 font-mono">
+                <Command className="h-3 w-3" />K
+              </kbd>
+            </button>
+            {/* モバイル: 検索アイコン */}
+            <button
+              onClick={openCommandPalette}
+              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="検索"
+            >
+              <Search className="h-5 w-5" />
+            </button>
 
             {/* 右側: アイコンメニュー */}
             <div className="flex items-center space-x-1 sm:space-x-3">
