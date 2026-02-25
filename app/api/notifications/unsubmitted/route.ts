@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnsubmittedUsers } from '@/lib/notifications'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
 
 // 未提出者リストを取得（管理者向け）
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'view_all_reports')
     if ('error' in authResult) return authErrorResponse(authResult)
 
     const result = await getUnsubmittedUsers()

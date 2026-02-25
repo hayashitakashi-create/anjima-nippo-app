@@ -27,6 +27,7 @@ interface User {
   name: string
   position?: string
   role: string
+  permissions?: Record<string, boolean>
 }
 
 interface Summary {
@@ -103,7 +104,7 @@ export default function AnalyticsPage() {
     if (!currentUser) return
     setLoading(true)
 
-    const userParam = currentUser.role === 'admin' && viewMode === 'all' ? 'all' : currentUser.id
+    const userParam = currentUser.permissions?.view_all_analytics && viewMode === 'all' ? 'all' : currentUser.id
     fetch(`/api/analytics?months=${months}&userId=${userParam}`)
       .then(res => {
         if (!res.ok) throw new Error('取得失敗')
@@ -153,7 +154,7 @@ export default function AnalyticsPage() {
               <Link href="/dashboard" className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="TOP画面">
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link href="/admin" className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="管理画面">
                   <Shield className="h-5 w-5" />
                 </Link>

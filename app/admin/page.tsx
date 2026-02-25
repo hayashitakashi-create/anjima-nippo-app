@@ -42,6 +42,7 @@ interface User {
   role: string
   isActive?: boolean
   defaultReportType: string
+  permissions?: Record<string, boolean>
 }
 
 interface ManagedUser extends User {
@@ -102,7 +103,8 @@ export default function AdminPage() {
       })
       .then(data => {
         if (data?.user) {
-          if (data.user.role !== 'admin') { router.push('/dashboard'); return }
+          const perms = data.user.permissions || {}
+          if (!perms.manage_users && !perms.approve_reports && !perms.manage_masters && !perms.system_settings && !perms.view_audit_log && !perms.bulk_print && !perms.view_aggregation) { router.push('/dashboard'); return }
           setCurrentUser(data.user)
         }
       })
@@ -111,8 +113,13 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!currentUser) return
-    fetchUsers()
-    fetchPositionOptions()
+    // manage_users権限がある場合のみユーザー一覧を取得
+    if (currentUser.permissions?.manage_users) {
+      fetchUsers()
+      fetchPositionOptions()
+    } else {
+      setLoading(false)
+    }
   }, [currentUser])
 
   const fetchPositionOptions = async () => {
@@ -357,7 +364,8 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 統計サマリ */}
+        {/* 統計サマリ（manage_users権限がある場合のみ表示） */}
+        {currentUser.permissions?.manage_users && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
             <div className="flex items-center space-x-3">
@@ -404,133 +412,151 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* 管理メニュー */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-          <Link href="/admin/approvals" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
+          {currentUser.permissions?.approve_reports && (
+            <Link href="/admin/approvals" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">承認管理</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">日報の承認・差戻し</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">承認管理</p>
-                <p className="text-xs text-gray-500 hidden sm:block">日報の承認・差戻し</p>
+            </Link>
+          )}
+          {currentUser.permissions?.manage_masters && (
+            <>
+              <Link href="/admin/projects" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                    <FolderKanban className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">案件管理</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">案件の一覧・管理</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/admin/project-types" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                    <Layers className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">工事種別</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">工事種別マスタ</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/admin/materials" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center group-hover:bg-cyan-200 transition-colors">
+                    <Package className="w-5 h-5 text-cyan-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">使用材料</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">材料マスタ管理</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/admin/subcontractors" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                    <Truck className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">外注先</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">外注先マスタ管理</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/admin/units" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors">
+                    <Ruler className="w-5 h-5 text-violet-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">単位設定</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">単位マスタ管理</p>
+                  </div>
+                </div>
+              </Link>
+            </>
+          )}
+          {currentUser.permissions?.view_audit_log && (
+            <Link href="/admin/audit-log" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
+                  <Activity className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">操作ログ</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">システム操作履歴</p>
+                </div>
               </div>
-            </div>
-          </Link>
-          <Link href="/admin/projects" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                <FolderKanban className="w-5 h-5 text-blue-600" />
+            </Link>
+          )}
+          {currentUser.permissions?.system_settings && (
+            <Link href="/admin/system-settings" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                  <Settings className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">システム設定</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">各種設定</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">案件管理</p>
-                <p className="text-xs text-gray-500 hidden sm:block">案件の一覧・管理</p>
+            </Link>
+          )}
+          {currentUser.permissions?.bulk_print && (
+            <Link href="/admin/bulk-print" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center group-hover:bg-teal-200 transition-colors">
+                  <Printer className="w-5 h-5 text-teal-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">一括印刷</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">日報を一括印刷</p>
+                </div>
               </div>
-            </div>
-          </Link>
-          <Link href="/admin/project-types" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                <Layers className="w-5 h-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">工事種別</p>
-                <p className="text-xs text-gray-500 hidden sm:block">工事種別マスタ</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/materials" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center group-hover:bg-cyan-200 transition-colors">
-                <Package className="w-5 h-5 text-cyan-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">使用材料</p>
-                <p className="text-xs text-gray-500 hidden sm:block">材料マスタ管理</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/subcontractors" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                <Truck className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">外注先</p>
-                <p className="text-xs text-gray-500 hidden sm:block">外注先マスタ管理</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/audit-log" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                <Activity className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">操作ログ</p>
-                <p className="text-xs text-gray-500 hidden sm:block">システム操作履歴</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/system-settings" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                <Settings className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">システム設定</p>
-                <p className="text-xs text-gray-500 hidden sm:block">各種設定</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/bulk-print" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center group-hover:bg-teal-200 transition-colors">
-                <Printer className="w-5 h-5 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">一括印刷</p>
-                <p className="text-xs text-gray-500 hidden sm:block">日報を一括印刷</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/aggregation" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center group-hover:bg-rose-200 transition-colors">
-                <Clock className="w-5 h-5 text-rose-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">労働時間集計</p>
-                <p className="text-xs text-gray-500 hidden sm:block">月次・材料・外注</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/aggregation/by-project" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                <Building2 className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">現場別集計</p>
-                <p className="text-xs text-gray-500 hidden sm:block">現場別月次レポート</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/units" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors">
-                <Ruler className="w-5 h-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">単位設定</p>
-                <p className="text-xs text-gray-500 hidden sm:block">単位マスタ管理</p>
-              </div>
-            </div>
-          </Link>
+            </Link>
+          )}
+          {currentUser.permissions?.view_aggregation && (
+            <>
+              <Link href="/admin/aggregation" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center group-hover:bg-rose-200 transition-colors">
+                    <Clock className="w-5 h-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">労働時間集計</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">月次・材料・外注</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/admin/aggregation/by-project" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                    <Building2 className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">現場別集計</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">現場別月次レポート</p>
+                  </div>
+                </div>
+              </Link>
+            </>
+          )}
         </div>
 
-        {/* ユーザー管理 */}
+        {/* ユーザー管理（manage_users権限がある場合のみ表示） */}
+        {currentUser.permissions?.manage_users && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h2 className="text-lg font-bold text-gray-900 flex items-center">
@@ -774,6 +800,7 @@ export default function AdminPage() {
             ))}
           </div>
         </div>
+        )}
       </main>
 
       {/* 新規作成モーダル */}

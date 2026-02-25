@@ -162,7 +162,7 @@ export default function BulkPrintPage() {
       })
       .then(data => {
         if (data?.user) {
-          if (data.user.role !== 'admin') { router.push('/dashboard'); return }
+          if (!data.user.permissions?.bulk_print) { router.push('/dashboard'); return }
           setCurrentUser(data.user)
         }
       })

@@ -5,6 +5,7 @@ export interface User {
   name: string
   position?: string
   role: string
+  permissions?: Record<string, boolean>
 }
 
 export interface WorkerRecord {

@@ -37,6 +37,7 @@ interface User {
   position?: string
   role: string
   defaultReportType: string
+  permissions?: Record<string, boolean>
 }
 
 export default function EditNippoPage() {
@@ -358,7 +359,7 @@ export default function EditNippoPage() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

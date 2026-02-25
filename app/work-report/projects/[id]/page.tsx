@@ -92,6 +92,7 @@ interface CurrentUser {
   id: string
   name: string
   role: string
+  permissions?: Record<string, boolean>
 }
 
 export default function ProjectDetailPage() {
@@ -441,7 +442,7 @@ export default function ProjectDetailPage() {
               <Link href="/dashboard" className="p-2 text-[#0E3091] hover:bg-blue-50 rounded-lg transition-colors" title="TOP画面">
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link href="/admin" className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="管理画面">
                   <Shield className="h-5 w-5" />
                 </Link>

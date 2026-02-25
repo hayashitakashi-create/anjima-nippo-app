@@ -11,6 +11,7 @@ interface User {
   username: string
   position?: string
   role: string
+  permissions?: Record<string, boolean>
 }
 
 export default function SettingsPage() {
@@ -148,7 +149,7 @@ export default function SettingsPage() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

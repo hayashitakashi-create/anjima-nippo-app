@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
 import {
   classifyWorkHours,
   calcTravelMinutes,
@@ -13,7 +13,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     // JWT認証（管理者のみ）
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'view_aggregation')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }

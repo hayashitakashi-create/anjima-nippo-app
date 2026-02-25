@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
+import { getUserPermissions } from '@/lib/permissions'
 import { WorkReportInput } from '../route'
 
 // 作業日報の個別取得
@@ -44,12 +45,15 @@ export async function GET(
       )
     }
 
-    // 自分の日報か管理者か確認
-    if (report.userId !== userId && user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'この作業日報にアクセスする権限がありません' },
-        { status: 403 }
-      )
+    // 自分の日報か閲覧権限があるか確認
+    if (report.userId !== userId) {
+      const permissions = await getUserPermissions(user.role)
+      if (!permissions.view_all_reports) {
+        return NextResponse.json(
+          { error: 'この作業日報にアクセスする権限がありません' },
+          { status: 403 }
+        )
+      }
     }
 
     return NextResponse.json(report)
@@ -213,12 +217,15 @@ export async function DELETE(
       )
     }
 
-    // 本人または管理者のみ削除可能
-    if (existingReport.userId !== userId && user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'この作業日報を削除する権限がありません' },
-        { status: 403 }
-      )
+    // 本人または編集権限のあるユーザーのみ削除可能
+    if (existingReport.userId !== userId) {
+      const permissions = await getUserPermissions(user.role)
+      if (!permissions.edit_all_reports) {
+        return NextResponse.json(
+          { error: 'この作業日報を削除する権限がありません' },
+          { status: 403 }
+        )
+      }
     }
 
     // onDelete: Cascade により子レコードも自動削除

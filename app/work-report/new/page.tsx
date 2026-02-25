@@ -329,7 +329,7 @@ function WorkReportNewPageContent() {
             name: record.name,
             startTime: record.startTime,
             endTime: record.endTime,
-            manHours: record.manHours,
+            workHours: record.manHours,
             workType: record.workType,
             details: record.details,
             dailyHours: record.dailyHours,
@@ -426,7 +426,7 @@ function WorkReportNewPageContent() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify, type JWTPayload as JoseJWTPayload } from 'jose'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from './prisma'
+import { getUserPermissions, type PermissionKey } from './permissions'
 
 // JWT シークレットキー（環境変数から取得、なければランダム生成）
 const JWT_SECRET = new TextEncoder().encode(
@@ -116,6 +117,24 @@ export async function requireAdmin(request: NextRequest): Promise<
   }
   if (user.role !== 'admin') {
     return { error: '管理者権限が必要です', status: 403 }
+  }
+  return { user }
+}
+
+/**
+ * 特定の権限が必要なAPIのガード
+ */
+export async function requirePermission(
+  request: NextRequest,
+  permission: PermissionKey
+): Promise<{ user: AuthenticatedUser } | { error: string; status: number }> {
+  const user = await getAuthFromRequest(request)
+  if (!user) {
+    return { error: 'ログインが必要です', status: 401 }
+  }
+  const permissions = await getUserPermissions(user.role)
+  if (!permissions[permission]) {
+    return { error: 'この操作を行う権限がありません', status: 403 }
   }
   return { user }
 }

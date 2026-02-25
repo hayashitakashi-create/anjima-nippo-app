@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
 
 // デフォルト材料読み込み
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_masters')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }

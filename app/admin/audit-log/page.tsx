@@ -166,7 +166,7 @@ export default function AuditLogPage() {
       })
       .then(data => {
         if (data?.user) {
-          if (data.user.role !== 'admin') { router.push('/dashboard'); return }
+          if (!data.user.permissions?.view_audit_log) { router.push('/dashboard'); return }
           setCurrentUser(data.user)
         }
       })

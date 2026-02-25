@@ -44,6 +44,7 @@ interface CurrentUser {
   name: string
   position?: string
   role: string
+  permissions?: Record<string, boolean>
 }
 
 // マスタデータ（APIから取得できなかった場合のフォールバック）
@@ -310,7 +311,7 @@ export default function ProjectListPage() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

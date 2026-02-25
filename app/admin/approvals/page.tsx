@@ -176,7 +176,7 @@ export default function ApprovalsPage() {
       })
       .then(data => {
         if (data && data.user) {
-          if (data.user.role !== 'admin') { router.push('/dashboard'); return }
+          if (!data.user.permissions?.approve_reports) { router.push('/dashboard'); return }
           setCurrentUser(data.user)
         }
       })

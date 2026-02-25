@@ -44,6 +44,7 @@ interface CommandDef {
 
 interface UserInfo {
   role: string
+  permissions?: Record<string, boolean>
 }
 
 export function CommandPalette() {
@@ -109,9 +110,29 @@ export function CommandPalette() {
   if (loading || !user) return null
   if (pathname === '/login' || pathname === '/register') return null
 
-  const isAdmin = user.role === 'admin'
+  const p = user.permissions || {}
+  const hasAnyAdmin = p.approve_reports || p.manage_masters || p.manage_users || p.system_settings || p.view_audit_log || p.bulk_print || p.view_aggregation
 
   // コマンド定義
+  const adminCommands: CommandDef[] = [
+    ...(hasAnyAdmin ? [{ id: 'admin-top', name: '管理画面', description: '管理者ダッシュボード', icon: <Shield className="h-5 w-5" />, category: '管理者', tags: ['管理', 'admin'], action: () => runCommand(() => router.push('/admin')) }] : []),
+    ...(p.approve_reports ? [{ id: 'admin-approvals', name: '承認管理', description: '日報の承認・差し戻し', icon: <CheckSquare className="h-5 w-5" />, category: '管理者', tags: ['承認'], action: () => runCommand(() => router.push('/admin/approvals')) }] : []),
+    ...(p.manage_masters ? [
+      { id: 'admin-projects', name: '案件管理', description: '案件の追加・編集・削除', icon: <FolderKanban className="h-5 w-5" />, category: '管理者', tags: ['案件', '物件'], action: () => runCommand(() => router.push('/admin/projects')) },
+      { id: 'admin-project-types', name: '工事種別', description: '工事種別マスタの管理', icon: <Hammer className="h-5 w-5" />, category: '管理者', tags: ['工事', '種別'], action: () => runCommand(() => router.push('/admin/project-types')) },
+      { id: 'admin-materials', name: '使用材料', description: '材料マスタの管理', icon: <Package className="h-5 w-5" />, category: '管理者', tags: ['材料', '資材'], action: () => runCommand(() => router.push('/admin/materials')) },
+      { id: 'admin-subcontractors', name: '外注先', description: '外注先マスタの管理', icon: <Truck className="h-5 w-5" />, category: '管理者', tags: ['外注', '業者'], action: () => runCommand(() => router.push('/admin/subcontractors')) },
+      { id: 'admin-units', name: '単位設定', description: '単位マスタの管理', icon: <Ruler className="h-5 w-5" />, category: '管理者', tags: ['単位'], action: () => runCommand(() => router.push('/admin/units')) },
+    ] : []),
+    ...(p.system_settings ? [{ id: 'admin-system', name: 'システム設定', description: 'システム全体の設定', icon: <Settings className="h-5 w-5" />, category: '管理者', tags: ['システム', '設定'], action: () => runCommand(() => router.push('/admin/system-settings')) }] : []),
+    ...(p.view_audit_log ? [{ id: 'admin-audit', name: '操作ログ', description: 'ユーザーの操作履歴を確認', icon: <ScrollText className="h-5 w-5" />, category: '管理者', tags: ['ログ', '履歴', '監査'], action: () => runCommand(() => router.push('/admin/audit-log')) }] : []),
+    ...(p.bulk_print ? [{ id: 'admin-print', name: '一括印刷', description: '日報をまとめて印刷', icon: <Printer className="h-5 w-5" />, category: '管理者', tags: ['印刷', 'PDF'], action: () => runCommand(() => router.push('/admin/bulk-print')) }] : []),
+    ...(p.view_aggregation ? [
+      { id: 'admin-aggregation', name: '労働時間集計', description: '全社員の労働時間を集計', icon: <Clock className="h-5 w-5" />, category: '管理者', tags: ['労働', '時間', '集計'], action: () => runCommand(() => router.push('/admin/aggregation')) },
+      { id: 'admin-by-project', name: '現場別集計', description: '現場（物件）ごとの集計', icon: <HardHat className="h-5 w-5" />, category: '管理者', tags: ['現場', '集計'], action: () => runCommand(() => router.push('/admin/aggregation/by-project')) },
+    ] : []),
+  ]
+
   const commands: CommandDef[] = [
     // クイック作成
     { id: 'create-sales', name: '営業日報を作成', description: '新しい営業日報を作成します', icon: <Plus className="h-5 w-5" />, category: 'クイック作成', tags: ['新規', '営業', '日報'], action: () => runCommand(() => router.push('/nippo-improved')) },
@@ -126,20 +147,7 @@ export function CommandPalette() {
     { id: 'nav-reports', name: 'レポート・分析', description: '月次レポートや分析データを表示', icon: <BarChart3 className="h-5 w-5" />, category: 'ナビゲーション', tags: ['レポート', '分析', '集計'], action: () => runCommand(() => router.push('/reports')) },
     { id: 'nav-settings', name: 'アカウント設定', description: 'プロフィールやパスワードを変更', icon: <UserCog className="h-5 w-5" />, category: 'ナビゲーション', tags: ['設定', 'アカウント', 'プロフィール'], action: () => runCommand(() => router.push('/settings')) },
     // 管理者
-    ...(isAdmin ? [
-      { id: 'admin-top', name: '管理画面', description: '管理者ダッシュボード', icon: <Shield className="h-5 w-5" />, category: '管理者', tags: ['管理', 'admin'], action: () => runCommand(() => router.push('/admin')) },
-      { id: 'admin-approvals', name: '承認管理', description: '日報の承認・差し戻し', icon: <CheckSquare className="h-5 w-5" />, category: '管理者', tags: ['承認'], action: () => runCommand(() => router.push('/admin/approvals')) },
-      { id: 'admin-projects', name: '案件管理', description: '案件の追加・編集・削除', icon: <FolderKanban className="h-5 w-5" />, category: '管理者', tags: ['案件', '物件'], action: () => runCommand(() => router.push('/admin/projects')) },
-      { id: 'admin-project-types', name: '工事種別', description: '工事種別マスタの管理', icon: <Hammer className="h-5 w-5" />, category: '管理者', tags: ['工事', '種別'], action: () => runCommand(() => router.push('/admin/project-types')) },
-      { id: 'admin-materials', name: '使用材料', description: '材料マスタの管理', icon: <Package className="h-5 w-5" />, category: '管理者', tags: ['材料', '資材'], action: () => runCommand(() => router.push('/admin/materials')) },
-      { id: 'admin-subcontractors', name: '外注先', description: '外注先マスタの管理', icon: <Truck className="h-5 w-5" />, category: '管理者', tags: ['外注', '業者'], action: () => runCommand(() => router.push('/admin/subcontractors')) },
-      { id: 'admin-units', name: '単位設定', description: '単位マスタの管理', icon: <Ruler className="h-5 w-5" />, category: '管理者', tags: ['単位'], action: () => runCommand(() => router.push('/admin/units')) },
-      { id: 'admin-system', name: 'システム設定', description: 'システム全体の設定', icon: <Settings className="h-5 w-5" />, category: '管理者', tags: ['システム', '設定'], action: () => runCommand(() => router.push('/admin/system-settings')) },
-      { id: 'admin-audit', name: '操作ログ', description: 'ユーザーの操作履歴を確認', icon: <ScrollText className="h-5 w-5" />, category: '管理者', tags: ['ログ', '履歴', '監査'], action: () => runCommand(() => router.push('/admin/audit-log')) },
-      { id: 'admin-print', name: '一括印刷', description: '日報をまとめて印刷', icon: <Printer className="h-5 w-5" />, category: '管理者', tags: ['印刷', 'PDF'], action: () => runCommand(() => router.push('/admin/bulk-print')) },
-      { id: 'admin-aggregation', name: '労働時間集計', description: '全社員の労働時間を集計', icon: <Clock className="h-5 w-5" />, category: '管理者', tags: ['労働', '時間', '集計'], action: () => runCommand(() => router.push('/admin/aggregation')) },
-      { id: 'admin-by-project', name: '現場別集計', description: '現場（物件）ごとの集計', icon: <HardHat className="h-5 w-5" />, category: '管理者', tags: ['現場', '集計'], action: () => runCommand(() => router.push('/admin/aggregation/by-project')) },
-    ] : []),
+    ...adminCommands,
     // アクション
     { id: 'logout', name: 'ログアウト', description: 'アカウントからログアウト', icon: <LogOut className="h-5 w-5" />, category: 'アクション', tags: ['ログアウト'], action: handleLogout },
   ]
@@ -147,7 +155,7 @@ export function CommandPalette() {
   const selectedCommand = commands.find((c) => c.id === selectedId) ?? null
 
   // カテゴリ順
-  const categories = ['クイック作成', 'ナビゲーション', ...(isAdmin ? ['管理者'] : []), 'アクション']
+  const categories = ['クイック作成', 'ナビゲーション', ...(adminCommands.length > 0 ? ['管理者'] : []), 'アクション']
 
   return (
     <>

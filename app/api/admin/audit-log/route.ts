@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
 
 // 操作ログ一覧取得
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'view_audit_log')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 // 操作ログ作成（内部API用）
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'view_audit_log')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }

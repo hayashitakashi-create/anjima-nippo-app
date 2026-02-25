@@ -28,8 +28,7 @@ export default function AdminSettingsPage() {
       })
       .then(data => {
         if (data && data.user) {
-          // 管理者以外はアクセス不可
-          if (data.user.role !== 'admin') {
+          if (!data.user.permissions?.system_settings) {
             router.push('/dashboard')
             return
           }

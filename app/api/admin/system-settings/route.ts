@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
+import { PERMISSION_DEFINITIONS, ADMIN_LOCKED_PERMISSIONS, type PermissionKey } from '@/lib/permissions'
 
 // デフォルト値の定義
 const DEFAULT_SETTINGS = {
@@ -24,7 +25,7 @@ const DEFAULT_SETTINGS = {
 // GET: 全設定または特定の設定を取得
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'system_settings')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
 // PUT: 設定を更新または作成
 export async function PUT(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'system_settings')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -159,6 +160,15 @@ function parseValue(key: string, value: string): any {
     }
   }
 
+  // JSON オブジェクトとして保存される設定
+  if (key === 'role_permissions') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return {}
+    }
+  }
+
   // ブール値として扱う設定
   if (key === 'report_reminder_enabled') {
     return value === 'true'
@@ -177,6 +187,10 @@ function parseValue(key: string, value: string): any {
 function stringifyValue(key: string, value: any): string {
   if (key === 'approval_roles') {
     return JSON.stringify(Array.isArray(value) ? value : [])
+  }
+
+  if (key === 'role_permissions') {
+    return JSON.stringify(value && typeof value === 'object' ? value : {})
   }
 
   if (key === 'report_reminder_enabled') {
@@ -224,6 +238,31 @@ function validateSetting(key: string, value: any): string | null {
       const timeout = parseInt(value, 10)
       if (isNaN(timeout) || timeout < 1) {
         return 'セッションタイムアウトは1時間以上である必要があります'
+      }
+      break
+
+    case 'role_permissions':
+      if (typeof value !== 'object' || value === null) {
+        return '権限設定はオブジェクトである必要があります'
+      }
+      // 管理者のロック権限が無効化されていないか検証
+      const adminPerms = value.admin
+      if (adminPerms) {
+        for (const lockedKey of ADMIN_LOCKED_PERMISSIONS) {
+          if (adminPerms[lockedKey] === false) {
+            const def = PERMISSION_DEFINITIONS.find(d => d.key === lockedKey)
+            return `管理者の「${def?.label || lockedKey}」は無効にできません`
+          }
+        }
+      }
+      // 不明な権限キーがないか検証
+      const validKeys = PERMISSION_DEFINITIONS.map(d => d.key)
+      for (const role of Object.keys(value)) {
+        for (const key of Object.keys(value[role])) {
+          if (!validKeys.includes(key as PermissionKey)) {
+            return `不明な権限キー: ${key}`
+          }
+        }
       }
       break
   }

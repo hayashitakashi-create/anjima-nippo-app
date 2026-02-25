@@ -91,6 +91,7 @@ interface User {
   name: string
   role: string
   defaultReportType: string
+  permissions?: Record<string, boolean>
 }
 
 // 曜日名
@@ -433,7 +434,7 @@ export default function NippoListPage() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

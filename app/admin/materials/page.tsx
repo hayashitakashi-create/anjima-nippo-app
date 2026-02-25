@@ -66,7 +66,7 @@ export default function MaterialsPage() {
       })
       .then(data => {
         if (data?.user) {
-          if (data.user.role !== 'admin') {
+          if (!data.user.permissions?.manage_masters) {
             router.push('/dashboard')
             return
           }

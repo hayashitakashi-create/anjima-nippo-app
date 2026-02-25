@@ -131,7 +131,7 @@ export default function AdminProjectsPage() {
       })
       .then(data => {
         if (data && data.user) {
-          if (data.user.role !== 'admin') { router.push('/dashboard'); return }
+          if (!data.user.permissions?.manage_masters) { router.push('/dashboard'); return }
           setCurrentUser(data.user)
         }
       })

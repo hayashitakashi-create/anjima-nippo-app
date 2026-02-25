@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
 
 // デフォルト単位リスト
 const DEFAULT_UNITS = [
@@ -12,7 +12,7 @@ const DEFAULT_UNITS = [
 // デフォルト単位を登録
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_masters')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }

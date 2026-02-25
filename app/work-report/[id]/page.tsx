@@ -44,6 +44,7 @@ interface CurrentUser {
   name: string
   position?: string
   role: string
+  permissions?: Record<string, boolean>
 }
 
 interface WorkerRecord {
@@ -120,6 +121,30 @@ const toHalfWidth = (str: string): string => {
   return str.replace(/[０-９]/g, (s) => {
     return String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
   }).replace(/[．]/g, '.').replace(/[，]/g, ',')
+}
+
+// 工数を自動計算（1時間 = 0.125、昼休憩12:00-13:00を自動控除）
+const calculateManHours = (startTime: string, endTime: string): number => {
+  if (!startTime || !endTime) return 0
+  const [startH, startM] = startTime.split(':').map(Number)
+  const [endH, endM] = endTime.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  if (endMinutes <= startMinutes) return 0
+
+  let totalMinutes = endMinutes - startMinutes
+
+  // 昼休憩（12:00-13:00）が作業時間に含まれる場合、1時間を引く
+  const lunchStart = 12 * 60
+  const lunchEnd = 13 * 60
+  if (startMinutes < lunchEnd && endMinutes > lunchStart) {
+    const overlapStart = Math.max(startMinutes, lunchStart)
+    const overlapEnd = Math.min(endMinutes, lunchEnd)
+    totalMinutes -= (overlapEnd - overlapStart)
+  }
+
+  const hours = totalMinutes / 60
+  return Number((hours * 0.125).toFixed(5))
 }
 
 export default function WorkReportDetailPage() {
@@ -288,17 +313,23 @@ export default function WorkReportDetailPage() {
 
         // 作業者記録
         if (data.workerRecords && data.workerRecords.length > 0) {
-          setWorkerRecords(data.workerRecords.map((r: any, i: number) => ({
-            id: r.id || (i + 1).toString(),
-            name: r.name || '',
-            startTime: r.startTime || '08:00',
-            endTime: r.endTime || '17:00',
-            manHours: r.workHours || 0,
-            workType: r.workType || '',
-            details: r.details || '',
-            dailyHours: r.dailyHours || 0,
-            totalHours: r.totalHours || 0,
-          })))
+          setWorkerRecords(data.workerRecords.map((r: any, i: number) => {
+            const startTime = r.startTime || '08:00'
+            const endTime = r.endTime || '17:00'
+            // DB保存値が0の場合は作業時間から再計算する
+            const manHours = r.workHours || calculateManHours(startTime, endTime)
+            return {
+              id: r.id || (i + 1).toString(),
+              name: r.name || '',
+              startTime,
+              endTime,
+              manHours,
+              workType: r.workType || '',
+              details: r.details || '',
+              dailyHours: r.dailyHours || 0,
+              totalHours: r.totalHours || 0,
+            }
+          }))
         }
 
         // 使用材料記録
@@ -347,7 +378,7 @@ export default function WorkReportDetailPage() {
         name: '',
         startTime: '08:00',
         endTime: '17:00',
-        manHours: 0,
+        manHours: calculateManHours('08:00', '17:00'),
         workType: '',
         details: '',
         dailyHours: 0,
@@ -637,7 +668,7 @@ export default function WorkReportDetailPage() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
@@ -921,6 +952,7 @@ export default function WorkReportDetailPage() {
                                 onChange={(e) => {
                                   const newRecords = [...workerRecords]
                                   newRecords[index].startTime = e.target.value
+                                  newRecords[index].manHours = calculateManHours(e.target.value, newRecords[index].endTime)
                                   setWorkerRecords(newRecords)
                                 }}
                                 className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
@@ -936,6 +968,7 @@ export default function WorkReportDetailPage() {
                                 onChange={(e) => {
                                   const newRecords = [...workerRecords]
                                   newRecords[index].endTime = e.target.value
+                                  newRecords[index].manHours = calculateManHours(newRecords[index].startTime, e.target.value)
                                   setWorkerRecords(newRecords)
                                 }}
                                 className="w-full h-[38px] px-1 sm:px-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"

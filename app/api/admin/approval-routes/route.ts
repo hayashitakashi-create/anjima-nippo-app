@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
 
 // GET: 承認ルート一覧を取得
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'system_settings')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 // POST: 新規承認ルート作成
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'system_settings')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 // PUT: 承認ルート更新
 export async function PUT(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'system_settings')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -163,7 +163,7 @@ export async function PUT(request: NextRequest) {
 // DELETE: 承認ルート削除
 export async function DELETE(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'system_settings')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }

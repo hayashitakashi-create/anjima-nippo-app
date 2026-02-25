@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAuthFromRequest, requireAdmin, authErrorResponse } from '@/lib/auth'
+import { getAuthFromRequest, requirePermission, authErrorResponse } from '@/lib/auth'
 
 // 単位一覧取得（認証済みユーザーならアクセス可能）
 export async function GET(request: NextRequest) {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 // 単位追加
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_masters')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 // 単位更新（有効/無効切り替え）
 export async function PUT(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_masters')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -111,7 +111,7 @@ export async function PUT(request: NextRequest) {
 // 単位削除
 export async function DELETE(request: NextRequest) {
   try {
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_masters')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }

@@ -30,8 +30,7 @@ export default function AdminNippoPage() {
       })
       .then(data => {
         if (data && data.user) {
-          // 管理者以外はアクセス不可
-          if (data.user.role !== 'admin') {
+          if (!data.user.permissions?.view_all_reports) {
             router.push('/dashboard')
             return
           }

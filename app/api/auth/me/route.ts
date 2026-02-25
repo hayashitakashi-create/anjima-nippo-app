@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthFromRequest, migrateOldSession, createToken, setAuthCookie } from '@/lib/auth'
+import { getUserPermissions } from '@/lib/permissions'
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +33,8 @@ export async function GET(request: NextRequest) {
             name: user.name,
           })
 
-          const response = NextResponse.json({ user })
+          const permissions = await getUserPermissions(user.role)
+          const response = NextResponse.json({ user: { ...user, permissions } })
           setAuthCookie(response, token)
           return response
         }
@@ -66,7 +68,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ user })
+    const permissions = await getUserPermissions(user.role)
+    return NextResponse.json({ user: { ...user, permissions } })
   } catch (error) {
     console.error('ユーザー取得エラー:', error)
     return NextResponse.json(

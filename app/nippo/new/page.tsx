@@ -37,6 +37,7 @@ interface User {
   position?: string
   role: string
   defaultReportType: string
+  permissions?: Record<string, boolean>
 }
 
 export default function NewNippoPage() {
@@ -174,7 +175,7 @@ export default function NewNippoPage() {
   const reportTypeName = reportType === 'sales' ? '営業日報' : '作業日報'
 
   const handleBackButton = () => {
-    if (currentUser?.role === 'admin') {
+    if (currentUser?.permissions?.manage_users) {
       router.push('/admin/nippo')
     } else {
       router.push('/dashboard')
@@ -241,7 +242,7 @@ export default function NewNippoPage() {
               >
                 <Home className="h-5 w-5" />
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

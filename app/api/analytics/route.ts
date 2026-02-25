@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
+import { getUserPermissions } from '@/lib/permissions'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +14,8 @@ export async function GET(request: NextRequest) {
     }
     const userId = user.id
 
-    const isAdmin = user.role === 'admin'
+    const permissions = await getUserPermissions(user.role)
+    const isAdmin = permissions.view_all_analytics
 
     // クエリパラメータ
     const { searchParams } = new URL(request.url)

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { requireAdmin, authErrorResponse } from '@/lib/auth'
+import { requirePermission, authErrorResponse } from '@/lib/auth'
 
 // ユーザー一覧取得
 export async function GET(request: NextRequest) {
   try {
     // JWT認証
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_users')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // JWT認証
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_users')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // JWT認証
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_users')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }
@@ -165,7 +165,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // JWT認証
-    const authResult = await requireAdmin(request)
+    const authResult = await requirePermission(request, 'manage_users')
     if ('error' in authResult) {
       return authErrorResponse(authResult)
     }

@@ -31,6 +31,7 @@ interface User {
   position?: string
   role: string
   defaultReportType: string
+  permissions?: Record<string, boolean>
 }
 
 interface RecentReport {
@@ -147,8 +148,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!currentUser) return
 
-    // 管理者なら未提出者情報を取得
-    if (currentUser.role === 'admin') {
+    // 閲覧権限があれば未提出者情報を取得
+    if (currentUser.permissions?.view_all_reports) {
       fetch('/api/notifications/unsubmitted')
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -304,7 +305,7 @@ export default function DashboardPage() {
 
             {/* 右側: アイコンメニュー */}
             <div className="flex items-center space-x-1 sm:space-x-3">
-              {currentUser?.role === 'admin' && (
+              {currentUser?.permissions?.manage_users && (
                 <Link
                   href="/admin"
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
@@ -361,7 +362,7 @@ export default function DashboardPage() {
           </motion.div>
 
           {/* 管理者向け: 未提出リマインダー */}
-          {currentUser?.role === 'admin' && unsubmitted && (
+          {currentUser?.permissions?.view_all_reports && unsubmitted && (
             (unsubmitted.salesUnsubmitted.length > 0 || unsubmitted.workUnsubmitted.length > 0) && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
