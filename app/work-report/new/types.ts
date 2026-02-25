@@ -76,13 +76,36 @@ export interface WorkReportFormState {
   contactNotes: string
 }
 
+// 工数を自動計算（1時間 = 0.125、昼休憩12:00-13:00を自動控除）
+export function calculateManHoursFromTime(startTime: string, endTime: string): number {
+  if (!startTime || !endTime) return 0
+  const [startH, startM] = startTime.split(':').map(Number)
+  const [endH, endM] = endTime.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  if (endMinutes <= startMinutes) return 0
+
+  let totalMinutes = endMinutes - startMinutes
+
+  const lunchStart = 12 * 60
+  const lunchEnd = 13 * 60
+  if (startMinutes < lunchEnd && endMinutes > lunchStart) {
+    const overlapStart = Math.max(startMinutes, lunchStart)
+    const overlapEnd = Math.min(endMinutes, lunchEnd)
+    totalMinutes -= (overlapEnd - overlapStart)
+  }
+
+  const hours = totalMinutes / 60
+  return Number((hours * 0.125).toFixed(5))
+}
+
 // 初期値
 export const INITIAL_WORKER_RECORD: WorkerRecord = {
   id: '1',
   name: '',
   startTime: '08:00',
   endTime: '17:00',
-  manHours: 0,
+  manHours: 1.0,
   workType: '',
   details: '',
   dailyHours: 0,

@@ -9,6 +9,7 @@ import {
   INITIAL_WORKER_RECORD,
   INITIAL_MATERIAL_RECORD,
   INITIAL_SUBCONTRACTOR_RECORD,
+  calculateManHoursFromTime,
 } from '../types'
 import {
   MAX_WORKER_RECORDS,
@@ -132,17 +133,21 @@ export function useWorkReportForm() {
       try {
         const workers = JSON.parse(template.workerRecords)
         if (Array.isArray(workers) && workers.length > 0) {
-          setWorkerRecords(workers.map((w: any, i: number) => ({
-            id: (i + 1).toString(),
-            name: w.name || '',
-            startTime: w.startTime || '08:00',
-            endTime: w.endTime || '17:00',
-            manHours: w.manHours || w.workHours || 0,
-            workType: w.workType || '',
-            details: w.details || '',
-            dailyHours: w.dailyHours || 0,
-            totalHours: w.totalHours || 0,
-          })))
+          setWorkerRecords(workers.map((w: any, i: number) => {
+            const startTime = w.startTime || '08:00'
+            const endTime = w.endTime || '17:00'
+            return {
+              id: (i + 1).toString(),
+              name: w.name || '',
+              startTime,
+              endTime,
+              manHours: w.manHours || w.workHours || calculateManHoursFromTime(startTime, endTime),
+              workType: w.workType || '',
+              details: w.details || '',
+              dailyHours: w.dailyHours || 0,
+              totalHours: w.totalHours || 0,
+            }
+          }))
         }
       } catch (e) {
         console.error('作業者記録パースエラー:', e)

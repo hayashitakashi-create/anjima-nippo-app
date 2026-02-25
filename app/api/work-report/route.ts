@@ -178,6 +178,29 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// 工数をサーバー側で計算（1時間 = 0.125、昼休憩12:00-13:00を自動控除）
+function calcWorkHours(startTime?: string, endTime?: string): number {
+  if (!startTime || !endTime) return 0
+  const [startH, startM] = startTime.split(':').map(Number)
+  const [endH, endM] = endTime.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  if (endMinutes <= startMinutes) return 0
+
+  let totalMinutes = endMinutes - startMinutes
+
+  const lunchStart = 12 * 60
+  const lunchEnd = 13 * 60
+  if (startMinutes < lunchEnd && endMinutes > lunchStart) {
+    const overlapStart = Math.max(startMinutes, lunchStart)
+    const overlapEnd = Math.min(endMinutes, lunchEnd)
+    totalMinutes -= (overlapEnd - overlapStart)
+  }
+
+  const hours = totalMinutes / 60
+  return Number((hours * 0.125).toFixed(5))
+}
+
 // 作業日報を作成
 export async function POST(request: NextRequest) {
   try {
@@ -205,7 +228,7 @@ export async function POST(request: NextRequest) {
             name: record.name,
             startTime: record.startTime,
             endTime: record.endTime,
-            workHours: record.workHours,
+            workHours: record.workHours || calcWorkHours(record.startTime, record.endTime),
             workType: record.workType,
             details: record.details,
             dailyHours: record.dailyHours,
@@ -221,7 +244,7 @@ export async function POST(request: NextRequest) {
             volumeUnit: record.volumeUnit,
             quantity: record.quantity,
             unitPrice: record.unitPrice,
-            amount: record.amount,
+            amount: (record.quantity || 0) * (record.unitPrice || 0),
             subcontractor: record.subcontractor,
             order: record.order,
           })),

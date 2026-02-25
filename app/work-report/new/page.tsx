@@ -27,7 +27,7 @@ import {
 import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
 
 // Types
-import { User, WorkerRecord, MaterialRecord, SubcontractorRecord } from './types'
+import { User, WorkerRecord, MaterialRecord, SubcontractorRecord, calculateManHoursFromTime } from './types'
 import { DEFAULT_PROJECT_TYPES, DEFAULT_VOLUME_UNITS, DEFAULT_SUBCONTRACTORS } from './constants'
 
 // Components
@@ -329,7 +329,7 @@ function WorkReportNewPageContent() {
             name: record.name,
             startTime: record.startTime,
             endTime: record.endTime,
-            workHours: record.manHours,
+            workHours: record.manHours || calculateManHoursFromTime(record.startTime, record.endTime),
             workType: record.workType,
             details: record.details,
             dailyHours: record.dailyHours,

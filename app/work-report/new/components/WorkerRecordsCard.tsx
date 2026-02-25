@@ -1,7 +1,7 @@
 'use client'
 
 import { Users, Plus, Copy, Trash2, UserPlus } from 'lucide-react'
-import { WorkerRecord } from '../types'
+import { WorkerRecord, calculateManHoursFromTime } from '../types'
 import { WORKER_NAMES, TIME_OPTIONS, MAX_WORKER_RECORDS } from '../constants'
 import { toHalfWidth } from '../utils'
 
@@ -24,29 +24,8 @@ export function WorkerRecordsCard({
   copyLoading,
   projectTypesList,
 }: WorkerRecordsCardProps) {
-  // 工数を自動計算（1時間 = 0.125、昼休憩12:00-13:00を自動控除）
-  const calculateManHours = (startTime: string, endTime: string): number => {
-    if (!startTime || !endTime) return 0
-    const [startH, startM] = startTime.split(':').map(Number)
-    const [endH, endM] = endTime.split(':').map(Number)
-    const startMinutes = startH * 60 + startM
-    const endMinutes = endH * 60 + endM
-    if (endMinutes <= startMinutes) return 0
-
-    let totalMinutes = endMinutes - startMinutes
-
-    // 昼休憩（12:00-13:00）が作業時間に含まれる場合、1時間を引く
-    const lunchStart = 12 * 60
-    const lunchEnd = 13 * 60
-    if (startMinutes < lunchEnd && endMinutes > lunchStart) {
-      const overlapStart = Math.max(startMinutes, lunchStart)
-      const overlapEnd = Math.min(endMinutes, lunchEnd)
-      totalMinutes -= (overlapEnd - overlapStart)
-    }
-
-    const hours = totalMinutes / 60
-    return Number((hours * 0.125).toFixed(5))
-  }
+  // 工数を自動計算（共通関数を使用）
+  const calculateManHours = calculateManHoursFromTime
 
   const updateRecord = (index: number, field: keyof WorkerRecord, value: any) => {
     const newRecords = [...workerRecords]

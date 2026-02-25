@@ -134,7 +134,6 @@ const calculateManHours = (startTime: string, endTime: string): number => {
 
   let totalMinutes = endMinutes - startMinutes
 
-  // 昼休憩（12:00-13:00）が作業時間に含まれる場合、1時間を引く
   const lunchStart = 12 * 60
   const lunchEnd = 13 * 60
   if (startMinutes < lunchEnd && endMinutes > lunchStart) {
