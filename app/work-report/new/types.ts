@@ -105,7 +105,7 @@ export const INITIAL_WORKER_RECORD: WorkerRecord = {
   name: '',
   startTime: '08:00',
   endTime: '17:00',
-  manHours: 1.0,
+  manHours: calculateManHoursFromTime('08:00', '17:00'),
   workType: '',
   details: '',
   dailyHours: 0,

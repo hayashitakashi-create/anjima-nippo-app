@@ -206,6 +206,14 @@ export async function POST(request: NextRequest) {
   try {
     const body: WorkReportInput = await request.json()
 
+    // デバッグログ: 受信データの確認
+    console.log('[work-report POST] workerRecords:', JSON.stringify(body.workerRecords?.map(r => ({
+      name: r.name, startTime: r.startTime, endTime: r.endTime, workHours: r.workHours
+    }))))
+    console.log('[work-report POST] materialRecords:', JSON.stringify(body.materialRecords?.map(r => ({
+      name: r.name, quantity: r.quantity, unitPrice: r.unitPrice, amount: r.amount
+    }))))
+
     const workReport = await prisma.workReport.create({
       data: {
         date: new Date(body.date),
