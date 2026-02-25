@@ -131,12 +131,12 @@ export function MaterialRecordsCard({
               <div className="col-span-1 sm:col-span-2">
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">数量</label>
                 <input
-                  type="text"
-                  inputMode="decimal"
+                  type="number"
+                  step="any"
+                  min="0"
                   value={record.quantity || ''}
                   onChange={(e) => {
-                    const halfWidth = toHalfWidth(e.target.value)
-                    updateRecord(index, 'quantity', parseFloat(halfWidth) || 0)
+                    updateRecord(index, 'quantity', parseFloat(e.target.value) || 0)
                   }}
                   className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   placeholder="0"
@@ -145,16 +145,18 @@ export function MaterialRecordsCard({
 
               {/* 単価 */}
               <div className="col-span-1 sm:col-span-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単価(円)</label>
+                <label className={`text-xs sm:text-sm font-medium mb-1 block ${record.quantity > 0 && !record.unitPrice ? 'text-red-600' : 'text-gray-700'}`}>
+                  単価(円){record.quantity > 0 && !record.unitPrice && <span className="text-red-500 ml-1">*</span>}
+                </label>
                 <input
-                  type="text"
-                  inputMode="decimal"
+                  type="number"
+                  step="any"
+                  min="0"
                   value={record.unitPrice || ''}
                   onChange={(e) => {
-                    const halfWidth = toHalfWidth(e.target.value)
-                    updateRecord(index, 'unitPrice', parseFloat(halfWidth) || 0)
+                    updateRecord(index, 'unitPrice', parseFloat(e.target.value) || 0)
                   }}
-                  className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
+                  className={`w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] ${record.quantity > 0 && !record.unitPrice ? 'bg-red-50 border-red-300' : 'bg-white border-gray-300'}`}
                   placeholder="0"
                 />
               </div>
@@ -163,7 +165,7 @@ export function MaterialRecordsCard({
             {/* 金額（自動計算） */}
             <div className="mt-3">
               <div className="text-sm text-gray-700">
-                金額: <span className="font-bold text-lg text-[#0E3091]">{(record.quantity * record.unitPrice).toLocaleString()}円</span>
+                金額 <span className="text-xs text-gray-500">(数量 × 単価)</span>: <span className="font-bold text-lg text-[#0E3091]">{(record.quantity * record.unitPrice).toLocaleString()}円</span>
               </div>
             </div>
           </div>
