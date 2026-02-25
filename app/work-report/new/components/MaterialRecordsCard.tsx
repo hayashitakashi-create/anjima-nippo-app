@@ -148,12 +148,11 @@ export function MaterialRecordsCard({
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単価(円)</label>
                 <input
                   type="text"
-                  inputMode="numeric"
-                  value={record.unitPrice ? record.unitPrice.toLocaleString() : ''}
+                  inputMode="decimal"
+                  value={record.unitPrice || ''}
                   onChange={(e) => {
                     const halfWidth = toHalfWidth(e.target.value)
-                    const rawValue = halfWidth.replace(/,/g, '')
-                    updateRecord(index, 'unitPrice', parseFloat(rawValue) || 0)
+                    updateRecord(index, 'unitPrice', parseFloat(halfWidth) || 0)
                   }}
                   className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   placeholder="0"

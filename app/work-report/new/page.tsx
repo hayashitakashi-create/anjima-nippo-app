@@ -305,6 +305,11 @@ function WorkReportNewPageContent() {
 
     setLoading(true)
 
+    // デバッグ: 送信前の材料データを確認
+    console.log('[submit] materialRecords:', form.materialRecords.map(r => ({
+      name: r.name, quantity: r.quantity, unitPrice: r.unitPrice, amount: r.quantity * r.unitPrice
+    })))
+
     try {
       const response = await fetch('/api/work-report', {
         method: 'POST',
