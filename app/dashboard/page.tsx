@@ -164,8 +164,9 @@ export default function DashboardPage() {
         return res.json()
       })
       .then(data => {
-        if (data && Array.isArray(data)) {
-          const recent = data.slice(0, 5).map((report: any) => ({
+        const reports = data?.reports ?? (Array.isArray(data) ? data : [])
+        if (reports.length > 0) {
+          const recent = reports.slice(0, 5).map((report: any) => ({
             id: report.id,
             date: report.date,
             destination: report.projectName || '',
@@ -174,8 +175,8 @@ export default function DashboardPage() {
           }))
           setWorkReports(recent)
 
-          const total = data.length
-          const thisMonth = data.filter((r: any) => {
+          const total = data?.pagination?.total ?? reports.length
+          const thisMonth = reports.filter((r: any) => {
             const reportDate = new Date(r.date)
             const now = new Date()
             return reportDate.getMonth() === now.getMonth() &&
