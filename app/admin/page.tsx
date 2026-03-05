@@ -867,12 +867,17 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex justify-end space-x-2">
-              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">キャンセル</button>
-              <button onClick={handleCreate} disabled={creating}
-                className="px-4 py-2 text-sm font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400">
-                {creating ? '作成中...' : '作成する'}
-              </button>
+            <div className="px-6 py-4 border-t border-slate-200 space-y-3">
+              <p className="text-xs text-gray-600">
+                ※<a href="https://dandori-work.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">プライバシーポリシー</a>をお読みいただき、同意の上作成してください。
+              </p>
+              <div className="flex justify-end space-x-2">
+                <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">キャンセル</button>
+                <button onClick={handleCreate} disabled={creating}
+                  className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400">
+                  {creating ? '作成中...' : 'プライバシーポリシーに同意のうえ作成する'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
