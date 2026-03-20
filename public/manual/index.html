@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安島工業株式会社 日報システム 取扱説明書</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#1e293b;background:#f8fafc;line-height:1.8}
+.cover{background:linear-gradient(135deg,#0E3091 0%,#1a4ab8 100%);color:white;padding:80px 40px;text-align:center;page-break-after:always;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.cover h1{font-size:42px;letter-spacing:.15em;margin-bottom:16px;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+.cover .subtitle{font-size:24px;color:#ffffff !important;margin-bottom:48px;font-weight:400}
+.cover .meta{font-size:16px;color:#ffffff !important}
+.cover .meta p{margin:6px 0;color:#ffffff !important}
+.cover p{color:#ffffff !important}
+.cover .logo{width:120px;height:120px;margin:0 auto 32px}
+.cover .logo img{width:100%;height:100%;object-fit:contain}
+.container{max-width:900px;margin:0 auto;padding:40px 32px}
+.toc{page-break-after:always}
+.toc h2{font-size:22px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:24px}
+.toc ol{list-style:none;counter-reset:toc}
+.toc ol li{counter-increment:toc;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:15px}
+.toc ol li::before{content:counter(toc) ".";color:#0E3091;font-weight:700;margin-right:12px;font-size:14px}
+.toc ol li a{color:#1e293b;text-decoration:none}
+.toc ol li a:hover{color:#0E3091}
+.section{page-break-before:always;margin-top:48px}
+h2.section-title{font-size:22px;color:#1e293b;border-left:4px solid #0E3091;padding-left:16px;margin-bottom:24px}
+h3{font-size:17px;color:#475569;margin:28px 0 12px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}
+h4{font-size:15px;color:#334155;margin:20px 0 8px}
+p{font-size:14px;color:#475569;margin-bottom:12px}
+.screenshot{width:100%;max-width:800px;border:1px solid #e2e8f0;border-radius:8px;margin:16px auto;display:block;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.caption{text-align:center;font-size:12px;color:#94a3b8;margin:-8px 0 24px}
+.tip{background:#f0f9ff;border-left:4px solid #0E3091;padding:14px 18px;margin:16px 0;border-radius:0 6px 6px 0;font-size:13px}
+.tip::before{content:"TIP";display:block;font-weight:700;color:#0E3091;margin-bottom:4px;font-size:12px;letter-spacing:.1em}
+.warn{background:#fffbeb;border-left:4px solid #f59e0b;padding:14px 18px;margin:16px 0;border-radius:0 6px 6px 0;font-size:13px}
+.warn::before{content:"注意";display:block;font-weight:700;color:#b45309;margin-bottom:4px;font-size:12px;letter-spacing:.1em}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border:1px solid #e2e8f0}
+td{padding:10px 12px;border:1px solid #e2e8f0;vertical-align:top}
+.steps{counter-reset:step;list-style:none;margin:16px 0}
+.steps li{counter-increment:step;position:relative;padding:8px 0 8px 44px;font-size:14px;color:#475569}
+.steps li::before{content:counter(step);position:absolute;left:0;top:6px;width:28px;height:28px;background:#0E3091;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+kbd{background:#f1f5f9;border:1px solid #d1d5db;border-radius:4px;padding:2px 6px;font-size:12px;font-family:inherit;color:#334155}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.05em}
+.badge-admin{background:#f3e8ff;color:#7c3aed}
+.badge-user{background:#ecfdf5;color:#059669}
+.pdf-btn{position:fixed;top:20px;right:20px;z-index:1000;background:#0E3091;color:white;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;transition:background .2s}
+.pdf-btn:hover{background:#0a2270}
+.pdf-btn svg{width:18px;height:18px;fill:currentColor}
+@media print{
+body{background:white}
+.cover{min-height:auto;padding:60px 40px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cover h1,.cover .subtitle,.cover .meta,.cover .meta p,.cover p{color:#ffffff !important}
+.container{padding:20px 16px}
+.screenshot{max-width:95%;box-shadow:none}
+.tip,.warn{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pdf-btn{display:none !important}
+}
+</style>
+</head>
+<body>
+
+<button class="pdf-btn" onclick="window.print()">
+  <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+  PDF ダウンロード
+</button>
+
+<!-- ======== カバーページ ======== -->
+<div class="cover">
+  <div class="logo"><img src="/manual/logo.png" alt="安島工業"></div>
+  <h1>日報システム</h1>
+  <p class="subtitle" style="color:#ffffff">取扱説明書</p>
+  <div class="meta" style="color:#ffffff">
+    <p style="font-size:18px;font-weight:600;color:#ffffff">安島工業株式会社</p>
+    <p style="color:#ffffff">Version 1.0 ― 2026年3月</p>
+    <p style="color:#ffffff">本マニュアルは管理者・一般ユーザー共通のドキュメントです</p>
+  </div>
+</div>
+
+<!-- ======== 目次 ======== -->
+<div class="container toc">
+  <h2>目次</h2>
+  <ol>
+    <li><a href="#sec1">ログイン・ログアウト</a></li>
+    <li><a href="#sec2">ダッシュボード（TOP画面）</a></li>
+    <li><a href="#sec3">営業日報の作成・閲覧</a></li>
+    <li><a href="#sec4">作業日報の作成・閲覧</a></li>
+    <li><a href="#sec5">物件管理</a></li>
+    <li><a href="#sec6">承認ワークフロー</a></li>
+    <li><a href="#sec7">管理者機能</a></li>
+    <li><a href="#sec8">設定・パスワード変更</a></li>
+    <li><a href="#sec9">便利な機能・ショートカット</a></li>
+    <li><a href="#sec10">よくある質問（FAQ）</a></li>
+  </ol>
+</div>
+
+<!-- ======== 1. ログイン ======== -->
+<div class="container section" id="sec1">
+  <h2 class="section-title">1. ログイン・ログアウト</h2>
+
+  <h3>ログイン方法</h3>
+  <ol class="steps">
+    <li>ブラウザで日報システムのURLにアクセスします</li>
+    <li><strong>メールアドレス</strong>（ログインID）を入力します</li>
+    <li><strong>パスワード</strong>を入力します（初期パスワード：<kbd>00000000</kbd>）</li>
+    <li>「ログイン」ボタンを押します</li>
+  </ol>
+
+  <img src="/screenshots/01_login.png" alt="ログイン画面" class="screenshot">
+  <p class="caption">図1-1: ログイン画面</p>
+
+  <div class="tip">初回ログイン後は、設定画面からパスワードを変更することをお勧めします。パスワードは8文字以上で設定してください。</div>
+
+  <div class="warn">パスワードを5回連続で間違えると、15分間ログインできなくなります。パスワードを忘れた場合は管理者にご連絡ください。</div>
+
+  <h3>ログアウト方法</h3>
+  <p>画面右上の<strong>ログアウトボタン</strong>（赤いアイコン）をクリックするとログアウトできます。共有PCをお使いの場合は、作業終了時に必ずログアウトしてください。</p>
+
+  <p>ログインIDは、管理者から配布されたメールアドレスです。初期パスワードは全員共通で <kbd>00000000</kbd>（ゼロ8桁）です。ログインIDがわからない場合は管理者にお問い合わせください。</p>
+</div>
+
+<!-- ======== 2. ダッシュボード ======== -->
+<div class="container section" id="sec2">
+  <h2 class="section-title">2. ダッシュボード（TOP画面）</h2>
+
+  <p>ログイン後に表示されるメイン画面です。日報の作成・閲覧・統計の確認がすべてここから行えます。</p>
+
+  <img src="/screenshots/02_dashboard.png" alt="ダッシュボード" class="screenshot">
+  <p class="caption">図2-1: ダッシュボード</p>
+
+  <h3>画面構成</h3>
+  <table>
+    <tr><th>エリア</th><th>説明</th></tr>
+    <tr><td><strong>タブ切り替え</strong></td><td>「営業日報」と「作業日報」を切り替えます。前回選択したタブが記憶されます。</td></tr>
+    <tr><td><strong>新規日報作成</strong></td><td>選択中の日報タイプに応じた作成画面に遷移します。</td></tr>
+    <tr><td><strong>日報一覧</strong></td><td>過去の日報を閲覧・編集する画面に遷移します。</td></tr>
+    <tr><td><strong>最近の日報</strong></td><td>直近5件の日報が表示されます。クリックで詳細画面に遷移します。</td></tr>
+    <tr><td><strong>今月の実績</strong></td><td>今月の作成数・承認待ち・承認済み件数が表示されます。</td></tr>
+    <tr><td><strong>クイックリンク</strong></td><td>通知・テンプレート・レポート・設定への素早いアクセス。</td></tr>
+  </table>
+
+  <h3>ヘッダーアイコン</h3>
+  <table>
+    <tr><th>アイコン</th><th>機能</th></tr>
+    <tr><td>盾アイコン（紫）</td><td>管理画面へ移動（管理者のみ表示）</td></tr>
+    <tr><td>ベルアイコン</td><td>通知一覧へ移動（未読件数がバッジで表示）</td></tr>
+    <tr><td>歯車アイコン</td><td>設定画面へ移動（パスワード変更など）</td></tr>
+    <tr><td>ログアウトアイコン（赤）</td><td>ログアウト</td></tr>
+  </table>
+
+  <div class="tip">管理者権限を持つユーザーには「本日の日報未提出者」のリマインダーが表示されます。営業日報・作業日報それぞれの未提出者名が確認できます。</div>
+</div>
+
+<!-- ======== 3. 営業日報 ======== -->
+<div class="container section" id="sec3">
+  <h2 class="section-title">3. 営業日報の作成・閲覧</h2>
+
+  <h3>営業日報を作成する</h3>
+  <ol class="steps">
+    <li>ダッシュボードで「営業日報」タブを選択し、「新規日報作成」をクリックします</li>
+    <li><strong>日付</strong>を選択します（デフォルトは本日）</li>
+    <li>訪問先ごとに以下の情報を入力します：
+      <ul style="margin:8px 0 0 20px;font-size:13px">
+        <li>訪問先名</li>
+        <li>担当者名</li>
+        <li>開始時間・終了時間（30分単位で選択）</li>
+        <li>訪問内容</li>
+        <li>支出経費（任意）</li>
+      </ul>
+    </li>
+    <li>訪問先を追加する場合は「訪問先を追加」ボタンをクリックします</li>
+    <li>特記事項があれば入力します</li>
+    <li>「提出する」ボタンをクリックして送信します</li>
+  </ol>
+
+  <img src="/screenshots/04_nippo_new.png" alt="営業日報作成画面" class="screenshot">
+  <p class="caption">図3-1: 営業日報作成画面</p>
+
+  <h3>営業日報一覧</h3>
+  <p>ダッシュボードの「日報一覧」から過去の営業日報を確認できます。</p>
+
+  <img src="/screenshots/03_nippo_list.png" alt="営業日報一覧" class="screenshot">
+  <p class="caption">図3-2: 営業日報一覧画面</p>
+
+  <h4>絞り込み機能</h4>
+  <table>
+    <tr><th>フィルター</th><th>説明</th></tr>
+    <tr><td>日付範囲</td><td>開始日〜終了日で期間を指定</td></tr>
+    <tr><td>担当者</td><td>特定のユーザーの日報のみ表示</td></tr>
+    <tr><td>承認状態</td><td>承認待ち・承認済み・差戻しで絞り込み</td></tr>
+    <tr><td>クイック選択</td><td>「今日」「今週」「今月」でワンクリック指定</td></tr>
+  </table>
+
+  <h3>営業日報の詳細・編集</h3>
+  <p>一覧から日報をクリックすると詳細画面が表示されます。自分の日報であれば編集・削除が可能です。</p>
+
+  <img src="/screenshots/05_nippo_detail.png" alt="営業日報詳細" class="screenshot">
+  <p class="caption">図3-3: 営業日報詳細画面</p>
+
+  <div class="tip">印刷用レイアウトも用意されています。詳細画面の「印刷」ボタンから、そのまま紙に印刷できます。</div>
+</div>
+
+<!-- ======== 4. 作業日報 ======== -->
+<div class="container section" id="sec4">
+  <h2 class="section-title">4. 作業日報の作成・閲覧</h2>
+
+  <h3>作業日報を作成する</h3>
+  <ol class="steps">
+    <li>ダッシュボードで「作業日報」タブを選択し、「物件一覧・日報作成」をクリックします</li>
+    <li>物件一覧から該当する物件を選びます（物件を選ぶと工事名等が自動入力されます）</li>
+    <li>以下の情報を入力します</li>
+  </ol>
+
+  <img src="/screenshots/07_work_report_new_top.png" alt="作業日報作成画面（上部）" class="screenshot">
+  <p class="caption">図4-1: 作業日報作成画面（上部）</p>
+
+  <h4>基本情報</h4>
+  <table>
+    <tr><th>項目</th><th>説明</th></tr>
+    <tr><td>日付</td><td>作業日（デフォルトは本日）</td></tr>
+    <tr><td>工事名</td><td>物件選択時に自動入力。手動変更も可</td></tr>
+    <tr><td>工事種別</td><td>マスタから選択（塗装、防水、左官 など）</td></tr>
+    <tr><td>天気</td><td>晴れ・曇り・雨・雪から選択</td></tr>
+  </table>
+
+  <h4>作業者記録（最大11件）</h4>
+  <table>
+    <tr><th>項目</th><th>説明</th></tr>
+    <tr><td>作業者名</td><td>作業者の氏名を入力</td></tr>
+    <tr><td>開始時間・終了時間</td><td>作業時間を入力すると工数が自動計算（昼休憩1時間を自動控除）</td></tr>
+    <tr><td>工種</td><td>作業内容の種別</td></tr>
+    <tr><td>詳細</td><td>具体的な作業内容（任意）</td></tr>
+  </table>
+
+  <h4>使用材料・消耗品（最大5件）</h4>
+  <table>
+    <tr><th>項目</th><th>説明</th></tr>
+    <tr><td>材料名</td><td>マスタから選択または手入力</td></tr>
+    <tr><td>容量・単位</td><td>例: 16ℓ、20kg など</td></tr>
+    <tr><td>数量</td><td>使用した数量</td></tr>
+    <tr><td>単価</td><td>1個あたりの単価（任意。未入力時は「未登録」と表示）</td></tr>
+    <tr><td>金額</td><td>数量×単価で自動計算</td></tr>
+  </table>
+
+  <h4>外注先（最大10件）</h4>
+  <table>
+    <tr><th>項目</th><th>説明</th></tr>
+    <tr><td>外注先名</td><td>マスタから選択または手入力</td></tr>
+    <tr><td>人数</td><td>当日の作業人数</td></tr>
+    <tr><td>作業内容</td><td>具体的な作業内容</td></tr>
+  </table>
+
+  <img src="/screenshots/08_work_report_new_bottom.png" alt="作業日報作成画面（下部）" class="screenshot">
+  <p class="caption">図4-2: 作業日報作成画面（下部）</p>
+
+  <h4>遠隔地・交通誘導警備員</h4>
+  <table>
+    <tr><th>項目</th><th>説明</th></tr>
+    <tr><td>出発時間・到着時間</td><td>遠隔地の場合の移動時間（往復2セット入力可）</td></tr>
+    <tr><td>交通誘導警備員</td><td>人数・開始時間・終了時間</td></tr>
+  </table>
+
+  <h4>連絡事項</h4>
+  <p>現場での連絡事項を自由記述で入力できます。</p>
+
+  <div class="tip">
+    <strong>前日コピー機能：</strong>各セクションの「前日コピー」ボタンを押すと、同じ物件の前回の日報データがコピーされます。毎日同じ作業者で作業する場合に便利です。
+  </div>
+
+  <div class="tip">
+    <strong>下書き自動保存：</strong>入力中のデータは30秒ごとに自動保存されます。ブラウザを閉じても、次回アクセス時に復元できます。
+  </div>
+
+  <h3>作業日報一覧</h3>
+  <p>ダッシュボードの「日報一覧」から過去の作業日報を確認できます。キーワード検索で案件名・工種・作業者名・材料名から横断検索が可能です。</p>
+
+  <img src="/screenshots/06_work_report_list.png" alt="作業日報一覧" class="screenshot">
+  <p class="caption">図4-3: 作業日報一覧画面</p>
+</div>
+
+<!-- ======== 5. 物件管理 ======== -->
+<div class="container section" id="sec5">
+  <h2 class="section-title">5. 物件管理</h2>
+
+  <p>物件（工事案件）を管理し、物件ごとに作業日報を整理できます。</p>
+
+  <img src="/screenshots/09_projects_list.png" alt="物件一覧" class="screenshot">
+  <p class="caption">図5-1: 物件一覧画面</p>
+
+  <h3>物件一覧</h3>
+  <p>ダッシュボードの「物件一覧・日報作成」から物件の一覧を確認できます。各物件には以下の情報が表示されます。</p>
+  <table>
+    <tr><th>項目</th><th>説明</th></tr>
+    <tr><td>物件名</td><td>工事案件の名称</td></tr>
+    <tr><td>工事種別</td><td>塗装、防水、左官など</td></tr>
+    <tr><td>ステータス</td><td>進行中 / 完了 / アーカイブ</td></tr>
+    <tr><td>日報件数</td><td>その物件に紐づく作業日報の数</td></tr>
+    <tr><td>最終日報日</td><td>最後に日報が作成された日付</td></tr>
+  </table>
+
+  <h3>物件の詳細画面</h3>
+  <p>物件をクリックすると、その物件に紐づく全日報が一覧表示されます。工数合計・材料費合計・関わった作業者数などの集計も確認できます。</p>
+
+  <img src="/screenshots/10_project_detail.png" alt="物件詳細" class="screenshot">
+  <p class="caption">図5-2: 物件詳細画面</p>
+
+  <h3>物件の新規登録</h3>
+  <ol class="steps">
+    <li>物件一覧画面の「新規物件登録」ボタンをクリックします</li>
+    <li>物件名・工事種別・工事番号・施主名・所在地を入力します</li>
+    <li>「登録」ボタンをクリックします</li>
+  </ol>
+
+  <div class="warn">日報が紐づいている物件は削除できません。不要な物件は「アーカイブ」に変更してください。</div>
+</div>
+
+<!-- ======== 6. 承認ワークフロー ======== -->
+<div class="container section" id="sec6">
+  <h2 class="section-title">6. 承認ワークフロー</h2>
+
+  <p>営業日報には承認機能があります。日報を提出すると、設定された承認経路に従って承認者に通知が届きます。</p>
+
+  <h3>承認の流れ</h3>
+  <ol class="steps">
+    <li>社員が営業日報を提出します</li>
+    <li>承認経路に設定された承認者（社長・専務・常務・部長など）に通知が届きます</li>
+    <li>承認者は承認画面で内容を確認し、「承認」または「差戻し」を行います</li>
+    <li>全承認者が承認すると、日報のステータスが「承認済み」に変わります</li>
+  </ol>
+
+  <img src="/screenshots/13_admin_approvals.png" alt="承認管理画面" class="screenshot">
+  <p class="caption">図6-1: 承認管理画面</p>
+
+  <h3>承認ステータス</h3>
+  <table>
+    <tr><th>ステータス</th><th>説明</th></tr>
+    <tr><td>承認待ち</td><td>提出済みで、承認者の対応を待っている状態</td></tr>
+    <tr><td>承認済み</td><td>全承認者が承認した状態</td></tr>
+    <tr><td>差戻し</td><td>承認者が内容に問題ありとして差し戻した状態。修正後に再提出が必要</td></tr>
+  </table>
+
+  <div class="tip">承認経路は管理者が「管理画面 → 承認経路設定」で変更できます。</div>
+</div>
+
+<!-- ======== 7. 管理者機能 ======== -->
+<div class="container section" id="sec7">
+  <h2 class="section-title">7. 管理者機能</h2>
+
+  <p>管理者権限を持つユーザーは、ヘッダーの盾アイコンから管理画面にアクセスできます。</p>
+
+  <img src="/screenshots/11_admin_top.png" alt="管理画面トップ" class="screenshot">
+  <p class="caption">図7-1: 管理画面トップ</p>
+
+  <h3>ユーザー管理</h3>
+  <p>社員の追加・編集・無効化を行います。</p>
+
+  <img src="/screenshots/12_admin_users.png" alt="ユーザー管理" class="screenshot">
+  <p class="caption">図7-2: ユーザー管理画面</p>
+
+  <table>
+    <tr><th>操作</th><th>説明</th></tr>
+    <tr><td>新規作成</td><td>氏名・メールアドレス・初期パスワード・権限を設定して登録</td></tr>
+    <tr><td>編集</td><td>氏名・権限・デフォルト日報タイプの変更</td></tr>
+    <tr><td>無効化</td><td>退職者などのアカウントを無効化（データは保持、ログイン不可）</td></tr>
+    <tr><td>パスワードリセット</td><td>パスワードを忘れたユーザーのパスワードを再設定</td></tr>
+  </table>
+
+  <h3>マスタデータ管理</h3>
+  <p>日報入力時に使用する選択肢を管理します。</p>
+
+  <h4>材料マスタ</h4>
+  <p>作業日報で使用する材料名を管理します。デフォルトの容量・単位も設定できます。</p>
+  <img src="/screenshots/14_admin_materials.png" alt="材料マスタ" class="screenshot">
+  <p class="caption">図7-3: 材料マスタ管理</p>
+
+  <h4>単位マスタ</h4>
+  <p>材料で使用する単位（kg, ℓ, m, 缶 など）を管理します。</p>
+  <img src="/screenshots/15_admin_units.png" alt="単位マスタ" class="screenshot">
+  <p class="caption">図7-4: 単位マスタ管理</p>
+
+  <h4>外注先マスタ</h4>
+  <p>外注先の会社名を管理します。</p>
+  <img src="/screenshots/16_admin_subcontractors.png" alt="外注先マスタ" class="screenshot">
+  <p class="caption">図7-5: 外注先マスタ管理</p>
+
+  <h4>工事種別マスタ</h4>
+  <p>工事の種別（塗装、防水、左官、足場 など）を管理します。</p>
+  <img src="/screenshots/17_admin_project_types.png" alt="工事種別マスタ" class="screenshot">
+  <p class="caption">図7-6: 工事種別マスタ管理</p>
+
+  <div class="tip">各マスタの「有効/無効」切り替えで、選択肢からの表示・非表示を制御できます。データは削除されません。</div>
+
+  <h3>集計・レポート</h3>
+  <p>物件別・作業者別の工数や材料費を月単位で集計できます。</p>
+  <img src="/screenshots/18_admin_aggregation.png" alt="集計画面" class="screenshot">
+  <p class="caption">図7-7: 集計画面</p>
+
+  <h3>一括印刷</h3>
+  <p>期間と担当者を指定して、複数の日報をまとめて印刷できます。</p>
+  <img src="/screenshots/19_admin_bulk_print.png" alt="一括印刷" class="screenshot">
+  <p class="caption">図7-8: 一括印刷画面</p>
+
+  <h3>監査ログ</h3>
+  <p>全ユーザーの操作履歴（日報の作成・編集・削除・承認など）を時系列で確認できます。</p>
+</div>
+
+<!-- ======== 8. 設定 ======== -->
+<div class="container section" id="sec8">
+  <h2 class="section-title">8. 設定・パスワード変更</h2>
+
+  <p>ヘッダーの歯車アイコン、またはダッシュボードの「アカウント設定」から設定画面にアクセスします。</p>
+
+  <h3>パスワード変更</h3>
+  <ol class="steps">
+    <li>設定画面を開きます</li>
+    <li>「現在のパスワード」に今のパスワードを入力します</li>
+    <li>「新しいパスワード」に8文字以上の新しいパスワードを入力します</li>
+    <li>「新しいパスワード（確認）」にもう一度同じパスワードを入力します</li>
+    <li>「パスワードを変更」ボタンをクリックします</li>
+  </ol>
+
+  <div class="warn">パスワードを変更すると、次回ログイン時から新しいパスワードが必要になります。変更後のパスワードは忘れないようにしてください。</div>
+
+  <h3>ユーザー名（メールアドレス）変更</h3>
+  <p>ログインIDとして使用しているメールアドレスを変更できます。新しいメールアドレスを入力して「ユーザー名を更新」ボタンをクリックします。</p>
+</div>
+
+<!-- ======== 9. 便利な機能 ======== -->
+<div class="container section" id="sec9">
+  <h2 class="section-title">9. 便利な機能・ショートカット</h2>
+
+  <h3>コマンドパレット</h3>
+  <p>キーボードの <kbd>⌘</kbd> + <kbd>K</kbd>（Macの場合）または <kbd>Ctrl</kbd> + <kbd>K</kbd>（Windowsの場合）で、コマンドパレットを呼び出せます。</p>
+  <p>コマンドパレットでは以下のことができます：</p>
+  <table>
+    <tr><th>機能</th><th>説明</th></tr>
+    <tr><td>ページ移動</td><td>「ダッシュボード」「日報一覧」「管理画面」などに素早く遷移</td></tr>
+    <tr><td>ユーザー検索</td><td>社員名で検索して、その社員の日報を表示</td></tr>
+    <tr><td>キーワード検索</td><td>日報のキーワード検索を実行</td></tr>
+  </table>
+
+  <h3>テンプレート機能</h3>
+  <p>作業日報でよく使う入力パターンをテンプレートとして保存できます。</p>
+  <ol class="steps">
+    <li>作業日報入力画面で通常通り入力します</li>
+    <li>「テンプレートとして保存」ボタンをクリックします</li>
+    <li>テンプレート名を入力して保存します</li>
+    <li>次回から「テンプレートから入力」で呼び出せます</li>
+  </ol>
+
+  <h3>一括日報作成</h3>
+  <p>ダッシュボードの「一括日報作成」から、複数日分の作業日報をまとめて作成できます。同じ現場で連日作業する場合に便利です。</p>
+
+  <h3>印刷機能</h3>
+  <p>各日報の詳細画面から印刷用レイアウトで出力できます。A4用紙に最適化されたレイアウトで、そのまま提出・保管に使えます。</p>
+</div>
+
+<!-- ======== 10. FAQ ======== -->
+<div class="container section" id="sec10">
+  <h2 class="section-title">10. よくある質問（FAQ）</h2>
+
+  <h3>Q. パスワードを忘れました</h3>
+  <p>管理者にご連絡ください。管理者がパスワードをリセットできます。</p>
+
+  <h3>Q. ログインできません</h3>
+  <p>以下を確認してください：</p>
+  <ul style="margin:8px 0 16px 20px;font-size:14px;color:#475569">
+    <li>メールアドレスが正しいか（大文字小文字は区別されます）</li>
+    <li>パスワードが正しいか（初期パスワードは <kbd>00000000</kbd>）</li>
+    <li>ログイン試行回数を超えていないか（5回失敗すると15分間ロックされます）</li>
+    <li>アカウントが無効化されていないか（管理者に確認してください）</li>
+  </ul>
+
+  <h3>Q. 日報を間違えて提出してしまいました</h3>
+  <p>日報一覧から該当の日報を開き、「編集」ボタンで内容を修正できます。ただし、既に承認済みの日報は編集できません。管理者にご連絡ください。</p>
+
+  <h3>Q. 途中まで入力した日報が消えてしまいました</h3>
+  <p>作業日報は30秒ごとに下書きが自動保存されています。次回同じ物件の日報作成画面を開くと、「下書きを復元しますか？」というバナーが表示されます。</p>
+
+  <h3>Q. 材料や外注先の選択肢を追加したい</h3>
+  <p>管理者にご連絡ください。管理画面の各マスタ管理から追加できます。</p>
+
+  <h3>Q. 他の社員の日報を見ることはできますか？</h3>
+  <p>日報一覧画面で「全員」のフィルターを選択すると、他の社員の日報も閲覧できます（管理者権限が必要な場合があります）。</p>
+
+  <h3>Q. スマートフォンで使えますか？</h3>
+  <p>はい。本システムはスマートフォン・タブレットに対応しています。ブラウザ（Safari, Chrome等）からアクセスしてください。ホーム画面に追加すると、アプリのように使えます。</p>
+
+  <h3>Q. 印刷がうまくできません</h3>
+  <p>日報詳細画面の「印刷」ボタンから印刷してください。ブラウザの印刷設定で「背景のグラフィック」にチェックを入れると、よりきれいに印刷できます。</p>
+
+  <div class="tip">その他ご不明な点がありましたら、管理者までお問い合わせください。</div>
+</div>
+
+<!-- ======== フッター ======== -->
+<div class="container" style="text-align:center;padding:40px 32px 60px;color:#94a3b8;font-size:12px;border-top:1px solid #e2e8f0;margin-top:48px">
+  <p>安島工業株式会社 日報システム 取扱説明書</p>
+  <p>Version 1.0 ― 2026年3月 発行</p>
+  <p style="margin-top:8px">© 2026 安島工業株式会社</p>
+</div>
+
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth, authErrorResponse } from '@/lib/auth'
 
 // 物件を個別取得（日報一覧付き）
 export async function GET(
@@ -7,6 +8,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const { id } = await params
 
     const project = await prisma.project.findUnique({
@@ -99,6 +106,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const { id } = await params
     const body = await request.json()
 
@@ -137,6 +150,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const { id } = await params
 
     // 紐づく日報があるか確認

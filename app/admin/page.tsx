@@ -488,19 +488,7 @@ export default function AdminPage() {
               </Link>
             </>
           )}
-          {currentUser.permissions?.view_audit_log && (
-            <Link href="/admin/audit-log" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                  <Activity className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">操作ログ</p>
-                  <p className="text-xs text-gray-500 hidden sm:block">システム操作履歴</p>
-                </div>
-              </div>
-            </Link>
-          )}
+          {/* 操作ログ: ログ書き込み未実装のため非表示 */}
           {currentUser.permissions?.system_settings && (
             <Link href="/admin/system-settings" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
               <div className="flex flex-col items-center text-center space-y-2">
@@ -875,7 +863,7 @@ export default function AdminPage() {
                 <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">キャンセル</button>
                 <button onClick={handleCreate} disabled={creating}
                   className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400">
-                  {creating ? '作成中...' : 'プライバシーポリシーに同意のうえ作成する'}
+                  {creating ? '作成中...' : <><span className="block">プライバシーポリシーに</span><span className="block">同意のうえ作成する</span></>}
                 </button>
               </div>
             </div>

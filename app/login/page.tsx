@@ -178,7 +178,7 @@ export default function LoginPage() {
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-gray-600">
               <a
-                href="https://dandori-work.co.jp/privacy/"
+                href="https://dandori-work.com/privacy/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-blue-600 transition-colors"
@@ -187,23 +187,12 @@ export default function LoginPage() {
               </a>
               <span className="text-gray-300">|</span>
               <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  alert('利用規約は準備中です')
-                }}
-                className="hover:text-blue-600 transition-colors"
-              >
-                利用規約
-              </a>
-              <span className="text-gray-300">|</span>
-              <a
-                href="https://dandori-work.co.jp/security/"
+                href="/terms/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-blue-600 transition-colors"
               >
-                特定商取引法
+                利用規約
               </a>
               <span className="text-gray-300">|</span>
               <a

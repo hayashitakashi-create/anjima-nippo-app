@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth, authErrorResponse } from '@/lib/auth'
 
 // 物件一覧を取得（最適化版）
 export async function GET(request: NextRequest) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status') // active, completed, all
 
@@ -64,6 +71,12 @@ export async function GET(request: NextRequest) {
 // 物件を新規登録
 export async function POST(request: NextRequest) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const body = await request.json()
 
     const project = await prisma.project.create({

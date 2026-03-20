@@ -95,8 +95,17 @@ export async function GET(request: NextRequest) {
 // 日報を作成
 export async function POST(request: NextRequest) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const body = await request.json()
     const { approvalRouteId } = body as { approvalRouteId?: string } & DailyReportInput
+
+    // 認証ユーザーのIDを使用（なりすまし防止）
+    body.userId = authResult.user.id
 
     // 承認ルートから承認者役職リストを取得
     let approvalRoles: string[] = []

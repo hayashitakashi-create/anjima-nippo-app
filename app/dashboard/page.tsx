@@ -98,42 +98,7 @@ export default function DashboardPage() {
         router.push('/login')
       })
 
-    // 営業日報取得
-    fetch('/api/nippo/list')
-      .then(res => {
-        if (!res.ok) return null
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.reports) {
-          const recent = data.reports.slice(0, 5).map((report: any) => ({
-            id: report.id,
-            date: report.date,
-            destination: report.visitRecords?.[0]?.destination,
-            status: 'submitted' as const,
-            type: 'sales' as const
-          }))
-          setSalesReports(recent)
-
-          const total = data.reports.length
-          const thisMonth = data.reports.filter((r: any) => {
-            const reportDate = new Date(r.date)
-            const now = new Date()
-            return reportDate.getMonth() === now.getMonth() &&
-                   reportDate.getFullYear() === now.getFullYear()
-          }).length
-
-          setSalesStats({
-            totalReports: total,
-            thisMonth: thisMonth,
-            pendingApproval: Math.floor(thisMonth * 0.3),
-            approved: Math.floor(thisMonth * 0.7)
-          })
-        }
-      })
-      .catch(error => {
-        console.error('営業日報取得エラー:', error)
-      })
+    // 営業日報取得（salesユーザーのみ）— ユーザー情報確定後に別useEffectで取得
 
     // 通知の未読数取得
     fetch('/api/notifications?limit=1')
@@ -144,7 +109,7 @@ export default function DashboardPage() {
       .catch((err) => console.error('通知取得エラー:', err))
   }, [router])
 
-  // 作業日報取得 + 管理者向け未提出者情報取得（ユーザー情報取得後）
+  // 日報取得 + 管理者向け未提出者情報取得（ユーザー情報取得後）
   useEffect(() => {
     if (!currentUser) return
 
@@ -158,6 +123,55 @@ export default function DashboardPage() {
         .catch((err) => console.error('未提出者情報取得エラー:', err))
     }
 
+    // 営業日報取得（salesユーザーのみ）
+    if (currentUser.defaultReportType === 'sales') {
+      fetch('/api/nippo/list')
+        .then(res => {
+          if (!res.ok) return null
+          return res.json()
+        })
+        .then(data => {
+          if (data && data.reports) {
+            const recent = data.reports.slice(0, 5).map((report: any) => ({
+              id: report.id,
+              date: report.date,
+              destination: report.visitRecords?.[0]?.destination,
+              status: 'submitted' as const,
+              type: 'sales' as const
+            }))
+            setSalesReports(recent)
+
+            const total = data.reports.length
+            const thisMonth = data.reports.filter((r: any) => {
+              const reportDate = new Date(r.date)
+              const now = new Date()
+              return reportDate.getMonth() === now.getMonth() &&
+                     reportDate.getFullYear() === now.getFullYear()
+            }).length
+
+            const pending = data.reports.filter((r: any) => {
+              const reportDate = new Date(r.date)
+              const now = new Date()
+              return reportDate.getMonth() === now.getMonth() &&
+                     reportDate.getFullYear() === now.getFullYear() &&
+                     r.approvals?.some((a: any) => a.status === 'pending')
+            }).length
+            const approvedCount = thisMonth - pending
+
+            setSalesStats({
+              totalReports: total,
+              thisMonth: thisMonth,
+              pendingApproval: pending,
+              approved: approvedCount
+            })
+          }
+        })
+        .catch(error => {
+          console.error('営業日報取得エラー:', error)
+        })
+    }
+
+    // 作業日報取得
     fetch(`/api/work-report?userId=${currentUser.id}`)
       .then(res => {
         if (!res.ok) return null
@@ -221,6 +235,7 @@ export default function DashboardPage() {
     )
   }
 
+  const showBothTabs = currentUser?.defaultReportType === 'sales'
   const reportTypeName = reportType === 'sales' ? '営業日報' : '作業日報'
   const recentReports = reportType === 'sales' ? salesReports : workReports
   const stats = reportType === 'sales' ? salesStats : workStats
@@ -279,29 +294,37 @@ export default function DashboardPage() {
                 </div>
               </Link>
 
-              {/* タブ切り替え */}
-              <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
-                <button
-                  onClick={() => setReportType('sales')}
-                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                    reportType === 'sales'
-                      ? 'bg-white text-emerald-600 shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  営業<span className="hidden sm:inline">日報</span>
-                </button>
-                <button
-                  onClick={() => setReportType('work')}
-                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                    reportType === 'work'
-                      ? 'bg-white text-[#0E3091] shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  作業<span className="hidden sm:inline">日報</span>
-                </button>
-              </div>
+              {/* タブ切り替え（営業の人は両方表示、作業の人は作業のみ） */}
+              {showBothTabs ? (
+                <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
+                  <button
+                    onClick={() => setReportType('sales')}
+                    className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                      reportType === 'sales'
+                        ? 'bg-white text-emerald-600 shadow'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    営業<span className="hidden sm:inline">日報</span>
+                  </button>
+                  <button
+                    onClick={() => setReportType('work')}
+                    className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                      reportType === 'work'
+                        ? 'bg-white text-[#0E3091] shadow'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    作業<span className="hidden sm:inline">日報</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
+                  <div className="px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium bg-white text-[#0E3091] shadow">
+                    作業<span className="hidden sm:inline">日報</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 右側: アイコンメニュー */}
@@ -357,9 +380,16 @@ export default function DashboardPage() {
             className="mb-6 sm:mb-8"
           >
             <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
-              おはようございます、{currentUser?.name}さん
+              {(() => {
+                const hour = new Date().getHours()
+                if (hour < 12) return 'おはようございます'
+                if (hour < 18) return 'こんにちは'
+                return 'お疲れさまです'
+              })()}、{currentUser?.name}さん
             </h2>
-            <p className="text-sm sm:text-base text-gray-600">今日も一日頑張りましょう！</p>
+            <p className="text-sm sm:text-base text-gray-600">
+              {new Date().getHours() < 12 ? '今日も一日頑張りましょう！' : 'お疲れさまです！'}
+            </p>
           </motion.div>
 
           {/* 管理者向け: 未提出リマインダー */}

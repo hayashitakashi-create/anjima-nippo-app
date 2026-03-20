@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from './prisma'
 import { getUserPermissions, type PermissionKey } from './permissions'
 
-// JWT シークレットキー（環境変数から取得、なければランダム生成）
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'anjima-nippo-secret-key-change-in-production-2024'
-)
+// JWT シークレットキー（環境変数から取得、必須）
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET 環境変数が設定されていません。本番環境では必ず設定してください。')
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 
 // トークン有効期限: 30日
-const TOKEN_EXPIRY = '30d'
+const TOKEN_EXPIRY = '60d'
 
 // ログイン試行回数制限
 const MAX_LOGIN_ATTEMPTS = 5
@@ -203,7 +204,7 @@ export function setAuthCookie(response: NextResponse, token: string): void {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30, // 30日
+    maxAge: 60 * 60 * 24 * 60, // 60日
     path: '/',
   })
 }
@@ -221,33 +222,3 @@ export function clearAuthCookie(response: NextResponse): void {
   })
 }
 
-/**
- * 後方互換性のため: 旧Cookie (userId) からの移行用
- * 旧Cookieがあれば読み取り、新トークンに移行
- */
-export async function migrateOldSession(request: NextRequest): Promise<AuthenticatedUser | null> {
-  const oldUserId = request.cookies.get('userId')?.value
-  if (!oldUserId) return null
-
-  const user = await prisma.user.findUnique({
-    where: { id: oldUserId },
-    select: {
-      id: true,
-      name: true,
-      role: true,
-      position: true,
-      defaultReportType: true,
-      isActive: true,
-    },
-  })
-
-  if (!user || !user.isActive) return null
-
-  return {
-    id: user.id,
-    name: user.name,
-    role: user.role,
-    position: user.position,
-    defaultReportType: user.defaultReportType,
-  }
-}

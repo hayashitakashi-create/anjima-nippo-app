@@ -148,23 +148,29 @@ export default function NippoListPage() {
         router.push('/login')
       })
 
-    // 営業日報取得
-    fetch('/api/nippo/list')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.reports) {
-          setSalesReports(data.reports)
-        }
-      })
-      .catch(error => {
-        console.error('営業日報取得エラー:', error)
-      })
-      .finally(() => setLoading(false))
+    // 営業日報取得はユーザー情報確定後に行う
+    setLoading(false)
   }, [router])
 
-  // 作業日報取得（ユーザーIDが必要）
+  // 日報取得（ユーザーIDが必要）
   useEffect(() => {
     if (!currentUser) return
+
+    // 営業日報取得（salesユーザーのみ）
+    if (currentUser.defaultReportType === 'sales') {
+      fetch('/api/nippo/list')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.reports) {
+            setSalesReports(data.reports)
+          }
+        })
+        .catch(error => {
+          console.error('営業日報取得エラー:', error)
+        })
+    }
+
+    // 作業日報取得
     fetch(`/api/work-report?userId=${currentUser.id}&limit=100`)
       .then(res => res.json())
       .then(data => {
@@ -199,9 +205,12 @@ export default function NippoListPage() {
       if (searchStartDate) params.set('startDate', searchStartDate)
       if (searchEndDate) params.set('endDate', searchEndDate)
 
-      // 営業日報検索
-      const salesRes = await fetch(`/api/nippo/list?${params.toString()}`)
-      const salesData = await salesRes.json()
+      let salesData: any = { reports: [] }
+      // 営業日報検索（salesユーザーのみ）
+      if (currentUser.defaultReportType === 'sales') {
+        const salesRes = await fetch(`/api/nippo/list?${params.toString()}`)
+        salesData = await salesRes.json()
+      }
 
       // 作業日報検索
       params.set('userId', currentUser.id)
@@ -460,31 +469,39 @@ export default function NippoListPage() {
             </div>
           </div>
 
-          {/* 日報タイプ切り替え */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1 w-fit">
-            <button
-              type="button"
-              onClick={() => setReportType('sales')}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                reportType === 'sales'
-                  ? 'bg-white text-emerald-600 shadow'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              営業日報
-            </button>
-            <button
-              type="button"
-              onClick={() => setReportType('work')}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                reportType === 'work'
-                  ? 'bg-white text-[#0E3091] shadow'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              作業日報
-            </button>
-          </div>
+          {/* 日報タイプ切り替え（営業の人は両方表示、作業の人は作業のみ） */}
+          {currentUser?.defaultReportType === 'sales' ? (
+            <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1 w-fit">
+              <button
+                type="button"
+                onClick={() => setReportType('sales')}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                  reportType === 'sales'
+                    ? 'bg-white text-emerald-600 shadow'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                営業日報
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportType('work')}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                  reportType === 'work'
+                    ? 'bg-white text-[#0E3091] shadow'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                作業日報
+              </button>
+            </div>
+          ) : (
+            <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1 w-fit">
+              <div className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium bg-white text-[#0E3091] shadow">
+                作業日報
+              </div>
+            </div>
+          )}
         </div>
       </header>
 

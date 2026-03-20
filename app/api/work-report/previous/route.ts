@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth, authErrorResponse } from '@/lib/auth'
 
 // 前日の作業日報を取得
 export async function GET(request: NextRequest) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const searchParams = request.nextUrl.searchParams
     const userId = searchParams.get('userId')
     const currentDate = searchParams.get('date')

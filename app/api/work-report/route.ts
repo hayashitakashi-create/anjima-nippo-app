@@ -204,15 +204,16 @@ function calcWorkHours(startTime?: string, endTime?: string): number {
 // 作業日報を作成
 export async function POST(request: NextRequest) {
   try {
+    // JWT認証
+    const authResult = await requireAuth(request)
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
     const body: WorkReportInput = await request.json()
 
-    // デバッグログ: 受信データの確認
-    console.log('[work-report POST] workerRecords:', JSON.stringify(body.workerRecords?.map(r => ({
-      name: r.name, startTime: r.startTime, endTime: r.endTime, workHours: r.workHours
-    }))))
-    console.log('[work-report POST] materialRecords:', JSON.stringify(body.materialRecords?.map(r => ({
-      name: r.name, quantity: r.quantity, unitPrice: r.unitPrice, amount: r.amount
-    }))))
+    // 認証ユーザーのIDを使用（なりすまし防止）
+    body.userId = authResult.user.id
 
     const workReport = await prisma.workReport.create({
       data: {

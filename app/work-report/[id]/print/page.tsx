@@ -41,6 +41,7 @@ interface ReportData {
   projectName: string
   projectType?: string
   projectId?: string
+  projectRefId?: string
   weather?: string
   contactNotes?: string
   remoteDepartureTime?: string
@@ -89,6 +90,16 @@ export default function WorkReportPrintPage() {
         router.push('/dashboard')
       })
   }, [reportId, router])
+
+  // PDF保存時のファイル名を設定
+  useEffect(() => {
+    if (report && userName) {
+      const d = new Date(report.date)
+      const df = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+      document.title = `${df}_${userName}_作業日報`
+    }
+    return () => { document.title = '安島工業株式会社 日報システム' }
+  }, [report, userName])
 
   const handlePrint = () => {
     window.print()
@@ -200,7 +211,7 @@ export default function WorkReportPrintPage() {
                 <th>工事種別</th>
                 <td>{report.projectType || ''}</td>
                 <th>工事番号</th>
-                <td colSpan={5}>{report.projectId || ''}</td>
+                <td colSpan={5}>{report.projectRefId || ''}</td>
               </tr>
             </tbody>
           </table>

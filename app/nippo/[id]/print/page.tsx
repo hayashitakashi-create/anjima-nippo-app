@@ -91,6 +91,16 @@ export default function NippoPrintPage() {
       })
   }, [reportId, router])
 
+  // PDF保存時のファイル名を設定
+  useEffect(() => {
+    if (report) {
+      const d = new Date(report.date)
+      const df = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+      document.title = `${df}_${report.user.name}_営業日報`
+    }
+    return () => { document.title = '安島工業株式会社 日報システム' }
+  }, [report])
+
   const handlePrint = () => {
     window.print()
   }

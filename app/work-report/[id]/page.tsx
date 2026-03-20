@@ -805,13 +805,13 @@ export default function WorkReportDetailPage() {
                   {isEditing ? (
                     <input
                       type="text"
-                      value={projectId}
-                      onChange={(e) => setProjectId(e.target.value)}
+                      value={projectRefId || ''}
+                      onChange={(e) => setProjectRefId(e.target.value || null)}
                       className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
                     />
                   ) : (
                     <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50 text-gray-900">
-                      {projectId || '-'}
+                      {projectRefId || '-'}
                     </div>
                   )}
                 </div>
