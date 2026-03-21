@@ -23,7 +23,8 @@ import {
   BarChart3,
   BookMarked,
   CalendarPlus,
-  Palmtree
+  Palmtree,
+  BookOpen
 } from 'lucide-react'
 
 interface User {
@@ -350,6 +351,14 @@ export default function DashboardPage() {
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
+              </Link>
+              <Link
+                href="/manual/"
+                target="_blank"
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="操作説明書"
+              >
+                <BookOpen className="h-5 w-5" />
               </Link>
               <Link
                 href="/settings"
