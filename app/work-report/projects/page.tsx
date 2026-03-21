@@ -63,6 +63,7 @@ export default function ProjectListPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterProjectType, setFilterProjectType] = useState('')
   const [showNewProjectModal, setShowNewProjectModal] = useState(false)
   const [statusTab, setStatusTab] = useState<'active' | 'completed' | 'archived'>('active')
 
@@ -180,12 +181,16 @@ export default function ProjectListPage() {
     }
   }
 
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.projectCode?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredProjects = projects.filter(p => {
+    const matchesSearch = searchQuery === '' || (
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.projectCode?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    const matchesType = filterProjectType === '' || p.projectType === filterProjectType
+    return matchesSearch && matchesType
+  })
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-'
@@ -371,7 +376,7 @@ export default function ProjectListPage() {
           </button>
         </div>
 
-        {/* 検索 + 新規登録 */}
+        {/* 検索 + フィルター + 新規登録 */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -383,6 +388,16 @@ export default function ProjectListPage() {
               placeholder="物件名・発注者・住所で検索..."
             />
           </div>
+          <select
+            value={filterProjectType}
+            onChange={(e) => setFilterProjectType(e.target.value)}
+            className="px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] bg-white text-gray-700 min-w-[160px]"
+          >
+            <option value="">全ての工事種別</option>
+            {projectTypesList.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
           <button
             onClick={() => setShowNewProjectModal(true)}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] text-white rounded-lg hover:from-[#0a2470] hover:to-[#0E3091] font-bold shadow-lg transition-all"
@@ -398,12 +413,12 @@ export default function ProjectListPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
               <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg mb-2">
-                {searchQuery ? '検索結果がありません' : 'まだ物件が登録されていません'}
+                {searchQuery || filterProjectType ? '検索結果がありません' : 'まだ物件が登録されていません'}
               </p>
               <p className="text-gray-400 text-sm mb-6">
-                {searchQuery ? '検索条件を変えてお試しください' : '「新規物件登録」から物件を追加してください'}
+                {searchQuery || filterProjectType ? '検索条件を変えてお試しください' : '「新規物件登録」から物件を追加してください'}
               </p>
-              {!searchQuery && (
+              {!searchQuery && !filterProjectType && (
                 <button
                   onClick={() => setShowNewProjectModal(true)}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] font-medium transition-all"

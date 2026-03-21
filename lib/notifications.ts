@@ -81,7 +81,76 @@ export async function notifyReportRejected(
   }
 }
 
+// 休暇届が提出された時（管理者全員に通知）
+export async function notifyLeaveSubmitted(
+  applicantName: string,
+  dateStr: string,
+  leaveType: string,
+) {
+  try {
+    const adminIds = await getAdminUserIds()
+    if (adminIds.length === 0) return
+
+    const notifications = adminIds.map(userId => ({
+      userId,
+      type: 'leave_submitted',
+      title: '休暇届が提出されました',
+      message: `${applicantName}さんが${dateStr}の${leaveType}を申請しました`,
+      linkUrl: '/admin/leave-requests',
+    }))
+
+    await prisma.notification.createMany({ data: notifications })
+  } catch (error) {
+    console.error('通知作成エラー (休暇届提出):', error)
+  }
+}
+
+// 休暇届が承認された時（申請者に通知）
+export async function notifyLeaveApproved(
+  userId: string,
+  dateStr: string,
+  leaveType: string,
+  approverName: string,
+) {
+  try {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'leave_approved',
+        title: '休暇届が承認されました',
+        message: `${dateStr}の${leaveType}が${approverName}さんにより承認されました`,
+        linkUrl: '/leave-requests',
+      },
+    })
+  } catch (error) {
+    console.error('通知作成エラー (休暇届承認):', error)
+  }
+}
+
+// 休暇届が差戻しされた時（申請者に通知）
+export async function notifyLeaveRejected(
+  userId: string,
+  dateStr: string,
+  leaveType: string,
+  approverName: string,
+) {
+  try {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'leave_rejected',
+        title: '休暇届が差し戻されました',
+        message: `${dateStr}の${leaveType}が${approverName}さんにより差し戻されました。内容をご確認ください`,
+        linkUrl: '/leave-requests',
+      },
+    })
+  } catch (error) {
+    console.error('通知作成エラー (休暇届差戻し):', error)
+  }
+}
+
 // 日報未提出リマインダー（管理者向け：当日日報を提出していないユーザーのリスト）
+// 作業日報については、作成者だけでなくworkerRecordsに名前が含まれるユーザーも提出済みとみなす
 export async function getUnsubmittedUsers(): Promise<{
   salesUnsubmitted: Array<{ id: string; name: string }>
   workUnsubmitted: Array<{ id: string; name: string }>
@@ -92,8 +161,9 @@ export async function getUnsubmittedUsers(): Promise<{
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    // 全ユーザー取得
+    // アクティブな一般ユーザーのみ取得（承認者=adminは日報提出不要のため除外）
     const allUsers = await prisma.user.findMany({
+      where: { isActive: true, role: 'user' },
       select: { id: true, name: true, defaultReportType: true },
     })
 
@@ -105,13 +175,39 @@ export async function getUnsubmittedUsers(): Promise<{
       })).map(r => r.userId)
     )
 
-    // 今日の作業日報を提出したユーザーID
-    const workSubmittedIds = new Set(
-      (await prisma.workReport.findMany({
-        where: { date: { gte: today, lt: tomorrow } },
-        select: { userId: true },
-      })).map(r => r.userId)
-    )
+    // 今日の作業日報を取得（作成者 + workerRecordsの名前で判定）
+    const todayWorkReports = await prisma.workReport.findMany({
+      where: { date: { gte: today, lt: tomorrow } },
+      select: {
+        userId: true,
+        workerRecords: {
+          select: { name: true },
+        },
+      },
+    })
+
+    // ユーザー名からIDへのマッピングを作成
+    const nameToUserIds: Record<string, string[]> = {}
+    allUsers.forEach(u => {
+      if (!nameToUserIds[u.name]) {
+        nameToUserIds[u.name] = []
+      }
+      nameToUserIds[u.name].push(u.id)
+    })
+
+    // 作業日報提出済みユーザーID（作成者 + workerRecordsに含まれるユーザー）
+    const workSubmittedIds = new Set<string>()
+    todayWorkReports.forEach(r => {
+      // 作成者自身
+      workSubmittedIds.add(r.userId)
+      // workerRecordsに名前が含まれるユーザー
+      r.workerRecords.forEach(worker => {
+        const matchedUserIds = nameToUserIds[worker.name]
+        if (matchedUserIds) {
+          matchedUserIds.forEach(uid => workSubmittedIds.add(uid))
+        }
+      })
+    })
 
     const salesUsers = allUsers.filter(u => u.defaultReportType === 'sales' || u.defaultReportType === 'both')
     const workUsers = allUsers.filter(u => u.defaultReportType === 'work' || u.defaultReportType === 'both')

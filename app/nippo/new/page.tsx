@@ -438,9 +438,9 @@ export default function NewNippoPage() {
                       </label>
                       <input
                         type="tel"
-                        value={record.expense !== undefined && record.expense !== null ? String(record.expense) : ''}
+                        value={record.expense !== undefined && record.expense !== null ? record.expense.toLocaleString() : ''}
                         onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '')
+                          const val = e.target.value.replace(/[^\d]/g, '')
                           const newRecords = [...visitRecords]
                           newRecords[index] = { ...newRecords[index], expense: val === '' ? undefined : Number(val) }
                           setVisitRecords(newRecords)

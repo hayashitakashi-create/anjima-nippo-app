@@ -32,6 +32,7 @@ import {
   Ruler,
   Building2,
   Clock,
+  CalendarOff,
 } from 'lucide-react'
 
 interface User {
@@ -40,6 +41,7 @@ interface User {
   username: string
   position?: string
   role: string
+  isApprover?: boolean
   isActive?: boolean
   defaultReportType: string
   permissions?: Record<string, boolean>
@@ -284,21 +286,60 @@ export default function AdminPage() {
     }
   }
 
+  // 承認者 ON/OFF
+  const [togglingApprover, setTogglingApprover] = useState<string | null>(null)
+  const handleToggleApprover = async (user: ManagedUser) => {
+    const newIsApprover = !user.isApprover
+    if (newIsApprover) {
+      const currentApproverCount = users.filter(u => u.isApprover).length
+      if (currentApproverCount >= 5) {
+        setError('承認者は最大5名までです')
+        return
+      }
+    }
+    setError('')
+    setMessage('')
+    setTogglingApprover(user.id)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, isApprover: newIsApprover }),
+      })
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isApprover: newIsApprover } : u))
+        setMessage(newIsApprover ? `${user.name}を承認者に設定しました` : `${user.name}の承認者設定を解除しました`)
+      } else {
+        const data = await res.json()
+        setError(data.error || '承認者の更新に失敗しました')
+      }
+    } catch (err) {
+      console.error('承認者トグルエラー:', err)
+      setError('承認者の更新に失敗しました')
+    } finally {
+      setTogglingApprover(null)
+    }
+  }
+
   const filteredUsers = users.filter(u => {
     if (filterActive === 'active') return u.isActive !== false
     if (filterActive === 'inactive') return u.isActive === false
     return true
   })
 
+  const getPositionOrder = (pos: string | undefined) => {
+    if (!pos || pos === '-') return positionOptions.length
+    const idx = positionOptions.indexOf(pos)
+    return idx >= 0 ? idx : positionOptions.length
+  }
+
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    let cmp = 0
-    if (sortField === 'role') {
-      cmp = a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1
-      if (cmp === 0) cmp = a.name.localeCompare(b.name, 'ja')
-    } else {
-      cmp = a.name.localeCompare(b.name, 'ja')
-    }
-    return sortAsc ? cmp : -cmp
+    // 役職順 → 権限順（管理者優先） → あいうえお順
+    const posA = getPositionOrder(a.position)
+    const posB = getPositionOrder(b.position)
+    if (posA !== posB) return posA - posB
+    if (a.role !== b.role) return a.role === 'admin' ? -1 : 1
+    return a.name.localeCompare(b.name, 'ja')
   })
 
   const handleLogout = async () => {
@@ -325,7 +366,7 @@ export default function AdminPage() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
+            <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-600 flex items-center justify-center">
                 <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
@@ -333,7 +374,7 @@ export default function AdminPage() {
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">管理画面</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">システム管理</p>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center space-x-1 sm:space-x-3">
               <Link href="/dashboard" className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="TOP画面">
                 <Home className="h-5 w-5" />
@@ -429,6 +470,19 @@ export default function AdminPage() {
               </div>
             </Link>
           )}
+          {currentUser.permissions?.view_all_reports && (
+            <Link href="/admin/leave-requests" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="w-10 h-10 rounded-lg bg-lime-100 flex items-center justify-center group-hover:bg-lime-200 transition-colors">
+                  <CalendarOff className="w-5 h-5 text-lime-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">休暇届管理</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">休暇届の一覧・管理</p>
+                </div>
+              </div>
+            </Link>
+          )}
           {currentUser.permissions?.manage_masters && (
             <>
               <Link href="/admin/projects" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
@@ -490,6 +544,18 @@ export default function AdminPage() {
           )}
           {/* 操作ログ: ログ書き込み未実装のため非表示 */}
           {currentUser.permissions?.system_settings && (
+            <>
+            <Link href="/admin/system-settings#approvalRoutes" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
+                  <ClipboardList className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">承認ルート</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">承認フロー設定</p>
+                </div>
+              </div>
+            </Link>
             <Link href="/admin/system-settings" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
               <div className="flex flex-col items-center text-center space-y-2">
                 <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
@@ -501,6 +567,7 @@ export default function AdminPage() {
                 </div>
               </div>
             </Link>
+            </>
           )}
           {currentUser.permissions?.bulk_print && (
             <Link href="/admin/bulk-print" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
@@ -595,6 +662,10 @@ export default function AdminPage() {
                       {sortField === 'role' && (sortAsc ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                     </div>
                   </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                    承認者
+                    <span className="block text-[10px] text-gray-400 normal-case">({users.filter(u => u.isApprover).length}/5)</span>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">日報</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状態</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
@@ -636,6 +707,20 @@ export default function AdminPage() {
                           {user.role === 'admin' ? '管理者' : '一般'}
                         </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleToggleApprover(user)}
+                        disabled={togglingApprover === user.id}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          user.isApprover ? 'bg-purple-600' : 'bg-gray-300'
+                        } ${togglingApprover === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+                        title={user.isApprover ? '承認者を解除' : '承認者に設定'}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          user.isApprover ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingUser === user.id ? (
@@ -719,6 +804,22 @@ export default function AdminPage() {
                       {user.role === 'admin' ? '管理者' : '一般'}
                     </span>
                   </div>
+                </div>
+
+                {/* 承認者トグル（モバイル） */}
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className="text-xs font-medium text-gray-600">承認者</span>
+                  <button
+                    onClick={() => handleToggleApprover(user)}
+                    disabled={togglingApprover === user.id}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      user.isApprover ? 'bg-purple-600' : 'bg-gray-300'
+                    } ${togglingApprover === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      user.isApprover ? 'translate-x-4' : 'translate-x-0.5'
+                    }`} />
+                  </button>
                 </div>
 
                 {editingUser === user.id ? (

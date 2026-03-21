@@ -12,7 +12,7 @@ interface MaterialRecordsCardProps {
   onDelete: (id: string) => void
   onCopyPrevious: () => void
   copyLoading: string
-  materialMasterList: string[]
+  materialMasterList: { name: string; unitPrice: number }[]
   unitMasterList: string[]
   totalAmount: number
 }
@@ -90,12 +90,22 @@ export function MaterialRecordsCard({
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">材料名</label>
                 <select
                   value={record.name}
-                  onChange={(e) => updateRecord(index, 'name', e.target.value)}
+                  onChange={(e) => {
+                    const selectedName = e.target.value
+                    updateRecord(index, 'name', selectedName)
+                    const master = materialMasterList.find(m => m.name === selectedName)
+                    if (master && master.unitPrice > 0) {
+                      const newRecords = [...materialRecords]
+                      ;(newRecords[index] as any).name = selectedName
+                      ;(newRecords[index] as any).unitPrice = master.unitPrice
+                      setMaterialRecords(newRecords)
+                    }
+                  }}
                   className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                 >
                   <option value="">選択してください</option>
-                  {materialMasterList.map(name => (
-                    <option key={name} value={name}>{name}</option>
+                  {materialMasterList.map(m => (
+                    <option key={m.name} value={m.name}>{m.name}</option>
                   ))}
                 </select>
               </div>
@@ -145,8 +155,8 @@ export function MaterialRecordsCard({
 
               {/* 単価 */}
               <div className="col-span-1 sm:col-span-2">
-                <label className={`text-xs sm:text-sm font-medium mb-1 block ${record.quantity > 0 && !record.unitPrice ? 'text-red-600' : 'text-gray-700'}`}>
-                  単価(円){record.quantity > 0 && !record.unitPrice && <span className="text-red-500 ml-1">*</span>}
+                <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+                  単価(円)
                 </label>
                 <input
                   type="number"
@@ -156,7 +166,7 @@ export function MaterialRecordsCard({
                   onChange={(e) => {
                     updateRecord(index, 'unitPrice', parseFloat(e.target.value) || 0)
                   }}
-                  className={`w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] ${record.quantity > 0 && !record.unitPrice ? 'bg-red-50 border-red-300' : 'bg-white border-gray-300'}`}
+                  className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   placeholder="0"
                 />
               </div>

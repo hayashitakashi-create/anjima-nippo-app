@@ -281,6 +281,18 @@ export default function NippoListPage() {
     return dates
   }, [salesReports])
 
+  // 承認済みの日付セット（営業日報）
+  const salesApprovedDates = useMemo(() => {
+    const dates = new Set<string>()
+    salesReports.forEach(report => {
+      if (report.approvals.length > 0 && report.approvals[0].status === 'approved') {
+        const d = new Date(report.date)
+        dates.add(getDateKey(d))
+      }
+    })
+    return dates
+  }, [salesReports])
+
   const workReportDates = useMemo(() => {
     const dates = new Set<string>()
     workReports.forEach(report => {
@@ -288,6 +300,25 @@ export default function NippoListPage() {
       dates.add(getDateKey(d))
     })
     return dates
+  }, [workReports])
+
+  // 日付→日報IDのマップ（カレンダークリックで直接遷移用）
+  const salesReportIdMap = useMemo(() => {
+    const map = new Map<string, string>()
+    salesReports.forEach(report => {
+      const d = new Date(report.date)
+      map.set(getDateKey(d), report.id)
+    })
+    return map
+  }, [salesReports])
+
+  const workReportIdMap = useMemo(() => {
+    const map = new Map<string, string>()
+    workReports.forEach(report => {
+      const d = new Date(report.date)
+      map.set(getDateKey(d), report.id)
+    })
+    return map
   }, [workReports])
 
   // 選択された日付の日報を取得
@@ -418,6 +449,8 @@ export default function NippoListPage() {
   }
 
   const reportDates = reportType === 'sales' ? salesReportDates : workReportDates
+  const approvedDates = reportType === 'sales' ? salesApprovedDates : new Set<string>()
+  const reportIdMap = reportType === 'sales' ? salesReportIdMap : workReportIdMap
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -791,7 +824,9 @@ export default function NippoListPage() {
           <div className="grid grid-cols-7">
             {calendarDays.map((date, index) => {
               const dateKey = getDateKey(date)
-              const hasReport = reportDates.has(dateKey)
+              const hasSales = salesReportDates.has(dateKey)
+              const hasWork = workReportDates.has(dateKey)
+              const isApproved = salesApprovedDates.has(dateKey)
               const dayOfWeek = date.getDay()
               const today = isToday(date)
               const selected = isSelected(date)
@@ -800,7 +835,17 @@ export default function NippoListPage() {
               return (
                 <button
                   key={index}
-                  onClick={() => setSelectedDate(new Date(date))}
+                  onClick={() => {
+                    setSelectedDate(new Date(date))
+                    const reportId = reportIdMap.get(dateKey)
+                    if (reportId) {
+                      if (reportType === 'sales') {
+                        router.push(`/nippo/${reportId}`)
+                      } else {
+                        router.push(`/work-report/${reportId}`)
+                      }
+                    }
+                  }}
                   className={`relative flex flex-col items-center justify-center py-2.5 sm:py-3 transition-colors ${
                     !inMonth ? 'opacity-30' : ''
                   } ${selected ? '' : 'hover:bg-gray-50'}`}
@@ -821,14 +866,25 @@ export default function NippoListPage() {
                     {date.getDate()}
                   </span>
 
-                  {/* 日報があるとドット表示 */}
-                  {hasReport && (
-                    <span
-                      className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${
-                        selected ? 'bg-white' : reportType === 'sales' ? 'bg-emerald-400' : 'bg-[#0E3091]'
-                      }`}
-                    />
-                  )}
+                  {/* 営業・作業の両方のドットを表示 */}
+                  <div className="absolute bottom-0.5 flex items-center gap-0.5">
+                    {hasSales && (
+                      isApproved ? (
+                        <span className={`text-[8px] leading-none font-bold ${
+                          selected ? 'text-white' : 'text-emerald-500'
+                        }`}>✓</span>
+                      ) : (
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          selected ? 'bg-white' : 'bg-emerald-400'
+                        }`} />
+                      )
+                    )}
+                    {hasWork && (
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        selected ? 'bg-white/70' : 'bg-[#0E3091]'
+                      }`} />
+                    )}
+                  </div>
                 </button>
               )
             })}

@@ -31,6 +31,7 @@ export interface AuthenticatedUser {
   id: string
   name: string
   role: string
+  isApprover?: boolean
   position?: string | null
   defaultReportType?: string
 }
@@ -75,6 +76,7 @@ export async function getAuthFromRequest(request: NextRequest): Promise<Authenti
       id: true,
       name: true,
       role: true,
+      isApprover: true,
       position: true,
       defaultReportType: true,
       isActive: true,
@@ -88,6 +90,7 @@ export async function getAuthFromRequest(request: NextRequest): Promise<Authenti
     id: user.id,
     name: user.name,
     role: user.role,
+    isApprover: user.isApprover,
     position: user.position,
     defaultReportType: user.defaultReportType,
   }
@@ -125,6 +128,9 @@ export async function requireAdmin(request: NextRequest): Promise<
 /**
  * 特定の権限が必要なAPIのガード
  */
+// 承認者に付与される追加権限
+const APPROVER_PERMISSIONS: PermissionKey[] = ['approve_reports', 'view_all_reports']
+
 export async function requirePermission(
   request: NextRequest,
   permission: PermissionKey
@@ -134,7 +140,9 @@ export async function requirePermission(
     return { error: 'ログインが必要です', status: 401 }
   }
   const permissions = await getUserPermissions(user.role)
-  if (!permissions[permission]) {
+  // 承認者は approve_reports と view_all_reports を追加で持つ
+  const hasApproverPermission = user.isApprover && APPROVER_PERMISSIONS.includes(permission)
+  if (!permissions[permission] && !hasApproverPermission) {
     return { error: 'この操作を行う権限がありません', status: 403 }
   }
   return { user }

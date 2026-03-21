@@ -22,7 +22,8 @@ import {
   Shield,
   BarChart3,
   BookMarked,
-  CalendarPlus
+  CalendarPlus,
+  Palmtree
 } from 'lucide-react'
 
 interface User {
@@ -695,6 +696,15 @@ export default function DashboardPage() {
                         {unreadCount}
                       </span>
                     )}
+                  </Link>
+                  <Link
+                    href="/leave-requests"
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-green-50 transition-colors group"
+                  >
+                    <Palmtree className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+                    <span className="text-gray-700 group-hover:text-green-600 transition-colors">
+                      休暇届
+                    </span>
                   </Link>
                   {reportType === 'work' && (
                     <>

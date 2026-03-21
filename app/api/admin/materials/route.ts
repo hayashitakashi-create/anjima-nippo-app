@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, defaultVolume, defaultUnit } = body
+    const { name, defaultVolume, defaultUnit, defaultUnitPrice } = body
 
     if (!name?.trim()) {
       return NextResponse.json(
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         defaultVolume: defaultVolume?.trim() || null,
         defaultUnit: defaultUnit?.trim() || null,
+        defaultUnitPrice: defaultUnitPrice || 0,
       },
     })
 
@@ -77,7 +78,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, isActive } = body
+    const { id, isActive, defaultUnitPrice } = body
 
     if (!id) {
       return NextResponse.json(
@@ -86,9 +87,13 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    const updateData: any = {}
+    if (isActive !== undefined) updateData.isActive = isActive
+    if (defaultUnitPrice !== undefined) updateData.defaultUnitPrice = defaultUnitPrice
+
     const material = await prisma.material.update({
       where: { id },
-      data: { isActive },
+      data: updateData,
     })
 
     return NextResponse.json({ material })

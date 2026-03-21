@@ -71,9 +71,32 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     const where: any = {}
+    // AND条件を構築するための配列
+    const andConditions: any[] = []
 
     if (userId) {
-      where.userId = userId
+      // ユーザーの名前を取得して、作成者 OR workerRecordsに名前が含まれる日報を取得
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      })
+
+      if (targetUser) {
+        // includeWorkerMatches パラメータで従来の挙動（userId のみ）に切り替え可能
+        const includeWorkerMatches = searchParams.get('includeWorkerMatches') !== 'false'
+        if (includeWorkerMatches) {
+          andConditions.push({
+            OR: [
+              { userId: userId },
+              { workerRecords: { some: { name: targetUser.name } } },
+            ]
+          })
+        } else {
+          where.userId = userId
+        }
+      } else {
+        where.userId = userId
+      }
     }
 
     if (projectRefId) {
@@ -91,43 +114,50 @@ export async function GET(request: NextRequest) {
 
     // キーワード検索（案件名、工事種別、工事番号、連絡事項、作業者名、工種、材料名、外注先名）
     if (keyword) {
-      where.OR = [
-        { projectName: { contains: keyword } },
-        { projectType: { contains: keyword } },
-        { projectId: { contains: keyword } },
-        { contactNotes: { contains: keyword } },
-        {
-          workerRecords: {
-            some: {
-              OR: [
-                { name: { contains: keyword } },
-                { workType: { contains: keyword } },
-                { details: { contains: keyword } },
-              ]
+      andConditions.push({
+        OR: [
+          { projectName: { contains: keyword } },
+          { projectType: { contains: keyword } },
+          { projectId: { contains: keyword } },
+          { contactNotes: { contains: keyword } },
+          {
+            workerRecords: {
+              some: {
+                OR: [
+                  { name: { contains: keyword } },
+                  { workType: { contains: keyword } },
+                  { details: { contains: keyword } },
+                ]
+              }
             }
-          }
-        },
-        {
-          materialRecords: {
-            some: {
-              OR: [
-                { name: { contains: keyword } },
-                { subcontractor: { contains: keyword } },
-              ]
+          },
+          {
+            materialRecords: {
+              some: {
+                OR: [
+                  { name: { contains: keyword } },
+                  { subcontractor: { contains: keyword } },
+                ]
+              }
             }
-          }
-        },
-        {
-          subcontractorRecords: {
-            some: {
-              OR: [
-                { name: { contains: keyword } },
-                { workContent: { contains: keyword } },
-              ]
+          },
+          {
+            subcontractorRecords: {
+              some: {
+                OR: [
+                  { name: { contains: keyword } },
+                  { workContent: { contains: keyword } },
+                ]
+              }
             }
-          }
-        },
-      ]
+          },
+        ]
+      })
+    }
+
+    // AND条件があれば結合
+    if (andConditions.length > 0) {
+      where.AND = andConditions
     }
 
     // 総件数と一覧を並列取得

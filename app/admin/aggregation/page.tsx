@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -18,6 +18,8 @@ import {
   Calendar,
   ArrowLeft,
   Loader2,
+  Search,
+  X,
 } from 'lucide-react'
 
 interface LaborItem {
@@ -75,6 +77,7 @@ export default function AggregationPage() {
   const [offset, setOffset] = useState(0)
   const [activeTab, setActiveTab] = useState<TabType>('labor')
   const [error, setError] = useState('')
+  const [laborPersonFilter, setLaborPersonFilter] = useState<string>('')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -108,6 +111,21 @@ export default function AggregationPage() {
     }
   }
 
+  // ========== 人名フィルター ==========
+  const laborPersonNames = useMemo(() => {
+    if (!data) return []
+    return data.labor.map(l => l.name).sort()
+  }, [data])
+
+  const filteredLabor = useMemo(() => {
+    if (!data) return []
+    if (!laborPersonFilter) return data.labor
+    const keyword = laborPersonFilter.toLowerCase()
+    return data.labor.filter(l => l.name.toLowerCase().includes(keyword))
+  }, [data, laborPersonFilter])
+
+  const isLaborFiltered = laborPersonFilter !== ''
+
   // CSV出力
   const handleExportCSV = () => {
     if (!data) return
@@ -117,10 +135,10 @@ export default function AggregationPage() {
 
     if (activeTab === 'labor') {
       csvContent = '氏名,月〜土 8:00-17:00,月〜土 時間外,月〜土 (うち22:00-5:00),月〜土 小計,日曜 8:00-17:00,日曜 時間外,日曜 (うち22:00-5:00),日曜 小計,合計,移動時間\n'
-      data.labor.forEach(item => {
+      filteredLabor.forEach(item => {
         csvContent += `"${item.name}",${fh(item.weekdayNormal)},${fh(item.weekdayOvertime)},${fh(item.weekdayLateNight)},${fh(item.weekdaySubtotal)},${fh(item.sundayNormal)},${fh(item.sundayOvertime)},${fh(item.sundayLateNight)},${fh(item.sundaySubtotal)},${fh(item.total)},${fh(item.travelTime)}\n`
       })
-      const totals = calcLaborTotals(data.labor)
+      const totals = calcLaborTotals(filteredLabor)
       csvContent += `"合計",${fh(totals.weekdayNormal)},${fh(totals.weekdayOvertime)},${fh(totals.weekdayLateNight)},${fh(totals.weekdaySubtotal)},${fh(totals.sundayNormal)},${fh(totals.sundayOvertime)},${fh(totals.sundayLateNight)},${fh(totals.sundaySubtotal)},${fh(totals.total)},${fh(totals.travelTime)}\n`
     } else if (activeTab === 'materials') {
       csvContent = '使用材料・消耗品,容量,単価,数量,金額\n'
@@ -370,16 +388,50 @@ export default function AggregationPage() {
             {activeTab === 'labor' && (
               <>
                 <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-blue-50/50">
-                  <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                    <Clock className="w-5 h-5 mr-2 text-blue-600" />
-                    労働時間集計
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-1">{data.period.label} / {data.labor.length}名</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                        <Clock className="w-5 h-5 mr-2 text-blue-600" />
+                        労働時間集計
+                      </h2>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {data.period.label} / {isLaborFiltered ? `${filteredLabor.length} / ${data.labor.length}` : data.labor.length}名
+                      </p>
+                    </div>
+                    {/* 人名フィルター */}
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={laborPersonFilter}
+                          onChange={(e) => setLaborPersonFilter(e.target.value)}
+                          placeholder="氏名で絞り込み..."
+                          list="labor-person-list"
+                          className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors w-[180px]"
+                        />
+                        <datalist id="labor-person-list">
+                          {laborPersonNames.map(name => (
+                            <option key={name} value={name} />
+                          ))}
+                        </datalist>
+                      </div>
+                      {isLaborFiltered && (
+                        <button
+                          onClick={() => setLaborPersonFilter('')}
+                          className="inline-flex items-center px-2 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                        >
+                          <X className="w-3 h-3 mr-0.5" />
+                          クリア
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                {data.labor.length === 0 ? (
+                {filteredLabor.length === 0 ? (
                   <div className="p-8 text-center text-gray-500">
-                    該当期間のデータがありません
+                    {isLaborFiltered ? '検索条件に一致するデータがありません' : '該当期間のデータがありません'}
                   </div>
                 ) : (
                   <>
@@ -434,7 +486,7 @@ export default function AggregationPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {data.labor.map((item, i) => (
+                          {filteredLabor.map((item, i) => (
                             <tr key={item.name} className="hover:bg-gray-50 transition-colors">
                               <td className="px-3 py-2 font-medium text-gray-900 bg-white border-r border-slate-200 sticky left-0 z-[1]">
                                 {item.name}
@@ -454,10 +506,10 @@ export default function AggregationPage() {
                         </tbody>
                         <tfoot>
                           {(() => {
-                            const t = calcLaborTotals(data.labor)
+                            const t = calcLaborTotals(filteredLabor)
                             return (
                               <tr className="border-t-2 border-slate-400 bg-yellow-50 font-bold">
-                                <td className="px-3 py-2 text-gray-900 bg-yellow-50 border-r border-slate-200 sticky left-0 z-[1]">合計</td>
+                                <td className="px-3 py-2 text-gray-900 bg-yellow-50 border-r border-slate-200 sticky left-0 z-[1]">合計{isLaborFiltered ? '(絞込)' : ''}</td>
                                 <td className="px-2 py-2 text-right font-mono text-gray-900 border-r border-slate-100">{fh(t.weekdayNormal)}</td>
                                 <td className="px-2 py-2 text-right font-mono text-gray-900 border-r border-slate-100">{fh(t.weekdayOvertime)}</td>
                                 <td className="px-2 py-2 text-right font-mono text-gray-900 border-r border-slate-100">{fh(t.weekdayLateNight)}</td>
@@ -488,7 +540,7 @@ export default function AggregationPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {data.labor.map((item) => (
+                          {filteredLabor.map((item) => (
                             <tr key={item.name} className="hover:bg-gray-50">
                               <td className="px-3 py-2 font-medium text-gray-900">{item.name}</td>
                               <td className="px-2 py-2 text-right font-mono text-green-800">{fh(item.weekdaySubtotal)}</td>
@@ -500,10 +552,10 @@ export default function AggregationPage() {
                         </tbody>
                         <tfoot>
                           {(() => {
-                            const t = calcLaborTotals(data.labor)
+                            const t = calcLaborTotals(filteredLabor)
                             return (
                               <tr className="border-t-2 border-slate-400 bg-yellow-50 font-bold">
-                                <td className="px-3 py-2 text-gray-900">合計</td>
+                                <td className="px-3 py-2 text-gray-900">合計{isLaborFiltered ? '(絞込)' : ''}</td>
                                 <td className="px-2 py-2 text-right font-mono text-green-800">{fh(t.weekdaySubtotal)}</td>
                                 <td className="px-2 py-2 text-right font-mono text-red-800">{fh(t.sundaySubtotal)}</td>
                                 <td className="px-2 py-2 text-right font-mono text-blue-800">{fh(t.total)}</td>
@@ -517,7 +569,7 @@ export default function AggregationPage() {
 
                     {/* モバイル表示 */}
                     <div className="md:hidden divide-y divide-slate-100">
-                      {data.labor.map((item) => (
+                      {filteredLabor.map((item) => (
                         <div key={item.name} className="p-4">
                           <p className="font-medium text-gray-900 mb-2">{item.name}</p>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -574,8 +626,8 @@ export default function AggregationPage() {
                       ))}
                       <div className="p-4 bg-yellow-50">
                         <div className="flex justify-between items-center font-bold">
-                          <span className="text-gray-900">合計</span>
-                          <span className="font-mono text-blue-800">{fh(data.totals.laborHours)}</span>
+                          <span className="text-gray-900">合計{isLaborFiltered ? '(絞込)' : ''}</span>
+                          <span className="font-mono text-blue-800">{fh(calcLaborTotals(filteredLabor).total)}</span>
                         </div>
                       </div>
                     </div>

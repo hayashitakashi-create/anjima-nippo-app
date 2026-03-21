@@ -62,6 +62,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (roles.length > 5) {
+      return NextResponse.json(
+        { error: '承認者は1ルートにつき最大5名までです' },
+        { status: 400 }
+      )
+    }
+
     // isDefault が true の場合、他のデフォルトを解除
     if (isDefault) {
       await prisma.approvalRoute.updateMany({
@@ -133,6 +140,13 @@ export async function PUT(request: NextRequest) {
         where: { isDefault: true, id: { not: id } },
         data: { isDefault: false },
       })
+    }
+
+    if (roles !== undefined && Array.isArray(roles) && roles.length > 5) {
+      return NextResponse.json(
+        { error: '承認者は1ルートにつき最大5名までです' },
+        { status: 400 }
+      )
     }
 
     const updateData: any = {}

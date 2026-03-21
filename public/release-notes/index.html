@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日報システム 機能追加リリースノート</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#1e293b;background:#f0f4ff;line-height:1.8;font-size:15px}
+.header{background:linear-gradient(135deg,#0E3091 0%,#1a4ab8 50%,#2563eb 100%);color:white;padding:48px 32px;text-align:center}
+.header h1{font-size:32px;letter-spacing:.08em;margin-bottom:8px;font-weight:700}
+.header .sub{font-size:15px;color:#93c5fd;margin-bottom:4px}
+.header .date{font-size:13px;color:#bfdbfe;margin-top:12px;background:rgba(255,255,255,.1);display:inline-block;padding:4px 16px;border-radius:20px}
+.container{max-width:960px;margin:0 auto;padding:32px 20px 60px}
+.summary-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:-28px 0 32px;position:relative;z-index:1}
+.summary-chip{background:white;border-radius:12px;padding:12px 20px;box-shadow:0 2px 12px rgba(14,48,145,.12);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#334155}
+.summary-chip .num{font-size:24px;font-weight:800;color:#0E3091}
+.feature{background:white;border-radius:16px;margin-bottom:24px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;transition:box-shadow .2s}
+.feature:hover{box-shadow:0 4px 20px rgba(14,48,145,.12)}
+.feature-header{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid #f1f5f9}
+.feature-num{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:white;flex-shrink:0}
+.feature-num.n1{background:linear-gradient(135deg,#0E3091,#2563eb)}
+.feature-num.n2{background:linear-gradient(135deg,#059669,#10b981)}
+.feature-num.n3{background:linear-gradient(135deg,#7c3aed,#8b5cf6)}
+.feature-num.n4{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.feature-num.n5{background:linear-gradient(135deg,#dc2626,#ef4444)}
+.feature-num.n6{background:linear-gradient(135deg,#0891b2,#06b6d4)}
+.feature-title{font-size:18px;font-weight:700;color:#0f172a}
+.feature-tag{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap}
+.tag-new{background:#dbeafe;color:#1d4ed8}
+.tag-improve{background:#fef3c7;color:#92400e}
+.tag-done{background:#d1fae5;color:#065f46}
+.feature-body{padding:20px 24px}
+.feature-desc{color:#475569;margin-bottom:16px;font-size:14px}
+.mockup{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
+.mockup-bar{background:#1e293b;padding:6px 12px;display:flex;align-items:center;gap:6px}
+.mockup-dot{width:8px;height:8px;border-radius:50%}
+.mockup-dot.r{background:#ef4444}
+.mockup-dot.y{background:#f59e0b}
+.mockup-dot.g{background:#22c55e}
+.mockup-url{color:#94a3b8;font-size:11px;margin-left:8px;font-family:monospace}
+.mockup-content{padding:16px;font-size:13px}
+.mock-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9}
+.mock-row:last-child{border-bottom:none}
+.mock-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.mock-badge.blue{background:#dbeafe;color:#1d4ed8}
+.mock-badge.green{background:#d1fae5;color:#065f46}
+.mock-badge.purple{background:#ede9fe;color:#6d28d9}
+.mock-badge.orange{background:#fff7ed;color:#9a3412}
+.mock-badge.red{background:#fee2e2;color:#991b1b}
+.mock-badge.teal{background:#ccfbf1;color:#0f766e}
+.mock-badge.gray{background:#f1f5f9;color:#475569}
+.mock-select{padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:white;color:#334155}
+.mock-input{padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:white;color:#334155;width:140px}
+.mock-btn{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;border:none;cursor:default}
+.mock-btn.primary{background:#0E3091;color:white}
+.mock-btn.success{background:#059669;color:white}
+.mock-btn.danger{background:#dc2626;color:white}
+.mock-table{width:100%;border-collapse:collapse;font-size:12px}
+.mock-table th{background:#f1f5f9;padding:6px 8px;text-align:left;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0}
+.mock-table td{padding:5px 8px;border-bottom:1px solid #f1f5f9;color:#334155}
+.mock-calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11px}
+.mock-calendar .day-header{font-weight:700;color:#64748b;padding:4px 0}
+.mock-calendar .day{padding:4px 2px;border-radius:4px;position:relative}
+.mock-calendar .day.has-report{background:#dbeafe}
+.mock-calendar .day.has-leave{background:#fef3c7}
+.mock-calendar .day.has-both{background:linear-gradient(135deg,#dbeafe 50%,#fef3c7 50%)}
+.mock-calendar .day.today{outline:2px solid #2563eb;outline-offset:-1px}
+.mock-calendar .day .dot{width:4px;height:4px;border-radius:50%;display:inline-block;margin:0 1px}
+.mock-calendar .day .dot.blue{background:#2563eb}
+.mock-calendar .day .dot.green{background:#059669}
+.mock-calendar .day .dot.yellow{background:#d97706}
+.print-compare{display:flex;gap:12px}
+.print-box{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:white}
+.print-box h4{font-size:11px;text-align:center;margin-bottom:6px;color:#64748b}
+.print-section{border:1px solid #cbd5e1;padding:4px 6px;margin-bottom:3px;font-size:10px;border-radius:3px}
+.print-section.material{background:#fef3c7;border-color:#fbbf24}
+.print-section.notes{background:#dbeafe;border-color:#60a5fa}
+.print-section.hidden{background:#f1f5f9;border-color:#e2e8f0;color:#94a3b8;text-decoration:line-through;opacity:.5}
+.print-section.expanded{min-height:40px;background:#bfdbfe;border-color:#3b82f6}
+.arrow-label{font-size:20px;display:flex;align-items:center;justify-content:center;color:#0E3091;font-weight:900}
+.changes-list{list-style:none;padding:0}
+.changes-list li{padding:4px 0 4px 20px;position:relative;font-size:13px;color:#475569}
+.changes-list li::before{content:"✓";position:absolute;left:0;color:#059669;font-weight:700}
+.footer{text-align:center;padding:32px;color:#94a3b8;font-size:12px}
+.footer a{color:#0E3091;text-decoration:none}
+@media(max-width:640px){
+.header{padding:32px 16px}
+.header h1{font-size:24px}
+.container{padding:20px 12px 48px}
+.summary-bar{margin:-20px 0 24px;gap:8px}
+.summary-chip{padding:8px 14px;font-size:12px}
+.summary-chip .num{font-size:18px}
+.feature-header{padding:16px;gap:10px}
+.feature-title{font-size:16px}
+.feature-body{padding:16px}
+.print-compare{flex-direction:column}
+}
+@media print{
+body{background:white;font-size:12px}
+.header{padding:24px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.feature{break-inside:avoid;page-break-inside:avoid}
+.container{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="sub">安島工業株式会社 日報システム</div>
+  <h1>機能追加リリースノート</h1>
+  <div class="date">2026年3月20日 リリース</div>
+</div>
+
+<div class="container">
+  <div class="summary-bar">
+    <div class="summary-chip"><span class="num">10</span> 実装項目</div>
+    <div class="summary-chip"><span class="num">6</span> 新機能</div>
+    <div class="summary-chip"><span class="num">4</span> 改善</div>
+  </div>
+
+  <!-- Feature 1 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n1">1</div>
+      <div style="flex:1">
+        <div class="feature-title">作業員別 提出状況の追跡</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        作業日報に記載された作業員も「提出済み」として自動的にカウント。<br>
+        代表者1名が複数名分を記入する運用でも、全作業員の提出状況を正確に把握できます。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">管理画面 → 承認管理（カレンダー表示）</span>
+        </div>
+        <div class="mockup-content">
+          <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">2026年3月 提出状況カレンダー</div>
+          <div class="mock-table">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <tr>
+                <th style="background:#f1f5f9;padding:6px 8px;border-bottom:2px solid #e2e8f0;text-align:left">氏名</th>
+                <th style="background:#f1f5f9;padding:6px 8px;border-bottom:2px solid #e2e8f0;text-align:center">3/17(月)</th>
+                <th style="background:#f1f5f9;padding:6px 8px;border-bottom:2px solid #e2e8f0;text-align:center">3/18(火)</th>
+                <th style="background:#f1f5f9;padding:6px 8px;border-bottom:2px solid #e2e8f0;text-align:center">3/19(水)</th>
+              </tr>
+              <tr>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">矢野 誠 <span class="mock-badge blue" style="font-size:10px">記入者</span></td>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center"><span style="color:#059669;font-weight:700">●</span></td>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center"><span style="color:#059669;font-weight:700">●</span></td>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center"><span style="color:#059669;font-weight:700">●</span></td>
+              </tr>
+              <tr>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">大塚 崇 <span class="mock-badge green" style="font-size:10px">作業員</span></td>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center"><span style="color:#059669;font-weight:700">●</span></td>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center"><span style="color:#059669;font-weight:700">●</span></td>
+                <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;color:#dc2626">✕</td>
+              </tr>
+              <tr>
+                <td style="padding:5px 8px">古曵 正樹 <span class="mock-badge green" style="font-size:10px">作業員</span></td>
+                <td style="padding:5px 8px;text-align:center"><span style="color:#059669;font-weight:700">●</span></td>
+                <td style="padding:5px 8px;text-align:center;color:#dc2626">✕</td>
+                <td style="padding:5px 8px;text-align:center"><span style="color:#059669;font-weight:700">●</span></td>
+              </tr>
+            </table>
+          </div>
+          <ul class="changes-list" style="margin-top:12px">
+            <li>作業日報の作業員欄に名前がある人も提出済みとして表示</li>
+            <li>「本日の未提出」リストにも反映</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 2 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n2">2</div>
+      <div style="flex:1">
+        <div class="feature-title">休暇届け機能</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        日報未提出が「書き忘れ」か「休暇」かを区別可能に。<br>
+        カレンダー上に休暇マークが表示され、一目で状況を確認できます。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">/leave-requests</span>
+        </div>
+        <div class="mockup-content">
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <!-- 申請フォーム -->
+            <div style="flex:1;min-width:200px">
+              <div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:8px">🌴 休暇届 申請</div>
+              <div style="margin-bottom:6px">
+                <div style="font-size:11px;color:#64748b;margin-bottom:2px">日付</div>
+                <input type="text" value="2026-03-20" class="mock-input" style="width:100%" readonly>
+              </div>
+              <div style="margin-bottom:6px">
+                <div style="font-size:11px;color:#64748b;margin-bottom:2px">休暇種別</div>
+                <select class="mock-select" style="width:100%">
+                  <option>有給</option>
+                  <option>振替</option>
+                  <option>代休</option>
+                  <option>看護</option>
+                  <option>介護</option>
+                  <option>特別休暇</option>
+                  <option>その他</option>
+                </select>
+              </div>
+              <div style="margin-bottom:8px">
+                <div style="font-size:11px;color:#64748b;margin-bottom:2px">理由（任意）</div>
+                <input type="text" placeholder="理由を入力..." class="mock-input" style="width:100%">
+              </div>
+              <button class="mock-btn success" style="width:100%;padding:6px">申請する</button>
+            </div>
+            <!-- カレンダー -->
+            <div style="flex:1;min-width:220px">
+              <div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:8px;text-align:center">2026年3月</div>
+              <div class="mock-calendar">
+                <div class="day-header" style="color:#dc2626">日</div>
+                <div class="day-header">月</div>
+                <div class="day-header">火</div>
+                <div class="day-header">水</div>
+                <div class="day-header">木</div>
+                <div class="day-header">金</div>
+                <div class="day-header" style="color:#2563eb">土</div>
+                <div class="day" style="color:#dc2626">1</div>
+                <div class="day">2</div>
+                <div class="day">3</div>
+                <div class="day">4</div>
+                <div class="day has-leave">5<br><span class="dot yellow"></span></div>
+                <div class="day">6</div>
+                <div class="day" style="color:#2563eb">7</div>
+                <div class="day" style="color:#dc2626">8</div>
+                <div class="day">9</div>
+                <div class="day">10</div>
+                <div class="day">11</div>
+                <div class="day">12</div>
+                <div class="day has-leave">13<br><span class="dot yellow"></span></div>
+                <div class="day" style="color:#2563eb">14</div>
+                <div class="day" style="color:#dc2626">15</div>
+                <div class="day">16</div>
+                <div class="day">17</div>
+                <div class="day">18</div>
+                <div class="day">19</div>
+                <div class="day today">20</div>
+                <div class="day" style="color:#2563eb">21</div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:6px;font-size:10px;color:#64748b;justify-content:center">
+                <span><span class="dot yellow" style="width:6px;height:6px"></span> 有給</span>
+                <span><span class="dot" style="width:6px;height:6px;background:#8b5cf6;display:inline-block;border-radius:50%"></span> 振替</span>
+                <span><span class="dot" style="width:6px;height:6px;background:#0d9488;display:inline-block;border-radius:50%"></span> 代休</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 3 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n3">3</div>
+      <div style="flex:1">
+        <div class="feature-title">物件一覧 工事種別フィルター</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        物件一覧ページに工事種別のドロップダウンフィルターを追加。<br>
+        塗装・建築・区画線など種別ごとに絞り込んで目的の現場をすぐ見つけられます。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">/work-report/projects</span>
+        </div>
+        <div class="mockup-content">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+            <div style="display:flex;gap:4px">
+              <span class="mock-btn primary" style="border-radius:6px 0 0 6px;padding:4px 10px;font-size:11px">進行中</span>
+              <span class="mock-btn" style="background:#f1f5f9;color:#64748b;border-radius:0;padding:4px 10px;font-size:11px">完了</span>
+              <span class="mock-btn" style="background:#f1f5f9;color:#64748b;border-radius:0 6px 6px 0;padding:4px 10px;font-size:11px">アーカイブ</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+            <input type="text" placeholder="🔍 物件名・発注者で検索..." class="mock-input" style="flex:1;min-width:160px">
+            <select class="mock-select" style="min-width:140px;border:2px solid #0E3091;font-weight:600;color:#0E3091">
+              <option>🏗️ 建築塗装工事</option>
+            </select>
+            <button class="mock-btn primary">＋ 新規物件登録</button>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <span style="font-weight:700;font-size:13px">山田ビル外壁塗装工事</span>
+                <span class="mock-badge blue" style="margin-left:6px">建築塗装工事</span>
+              </div>
+              <button class="mock-btn primary" style="font-size:11px">日報作成</button>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <span style="font-weight:700;font-size:13px">鈴木邸外壁塗装工事</span>
+                <span class="mock-badge blue" style="margin-left:6px">建築塗装工事</span>
+              </div>
+              <button class="mock-btn primary" style="font-size:11px">日報作成</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 4 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n4">4</div>
+      <div style="flex:1">
+        <div class="feature-title">集計ページ 絞り込み強化</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        月次集計に人別検索、現場別集計に工事種別フィルター＋人別検索を追加。<br>
+        CSV出力も絞り込んだ結果が反映されます。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">管理画面 → 月次集計 / 現場別集計</span>
+        </div>
+        <div class="mockup-content">
+          <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:8px">月次集計 — 労働時間</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <span style="font-size:11px;color:#64748b">期間:</span>
+            <span style="font-size:13px;font-weight:700">2026/2/21 〜 2026/3/20</span>
+            <span style="font-size:11px;color:#64748b;margin-left:12px">絞り込み:</span>
+            <input type="text" placeholder="🔍 氏名で検索..." class="mock-input" value="矢野" style="border:2px solid #7c3aed">
+            <button class="mock-btn" style="background:#ede9fe;color:#7c3aed;font-size:11px">✕ クリア</button>
+          </div>
+          <table class="mock-table">
+            <tr>
+              <th>氏名</th>
+              <th style="text-align:right">月〜土 小計</th>
+              <th style="text-align:right">日曜 小計</th>
+              <th style="text-align:right;color:#1d4ed8">合計</th>
+            </tr>
+            <tr>
+              <td><strong>矢野 誠</strong></td>
+              <td style="text-align:right;font-family:monospace">160.00</td>
+              <td style="text-align:right;font-family:monospace">8.00</td>
+              <td style="text-align:right;font-family:monospace;font-weight:700;color:#1d4ed8">168.00</td>
+            </tr>
+          </table>
+          <div style="font-size:10px;color:#7c3aed;margin-top:6px">1 / 27名を表示中（絞込）</div>
+
+          <hr style="margin:14px 0;border:none;border-top:1px solid #e2e8f0">
+          <div style="font-size:12px;font-weight:700;color:#d97706;margin-bottom:8px">現場別集計</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+            <select class="mock-select" style="border:2px solid #d97706;color:#92400e;font-weight:600">
+              <option>🏗️ 区画線工事</option>
+            </select>
+            <input type="text" placeholder="🔍 作業者名..." class="mock-input">
+            <span class="mock-badge orange">3 / 12 件表示</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 5 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n5">5</div>
+      <div style="flex:1">
+        <div class="feature-title">作業日報 印刷レイアウト改善</div>
+      </div>
+      <span class="feature-tag tag-improve">改善</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        工事種別に応じて印刷レイアウトを最適化。<br>
+        区画線工事は使用材料欄をしっかり表示、それ以外は材料欄を非表示にし備考・連絡事項欄を拡大。
+      </p>
+      <div class="print-compare">
+        <div class="print-box">
+          <h4>区画線工事</h4>
+          <div class="print-section" style="background:#f0fdf4;font-size:10px">作業者記録（11行）</div>
+          <div class="print-section material" style="font-size:10px">
+            <strong>使用材料・消耗品</strong>（5行）<br>
+            ← そのまま表示
+          </div>
+          <div class="print-section" style="font-size:10px">外注先</div>
+          <div class="print-section notes" style="font-size:10px">連絡事項</div>
+        </div>
+        <div class="arrow-label">→</div>
+        <div class="print-box">
+          <h4>塗装工事・建築工事 など</h4>
+          <div class="print-section" style="background:#f0fdf4;font-size:10px">作業者記録（11行）</div>
+          <div class="print-section hidden" style="font-size:10px">
+            使用材料・消耗品 → 非表示
+          </div>
+          <div class="print-section" style="font-size:10px">外注先（全幅で表示）</div>
+          <div class="print-section expanded" style="font-size:10px">
+            <strong>連絡事項（拡大表示）</strong><br>
+            ← スペース活用
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 6 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n6">6</div>
+      <div style="flex:1">
+        <div class="feature-title">完了物件の一覧非表示</div>
+      </div>
+      <span class="feature-tag tag-done">対応済み</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        物件一覧はデフォルトで「進行中」のみ表示。完了した現場は自動的に非表示となり、<br>
+        「完了」タブや検索で確認できます。進行中の現場だけに集中できる画面です。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">/work-report/projects</span>
+        </div>
+        <div class="mockup-content" style="text-align:center">
+          <div style="display:flex;gap:2px;justify-content:center;margin-bottom:12px">
+            <span class="mock-btn primary" style="border-radius:6px 0 0 6px;padding:6px 16px">📋 進行中</span>
+            <span class="mock-btn" style="background:#f1f5f9;color:#64748b;padding:6px 16px">✅ 完了</span>
+            <span class="mock-btn" style="background:#f1f5f9;color:#64748b;border-radius:0 6px 6px 0;padding:6px 16px">📦 アーカイブ</span>
+          </div>
+          <div style="font-size:12px;color:#64748b">
+            デフォルトは「進行中」→ 完了した現場はここから消える<br>
+            「完了」タブに切り替えれば過去の現場も確認可能
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 7 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n1">7</div>
+      <div style="flex:1">
+        <div class="feature-title">承認者 ON/OFF 設定</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        ユーザー管理画面で「承認者」のON/OFFを切り替え可能に。<br>
+        管理者権限とは独立して設定でき、承認者は最大5名まで。承認者には日報の承認・閲覧権限が自動付与されます。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">管理画面 → ユーザー管理</span>
+        </div>
+        <div class="mockup-content">
+          <table class="mock-table">
+            <tr>
+              <th>氏名</th>
+              <th>権限</th>
+              <th style="text-align:center">承認者</th>
+            </tr>
+            <tr>
+              <td><strong>安島 圭介</strong></td>
+              <td><span class="mock-badge purple">管理者</span></td>
+              <td style="text-align:center"><span style="display:inline-block;width:36px;height:20px;background:#059669;border-radius:10px;position:relative"><span style="position:absolute;right:2px;top:2px;width:16px;height:16px;background:white;border-radius:50%"></span></span></td>
+            </tr>
+            <tr>
+              <td><strong>小林 敬博</strong></td>
+              <td><span class="mock-badge gray">一般</span></td>
+              <td style="text-align:center"><span style="display:inline-block;width:36px;height:20px;background:#d1d5db;border-radius:10px;position:relative"><span style="position:absolute;left:2px;top:2px;width:16px;height:16px;background:white;border-radius:50%"></span></span></td>
+            </tr>
+          </table>
+          <ul class="changes-list" style="margin-top:12px">
+            <li>権限（管理者/一般）とは独立した承認者フラグ</li>
+            <li>承認者は最大5名まで設定可能</li>
+            <li>承認者ONで「承認管理」「全日報閲覧」権限を自動付与</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 8 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n2">8</div>
+      <div style="flex:1">
+        <div class="feature-title">休暇届 管理メニュー</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        管理画面に「休暇届管理」メニューを追加。全社員の休暇届を月別に一覧表示。<br>
+        クリックで詳細確認、添付ファイルの閲覧、管理者による削除が可能です。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">管理画面 → 休暇届管理</span>
+        </div>
+        <div class="mockup-content">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <span style="font-size:16px;cursor:pointer">◀</span>
+            <span style="font-size:14px;font-weight:700">2026年3月</span>
+            <span style="font-size:16px;cursor:pointer">▶</span>
+            <span style="font-size:12px;color:#64748b;margin-left:4px">5件</span>
+            <select class="mock-select" style="margin-left:auto">
+              <option>全社員</option>
+              <option>林　崇</option>
+            </select>
+            <select class="mock-select">
+              <option>全種別</option>
+              <option>有給 (3)</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+            <span class="mock-badge blue">有給: 3件</span>
+            <span class="mock-badge purple">振替: 1件</span>
+            <span class="mock-badge teal">代休: 1件</span>
+          </div>
+          <table class="mock-table">
+            <tr><th>日付</th><th>氏名</th><th>種別</th><th>理由</th><th>添付</th></tr>
+            <tr>
+              <td>3/18(火)</td><td>林　崇</td>
+              <td><span class="mock-badge blue">有給</span></td>
+              <td style="color:#64748b">通院のため</td>
+              <td><span style="color:#2563eb;font-size:11px">📎 診断書.pdf</span></td>
+            </tr>
+            <tr>
+              <td>3/14(金)</td><td>田邊沙帆</td>
+              <td><span class="mock-badge purple">振替</span></td>
+              <td style="color:#64748b">-</td>
+              <td style="color:#94a3b8;font-size:11px">-</td>
+            </tr>
+          </table>
+          <ul class="changes-list" style="margin-top:12px">
+            <li>行クリックで詳細モーダル（氏名・日付・種別・理由・添付）</li>
+            <li>氏名はユーザー管理の登録名からセレクトで検索</li>
+            <li>管理者は他ユーザーの休暇届も削除可能</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 9 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n3">9</div>
+      <div style="flex:1">
+        <div class="feature-title">提出状況カレンダー 承認済み表示</div>
+      </div>
+      <span class="feature-tag tag-improve">改善</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        提出状況カレンダーで承認済みの日報を区別して表示。<br>
+        承認済みは青のダブルチェック（✓✓）、未承認の提出済みは緑のチェック（✓）で一目で状況がわかります。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">管理画面 → 承認管理（カレンダー表示）</span>
+        </div>
+        <div class="mockup-content">
+          <table class="mock-table">
+            <tr>
+              <th style="text-align:left">氏名</th>
+              <th style="text-align:center">3/17</th>
+              <th style="text-align:center">3/18</th>
+              <th style="text-align:center">3/19</th>
+              <th style="text-align:center">3/20</th>
+            </tr>
+            <tr>
+              <td>林　崇</td>
+              <td style="text-align:center"><span style="color:#3b82f6;font-weight:700;font-size:16px">✓✓</span></td>
+              <td style="text-align:center"><span style="color:#3b82f6;font-weight:700;font-size:16px">✓✓</span></td>
+              <td style="text-align:center"><span style="color:#059669;font-weight:700;font-size:16px">✓</span></td>
+              <td style="text-align:center"><span style="color:#dc2626;font-weight:700;font-size:16px">✕</span></td>
+            </tr>
+            <tr>
+              <td>田中 剛士</td>
+              <td style="text-align:center"><span style="color:#3b82f6;font-weight:700;font-size:16px">✓✓</span></td>
+              <td style="text-align:center"><span style="color:#059669;font-weight:700;font-size:16px">✓</span></td>
+              <td style="text-align:center"><span style="color:#dc2626;font-weight:700;font-size:16px">✕</span></td>
+              <td style="text-align:center"><span style="color:#dc2626;font-weight:700;font-size:16px">✕</span></td>
+            </tr>
+          </table>
+          <div style="display:flex;gap:12px;margin-top:10px;font-size:11px;color:#64748b">
+            <span><span style="color:#3b82f6;font-weight:700">✓✓</span> 承認済み</span>
+            <span><span style="color:#059669;font-weight:700">✓</span> 提出済み</span>
+            <span><span style="color:#dc2626;font-weight:700">✕</span> 未提出</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 10 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n4">10</div>
+      <div style="flex:1">
+        <div class="feature-title">氏名検索のセレクトボックス化</div>
+      </div>
+      <span class="feature-tag tag-improve">改善</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        休暇届管理・提出状況カレンダーの氏名検索を、自由入力からセレクトボックスに変更。<br>
+        ユーザー管理に登録されている名前から選択するため、入力ミスなく正確に絞り込めます。
+      </p>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+          <span class="mockup-url">休暇届管理 / 提出状況カレンダー</span>
+        </div>
+        <div class="mockup-content">
+          <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+            <div style="flex:1;min-width:160px">
+              <div style="font-size:11px;color:#64748b;margin-bottom:4px">変更前（テキスト入力）</div>
+              <input type="text" placeholder="氏名で検索..." class="mock-input" style="width:100%;background:#fee2e2;border-color:#fca5a5" readonly>
+              <div style="font-size:10px;color:#dc2626;margin-top:3px">× 入力ミスで検索できない</div>
+            </div>
+            <div style="font-size:20px;font-weight:900;color:#059669;display:flex;align-items:center;padding-top:16px">→</div>
+            <div style="flex:1;min-width:160px">
+              <div style="font-size:11px;color:#64748b;margin-bottom:4px">変更後（セレクトボックス）</div>
+              <select class="mock-select" style="width:100%;border:2px solid #059669;font-weight:600">
+                <option>全社員</option>
+                <option selected>林　崇</option>
+              </select>
+              <div style="font-size:10px;color:#059669;margin-top:3px">✓ 登録済みの名前から選ぶだけ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>安島工業株式会社 日報システム — <a href="/login">ログイン画面へ</a></p>
+  <p style="margin-top:4px">&copy; 2026 ダンドリワーク株式会社</p>
+</div>
+
+</body>
+</html>

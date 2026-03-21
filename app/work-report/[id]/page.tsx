@@ -160,7 +160,7 @@ export default function WorkReportDetailPage() {
   const [deleting, setDeleting] = useState(false)
 
   // 使用材料マスタから取得したリスト
-  const [materialMasterList, setMaterialMasterList] = useState<string[]>([])
+  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number }[]>([])
 
   // 工事種別マスタから取得したリスト
   const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
@@ -228,7 +228,7 @@ export default function WorkReportDetailPage() {
       .then(data => {
         if (data?.materials) {
           setMaterialMasterList(
-            data.materials.filter((m: any) => m.isActive).map((m: any) => m.name)
+            data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0 }))
           )
         }
       })
@@ -1151,15 +1151,20 @@ export default function WorkReportDetailPage() {
                             <select
                               value={record.name}
                               onChange={(e) => {
+                                const selectedName = e.target.value
                                 const newRecords = [...materialRecords]
-                                newRecords[index].name = e.target.value
+                                newRecords[index].name = selectedName
+                                const master = materialMasterList.find(m => m.name === selectedName)
+                                if (master && master.unitPrice > 0) {
+                                  newRecords[index].unitPrice = master.unitPrice
+                                }
                                 setMaterialRecords(newRecords)
                               }}
                               className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                             >
                               <option value="">選択してください</option>
-                              {materialMasterList.map(name => (
-                                <option key={name} value={name}>{name}</option>
+                              {materialMasterList.map(m => (
+                                <option key={m.name} value={m.name}>{m.name}</option>
                               ))}
                             </select>
                           </div>
@@ -1210,8 +1215,8 @@ export default function WorkReportDetailPage() {
                             />
                           </div>
                           <div className="col-span-1 sm:col-span-2">
-                            <label className={`text-xs sm:text-sm font-medium mb-1 block ${record.quantity > 0 && !record.unitPrice ? 'text-red-600' : 'text-gray-700'}`}>
-                              単価(円){record.quantity > 0 && !record.unitPrice && <span className="text-red-500 ml-1">*</span>}
+                            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">
+                              単価(円)
                             </label>
                             <input
                               type="number"
@@ -1223,7 +1228,7 @@ export default function WorkReportDetailPage() {
                                 newRecords[index].unitPrice = parseFloat(e.target.value) || 0
                                 setMaterialRecords(newRecords)
                               }}
-                              className={`w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] ${record.quantity > 0 && !record.unitPrice ? 'bg-red-50 border-red-300' : 'bg-white border-gray-300'}`}
+                              className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
                               placeholder="0"
                             />
                           </div>

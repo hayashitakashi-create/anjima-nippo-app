@@ -91,10 +91,10 @@ export async function GET(request: NextRequest) {
       const displayYear = periodStart.getFullYear()
       const displayMonth = periodStart.getMonth() + 1
 
-      // 並列でクエリ実行
-      const [activeUsers, periodReports] = await Promise.all([
+      // 並列でクエリ実行（営業日報 + 作業日報 + 休暇届の3つを取得）
+      const [activeUsers, periodReports, periodWorkReports, periodLeaveRequests] = await Promise.all([
         prisma.user.findMany({
-          where: { isActive: true, role: 'user' },
+          where: { isActive: true },
           select: { id: true, name: true, position: true },
           orderBy: { name: 'asc' },
         }),
@@ -102,19 +102,122 @@ export async function GET(request: NextRequest) {
           where: {
             date: { gte: periodStart, lte: periodEnd },
           },
-          select: { userId: true, date: true },
+          select: {
+            userId: true,
+            date: true,
+            approvals: {
+              select: { status: true },
+              orderBy: { createdAt: 'desc' as const },
+            },
+          },
+        }),
+        // 作業日報も取得（作成者 + workerRecordsに含まれる作業者名で提出判定）
+        prisma.workReport.findMany({
+          where: {
+            date: { gte: periodStart, lte: periodEnd },
+          },
+          select: {
+            userId: true,
+            date: true,
+            workerRecords: {
+              select: { name: true },
+            },
+          },
+        }),
+        // 休暇届を取得
+        prisma.leaveRequest.findMany({
+          where: {
+            date: { gte: periodStart, lte: periodEnd },
+          },
+          select: {
+            id: true,
+            userId: true,
+            date: true,
+            leaveType: true,
+            reason: true,
+            attachmentName: true,
+          },
         }),
       ])
 
-      // マップ作成
+      // ユーザー名からIDへのマッピングを作成（workerRecord.nameでの照合用）
+      const nameToUserIds: Record<string, string[]> = {}
+      activeUsers.forEach(u => {
+        if (!nameToUserIds[u.name]) {
+          nameToUserIds[u.name] = []
+        }
+        nameToUserIds[u.name].push(u.id)
+      })
+
+      // マップ作成（提出種別も記録: 'sales'=営業日報, 'work'=作業日報）
       const submissionMap: Record<string, Record<string, boolean>> = {}
+      const submissionTypeMap: Record<string, Record<string, string[]>> = {}
       activeUsers.forEach(u => {
         submissionMap[u.id] = {}
+        submissionTypeMap[u.id] = {}
       })
+
+      // 承認状況マップ（userId -> dateKey -> 'approved' | 'pending'）
+      const approvalMap: Record<string, Record<string, string>> = {}
+      activeUsers.forEach(u => {
+        approvalMap[u.id] = {}
+      })
+
+      // 営業日報の提出状況（作成者ベース）
       periodReports.forEach(r => {
         const dateKey = new Date(r.date).toISOString().split('T')[0]
         if (submissionMap[r.userId]) {
           submissionMap[r.userId][dateKey] = true
+          if (!submissionTypeMap[r.userId][dateKey]) submissionTypeMap[r.userId][dateKey] = []
+          if (!submissionTypeMap[r.userId][dateKey].includes('sales')) submissionTypeMap[r.userId][dateKey].push('sales')
+          // 承認状況
+          if (r.approvals && r.approvals.length > 0) {
+            const allApproved = r.approvals.every((a: any) => a.status === 'approved')
+            if (allApproved) {
+              approvalMap[r.userId][dateKey] = 'approved'
+            }
+          }
+        }
+      })
+
+      // 作業日報の提出状況（作成者 + workerRecordsに名前が含まれるユーザー）
+      periodWorkReports.forEach(r => {
+        const dateKey = new Date(r.date).toISOString().split('T')[0]
+        // 作成者自身を提出済みにする
+        if (submissionMap[r.userId]) {
+          submissionMap[r.userId][dateKey] = true
+          if (!submissionTypeMap[r.userId][dateKey]) submissionTypeMap[r.userId][dateKey] = []
+          if (!submissionTypeMap[r.userId][dateKey].includes('work')) submissionTypeMap[r.userId][dateKey].push('work')
+        }
+        // workerRecordsに含まれる名前と一致するユーザーも提出済みにする
+        r.workerRecords.forEach(worker => {
+          const matchedUserIds = nameToUserIds[worker.name]
+          if (matchedUserIds) {
+            matchedUserIds.forEach(uid => {
+              if (submissionMap[uid]) {
+                submissionMap[uid][dateKey] = true
+                if (!submissionTypeMap[uid][dateKey]) submissionTypeMap[uid][dateKey] = []
+                if (!submissionTypeMap[uid][dateKey].includes('work')) submissionTypeMap[uid][dateKey].push('work')
+              }
+            })
+          }
+        })
+      })
+
+      // 休暇マップ作成（userId -> dateKey -> { id, type, reason, attachmentName }）
+      const leaveMap: Record<string, Record<string, { id: string; type: string; reason?: string; attachmentName?: string }>> = {}
+      activeUsers.forEach(u => {
+        leaveMap[u.id] = {}
+      })
+      periodLeaveRequests.forEach(r => {
+        const dateKey = new Date(r.date).toISOString().split('T')[0]
+        if (leaveMap[r.userId]) {
+          leaveMap[r.userId][dateKey] = {
+            id: r.id,
+            type: r.leaveType,
+            reason: r.reason || undefined,
+            attachmentName: r.attachmentName || undefined,
+          }
         }
       })
 
@@ -125,6 +228,9 @@ export async function GET(request: NextRequest) {
         periodStart: periodStart.toISOString().split('T')[0],
         periodEnd: periodEnd.toISOString().split('T')[0],
         submissionMap,
+        submissionTypeMap,
+        leaveMap,
+        approvalMap,
       }
     }
 

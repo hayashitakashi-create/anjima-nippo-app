@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
         username: true,
         position: true,
         role: true,
+        isApprover: true,
         isActive: true,
         defaultReportType: true,
         createdAt: true,
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
         username: true,
         position: true,
         role: true,
+        isApprover: true,
         defaultReportType: true,
         createdAt: true,
         updatedAt: true,
@@ -122,7 +124,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId, role, defaultReportType, position, isActive } = body
+    const { userId, role, defaultReportType, position, isActive, isApprover } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -131,11 +133,24 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // 承認者は最大5名まで
+    if (isApprover === true) {
+      const approverUsers = await prisma.user.findMany({ where: { isApprover: true }, select: { id: true } })
+      const otherApproverCount = approverUsers.filter(u => u.id !== userId).length
+      if (otherApproverCount >= 5) {
+        return NextResponse.json(
+          { error: '承認者は最大5名までです' },
+          { status: 400 }
+        )
+      }
+    }
+
     const updateData: any = {}
     if (role !== undefined) updateData.role = role
     if (defaultReportType !== undefined) updateData.defaultReportType = defaultReportType
     if (position !== undefined) updateData.position = position
     if (isActive !== undefined) updateData.isActive = isActive
+    if (isApprover !== undefined) updateData.isApprover = isApprover
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -145,6 +160,7 @@ export async function PUT(request: NextRequest) {
         username: true,
         position: true,
         role: true,
+        isApprover: true,
         isActive: true,
         defaultReportType: true,
       },

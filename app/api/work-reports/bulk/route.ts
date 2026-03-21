@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
           projectName: template?.projectName || '',
           projectType: template?.projectType || null,
           weather: null,
-          contactNotes: null,
+          contactNotes: template?.contactNotes || null,
           remoteDepartureTime: template?.remoteDepartureTime || null,
           remoteArrivalTime: template?.remoteArrivalTime || null,
           remoteDepartureTime2: template?.remoteDepartureTime2 || null,

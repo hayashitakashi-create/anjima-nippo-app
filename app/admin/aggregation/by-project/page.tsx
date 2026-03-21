@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -21,6 +21,9 @@ import {
   ArrowLeft,
   Loader2,
   Building2,
+  Search,
+  Filter,
+  X,
 } from 'lucide-react'
 
 // ========== 型定義 ==========
@@ -96,6 +99,8 @@ export default function ByProjectAggregationPage() {
   const [error, setError] = useState('')
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const [projectTabs, setProjectTabs] = useState<Map<string, TabType>>(new Map())
+  const [filterProjectType, setFilterProjectType] = useState<string>('')
+  const [filterPersonName, setFilterPersonName] = useState<string>('')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -183,6 +188,74 @@ export default function ByProjectAggregationPage() {
     { key: 'materials', label: '材料', icon: Package },
     { key: 'subcontractors', label: '外注', icon: Truck },
   ]
+
+  // ========== フィルター関連 ==========
+
+  // 工事種別の一覧を取得（重複排除）
+  const projectTypes = useMemo(() => {
+    if (!data) return []
+    const types = new Set<string>()
+    data.projects.forEach(p => {
+      if (p.projectType) types.add(p.projectType)
+    })
+    return Array.from(types).sort()
+  }, [data])
+
+  // 全プロジェクトの作業者名一覧を取得（重複排除）
+  const allPersonNames = useMemo(() => {
+    if (!data) return []
+    const names = new Set<string>()
+    data.projects.forEach(p => {
+      p.labor.forEach(l => names.add(l.name))
+    })
+    return Array.from(names).sort()
+  }, [data])
+
+  // フィルター適用後のプロジェクト一覧
+  const filteredProjects = useMemo(() => {
+    if (!data) return []
+    let projects = data.projects
+
+    // 工事種別フィルター
+    if (filterProjectType) {
+      projects = projects.filter(p => p.projectType === filterProjectType)
+    }
+
+    // 人名フィルター（その人が労働時間に含まれるプロジェクトのみ表示 + 労働行も絞り込み）
+    if (filterPersonName) {
+      const keyword = filterPersonName.toLowerCase()
+      projects = projects
+        .filter(p => p.labor.some(l => l.name.toLowerCase().includes(keyword)))
+        .map(p => ({
+          ...p,
+          labor: p.labor.filter(l => l.name.toLowerCase().includes(keyword)),
+          totals: {
+            ...p.totals,
+            laborHours: p.labor
+              .filter(l => l.name.toLowerCase().includes(keyword))
+              .reduce((sum, l) => sum + l.total, 0),
+          },
+        }))
+    }
+
+    return projects
+  }, [data, filterProjectType, filterPersonName])
+
+  // フィルター後の合計値を再計算
+  const filteredGrandTotals = useMemo(() => {
+    return {
+      laborHours: filteredProjects.reduce((sum, p) => sum + p.totals.laborHours, 0),
+      materialAmount: filteredProjects.reduce((sum, p) => sum + p.totals.materialAmount, 0),
+      subcontractorCount: filteredProjects.reduce((sum, p) => sum + p.totals.subcontractorCount, 0),
+    }
+  }, [filteredProjects])
+
+  const isFilterActive = filterProjectType !== '' || filterPersonName !== ''
+
+  const clearFilters = () => {
+    setFilterProjectType('')
+    setFilterPersonName('')
+  }
 
   // CSV出力（全プロジェクト分）
   const handleExportCSV = () => {
@@ -329,6 +402,74 @@ export default function ByProjectAggregationPage() {
           </div>
         </div>
 
+        {/* フィルター */}
+        {data && !loading && (
+          <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+              <div className="flex items-center space-x-2 text-sm font-medium text-gray-600 shrink-0">
+                <Filter className="w-4 h-4 text-purple-600" />
+                <span>絞り込み</span>
+              </div>
+
+              {/* 工事種別フィルター */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-medium text-gray-500 mb-1">工事種別</label>
+                <select
+                  value={filterProjectType}
+                  onChange={(e) => setFilterProjectType(e.target.value)}
+                  className="w-full sm:w-auto min-w-[180px] px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                >
+                  <option value="">すべて</option>
+                  {projectTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 人名検索 */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-medium text-gray-500 mb-1">作業者名</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={filterPersonName}
+                    onChange={(e) => setFilterPersonName(e.target.value)}
+                    placeholder="氏名で検索..."
+                    list="person-name-list"
+                    className="w-full sm:w-auto min-w-[180px] pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                  />
+                  <datalist id="person-name-list">
+                    {allPersonNames.map(name => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              {/* フィルタークリア */}
+              {isFilterActive && (
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors shrink-0"
+                >
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  クリア
+                </button>
+              )}
+            </div>
+
+            {/* フィルター結果の件数表示 */}
+            {isFilterActive && (
+              <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-gray-500">
+                {filteredProjects.length} / {data.projects.length} 件の物件を表示中
+                {filterProjectType && <span className="ml-2 text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">種別: {filterProjectType}</span>}
+                {filterPersonName && <span className="ml-2 text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">氏名: {filterPersonName}</span>}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* サマリーカード */}
         {data && !loading && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
@@ -338,8 +479,8 @@ export default function ByProjectAggregationPage() {
                   <Building2 className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">物件数</p>
-                  <p className="text-2xl font-bold text-gray-900">{data.projects.length}</p>
+                  <p className="text-xs text-gray-500">物件数{isFilterActive ? '(絞込)' : ''}</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredProjects.length}</p>
                 </div>
               </div>
             </div>
@@ -349,8 +490,8 @@ export default function ByProjectAggregationPage() {
                   <BarChart3 className="w-5 h-5 text-gray-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">日報数合計</p>
-                  <p className="text-2xl font-bold text-gray-900">{data.projects.reduce((sum, p) => sum + p.reportCount, 0)}</p>
+                  <p className="text-xs text-gray-500">日報数合計{isFilterActive ? '(絞込)' : ''}</p>
+                  <p className="text-2xl font-bold text-gray-900">{filteredProjects.reduce((sum, p) => sum + p.reportCount, 0)}</p>
                 </div>
               </div>
             </div>
@@ -360,8 +501,8 @@ export default function ByProjectAggregationPage() {
                   <Clock className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">労働時間合計</p>
-                  <p className="text-2xl font-bold text-gray-900">{fh(data.grandTotals.laborHours)}</p>
+                  <p className="text-xs text-gray-500">労働時間合計{isFilterActive ? '(絞込)' : ''}</p>
+                  <p className="text-2xl font-bold text-gray-900">{fh(filteredGrandTotals.laborHours)}</p>
                 </div>
               </div>
             </div>
@@ -371,8 +512,8 @@ export default function ByProjectAggregationPage() {
                   <Package className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">材料費合計</p>
-                  <p className="text-xl font-bold text-gray-900">{formatCurrency(data.grandTotals.materialAmount)}</p>
+                  <p className="text-xs text-gray-500">材料費合計{isFilterActive ? '(絞込)' : ''}</p>
+                  <p className="text-xl font-bold text-gray-900">{formatCurrency(filteredGrandTotals.materialAmount)}</p>
                 </div>
               </div>
             </div>
@@ -397,12 +538,12 @@ export default function ByProjectAggregationPage() {
         {/* プロジェクト一覧 */}
         {!loading && data && (
           <div className="space-y-4">
-            {data.projects.length === 0 ? (
+            {filteredProjects.length === 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-gray-500">
-                該当期間のデータがありません
+                {isFilterActive ? 'フィルター条件に一致するデータがありません' : '該当期間のデータがありません'}
               </div>
             ) : (
-              data.projects.map(project => {
+              filteredProjects.map(project => {
                 const projectKey = project.projectRefId || project.projectName
                 const isExpanded = expandedProjects.has(projectKey)
                 const activeTab = getProjectTab(projectKey)

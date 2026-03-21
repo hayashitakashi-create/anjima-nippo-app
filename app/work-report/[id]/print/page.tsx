@@ -127,6 +127,9 @@ export default function WorkReportPrintPage() {
   const paddedSubs: (SubcontractorRecord | null)[] = [...report.subcontractorRecords]
   while (paddedSubs.length < 3) paddedSubs.push(null)
 
+  // 区画線工事かどうか（材料セクション表示の判定）
+  const isKukakusen = report.projectType === '区画線工事'
+
   // 金額合計
   const totalAmount = report.materialRecords.reduce(
     (sum, r) => sum + ((r.quantity || 0) * (r.unitPrice || 0)),
@@ -251,55 +254,57 @@ export default function WorkReportPrintPage() {
 
           {/* 使用材料・外注先を横並び */}
           <div style={{ display: 'flex', gap: '8px' }}>
-            {/* 使用材料 */}
-            <div style={{ flex: '1' }}>
-              <div className="section-title">使用材料・消耗品</div>
-              <table className="print-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '20px' }}>No</th>
-                    <th>材料名</th>
-                    <th style={{ width: '50px' }}>容量</th>
-                    <th style={{ width: '40px' }}>数量</th>
-                    <th style={{ width: '55px' }}>単価</th>
-                    <th style={{ width: '65px' }}>金額</th>
-                    <th style={{ width: '70px' }}>外注先</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paddedMaterials.map((record, index) => {
-                    const amt = (record?.quantity || 0) * (record?.unitPrice || 0)
-                    return (
-                      <tr key={index}>
-                        <td className="text-center">{index + 1}</td>
-                        <td>{record?.name || ''}</td>
-                        <td className="text-center">
-                          {record?.volume || ''}{record?.volumeUnit || ''}
-                        </td>
-                        <td className="text-right">{record?.quantity || ''}</td>
-                        <td className="text-right">
-                          {record?.unitPrice ? `¥${record.unitPrice.toLocaleString()}` : ''}
-                        </td>
-                        <td className="text-right">
-                          {amt > 0 ? `¥${amt.toLocaleString()}` : ''}
-                        </td>
-                        <td>{record?.subcontractor || ''}</td>
-                      </tr>
-                    )
-                  })}
-                  <tr>
-                    <td colSpan={5} className="text-right font-bold">合計</td>
-                    <td className="text-right font-bold">
-                      {totalAmount > 0 ? `¥${totalAmount.toLocaleString()}` : ''}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            {/* 使用材料（区画線工事の場合のみ表示） */}
+            {isKukakusen && (
+              <div style={{ flex: '1' }}>
+                <div className="section-title">使用材料・消耗品</div>
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '20px' }}>No</th>
+                      <th>材料名</th>
+                      <th style={{ width: '50px' }}>容量</th>
+                      <th style={{ width: '40px' }}>数量</th>
+                      <th style={{ width: '55px' }}>単価</th>
+                      <th style={{ width: '65px' }}>金額</th>
+                      <th style={{ width: '70px' }}>外注先</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paddedMaterials.map((record, index) => {
+                      const amt = (record?.quantity || 0) * (record?.unitPrice || 0)
+                      return (
+                        <tr key={index}>
+                          <td className="text-center">{index + 1}</td>
+                          <td>{record?.name || ''}</td>
+                          <td className="text-center">
+                            {record?.volume || ''}{record?.volumeUnit || ''}
+                          </td>
+                          <td className="text-right">{record?.quantity || ''}</td>
+                          <td className="text-right">
+                            {record?.unitPrice ? `¥${record.unitPrice.toLocaleString()}` : ''}
+                          </td>
+                          <td className="text-right">
+                            {amt > 0 ? `¥${amt.toLocaleString()}` : ''}
+                          </td>
+                          <td>{record?.subcontractor || ''}</td>
+                        </tr>
+                      )
+                    })}
+                    <tr>
+                      <td colSpan={5} className="text-right font-bold">合計</td>
+                      <td className="text-right font-bold">
+                        {totalAmount > 0 ? `¥${totalAmount.toLocaleString()}` : ''}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* 外注先 + 遠隔地情報 */}
-            <div style={{ width: '300px', flexShrink: 0 }}>
+            <div style={isKukakusen ? { width: '300px', flexShrink: 0 } : { flex: '1' }}>
               <div className="section-title">外注先</div>
               <table className="print-table mb-1">
                 <thead>
@@ -356,7 +361,7 @@ export default function WorkReportPrintPage() {
             <tbody>
               <tr>
                 <th style={{ width: '80px' }}>連絡事項</th>
-                <td style={{ minHeight: '30px', whiteSpace: 'pre-wrap', fontSize: '10px', padding: '4px 6px' }}>
+                <td style={{ minHeight: isKukakusen ? '30px' : '80px', whiteSpace: 'pre-wrap', fontSize: '10px', padding: '4px 6px' }}>
                   {report.contactNotes || ''}
                 </td>
               </tr>

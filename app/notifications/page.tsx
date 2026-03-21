@@ -15,6 +15,7 @@ import {
   Clock,
   Filter,
   Trash2,
+  Palmtree,
 } from 'lucide-react'
 
 interface Notification {
@@ -112,6 +113,12 @@ export default function NotificationsPage() {
         return <CheckCircle2 className="w-5 h-5 text-emerald-600" />
       case 'report_rejected':
         return <AlertTriangle className="w-5 h-5 text-red-600" />
+      case 'leave_submitted':
+        return <Palmtree className="w-5 h-5 text-green-600" />
+      case 'leave_approved':
+        return <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+      case 'leave_rejected':
+        return <AlertTriangle className="w-5 h-5 text-red-600" />
       case 'reminder':
         return <Clock className="w-5 h-5 text-orange-600" />
       default:
@@ -123,10 +130,13 @@ export default function NotificationsPage() {
     if (isRead) return 'bg-white'
     switch (type) {
       case 'report_submitted':
+      case 'leave_submitted':
         return 'bg-blue-50'
       case 'report_approved':
+      case 'leave_approved':
         return 'bg-emerald-50'
       case 'report_rejected':
+      case 'leave_rejected':
         return 'bg-red-50'
       case 'reminder':
         return 'bg-orange-50'

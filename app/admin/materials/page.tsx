@@ -25,6 +25,7 @@ interface User {
 interface Material {
   id: string
   name: string
+  defaultUnitPrice: number
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -41,6 +42,7 @@ export default function MaterialsPage() {
 
   // 新規材料追加フォーム
   const [newMaterial, setNewMaterial] = useState('')
+  const [newUnitPrice, setNewUnitPrice] = useState('')
   const [addingNew, setAddingNew] = useState(false)
 
   // デフォルト材料リスト
@@ -133,12 +135,14 @@ export default function MaterialsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newMaterial,
+          defaultUnitPrice: parseFloat(newUnitPrice) || 0,
         }),
       })
       if (res.ok) {
         const data = await res.json()
         setMaterials(prev => [...prev, data.material])
         setNewMaterial('')
+        setNewUnitPrice('')
         setAddingNew(false)
         setMessage('材料を追加しました')
       } else {
@@ -312,6 +316,20 @@ export default function MaterialsPage() {
                     placeholder="例: キクテック キクスイライン KL-115 白"
                   />
                 </div>
+                <div className="w-full sm:w-36">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    単価(円)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={newUnitPrice}
+                    onChange={e => setNewUnitPrice(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                    placeholder="0"
+                  />
+                </div>
               </div>
               <div className="flex items-center justify-end gap-3">
                 <button
@@ -341,6 +359,7 @@ export default function MaterialsPage() {
               <thead className="bg-gray-50 border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">材料名</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">単価(円)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状態</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
                 </tr>
@@ -348,7 +367,7 @@ export default function MaterialsPage() {
               <tbody className="divide-y divide-slate-100">
                 {materials.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center">
+                    <td colSpan={4} className="px-6 py-12 text-center">
                       <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-gray-500 mb-2">材料が登録されていません</p>
                       <p className="text-sm text-gray-400">「新規追加」から登録してください</p>
@@ -364,6 +383,28 @@ export default function MaterialsPage() {
                     >
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-gray-900">{material.name}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={material.defaultUnitPrice || ''}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0
+                            setMaterials(prev => prev.map(m => m.id === material.id ? { ...m, defaultUnitPrice: val } : m))
+                          }}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value) || 0
+                            fetch('/api/admin/materials', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: material.id, defaultUnitPrice: val }),
+                            })
+                          }}
+                          className="w-24 px-2 py-1 text-sm text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                          placeholder="0"
+                        />
                       </td>
                       <td className="px-6 py-4">
                         <span

@@ -19,6 +19,7 @@ model User {
   password          String            // ハッシュ化されたパスワード
   position          String?           // 役職(社長、専務、常務、部長など)
   role              String   @default("user") // ユーザー権限 (admin/user)
+  isApprover        Boolean  @default(false)  // 承認者かどうか
   isActive          Boolean  @default(true)   // アカウント有効/無効
   defaultReportType String   @default("work") // デフォルト日報タイプ (sales: 営業日報, work: 作業日報)
   createdAt         DateTime @default(now())
@@ -258,11 +259,12 @@ model Notification {
 
 // 使用材料マスタ
 model Material {
-  id            String   @id @default(cuid())
-  name          String   // 材料名
-  defaultVolume String?  // デフォルト容量（例: 20kg, 14kg）
-  defaultUnit   String?  // デフォルト単位（ℓ、kg、m、本など）
-  isActive      Boolean  @default(true) // 有効/無効
+  id               String   @id @default(cuid())
+  name             String   // 材料名
+  defaultVolume    String?  // デフォルト容量（例: 20kg, 14kg）
+  defaultUnit      String?  // デフォルト単位（ℓ、kg、m、本など）
+  defaultUnitPrice Float    @default(0) // デフォルト単価
+  isActive         Boolean  @default(true) // 有効/無効
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -304,6 +306,26 @@ model Unit {
 
   @@index([isActive])
   @@index([order])
+}
+
+// 休暇届
+model LeaveRequest {
+  id             String   @id @default(cuid())
+  userId         String   // 申請者
+  date           DateTime // 休暇日
+  leaveType      String   // 有給, 振替, 代休, 看護, 介護, 特別休暇, その他
+  reason         String?  // 理由
+  attachmentData String?  // 添付ファイル (base64)
+  attachmentName String?  // 添付ファイル名
+  attachmentType String?  // MIMEタイプ
+  status         String   @default("pending") // pending (承認待ち), approved (承認済), rejected (差戻し)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
 }
 
 // 作業日報テンプレート
