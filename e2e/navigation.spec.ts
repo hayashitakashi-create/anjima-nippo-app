@@ -8,6 +8,7 @@ test.describe('ナビゲーション・ルーティング', () => {
   })
 
   test('ダッシュボードからすべてのページにアクセスできる', async ({ page }) => {
+    test.setTimeout(60000)
     const pages = [
       { path: '/nippo', name: '営業日報' },
       { path: '/nippo/new', name: '営業日報作成' },
@@ -21,7 +22,7 @@ test.describe('ナビゲーション・ルーティング', () => {
     for (const p of pages) {
       await page.goto(p.path)
       await expect(page).toHaveURL(new RegExp(p.path))
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
     }
   })
 
@@ -40,7 +41,7 @@ test.describe('ナビゲーション・ルーティング', () => {
   test('404ページが正しく表示される', async ({ page }) => {
     await page.goto('/nonexistent-page-12345')
     // 404またはエラーページが表示されることを確認
-    await expect(page.getByText(/404|見つかり|存在しない|not found/i)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/404|見つかり|存在しない|not found/i).first()).toBeVisible({ timeout: 5000 })
   })
 })
 

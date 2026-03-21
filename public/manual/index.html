@@ -72,7 +72,7 @@ body{background:white}
   <p class="subtitle" style="color:#ffffff">取扱説明書</p>
   <div class="meta" style="color:#ffffff">
     <p style="font-size:18px;font-weight:600;color:#ffffff">安島工業株式会社</p>
-    <p style="color:#ffffff">Version 1.0 ― 2026年3月</p>
+    <p style="color:#ffffff">Version 2.0 ― 2026年3月</p>
     <p style="color:#ffffff">本マニュアルは管理者・一般ユーザー共通のドキュメントです</p>
   </div>
 </div>
@@ -89,8 +89,10 @@ body{background:white}
     <li><a href="#sec6">承認ワークフロー</a></li>
     <li><a href="#sec7">管理者機能</a></li>
     <li><a href="#sec8">設定・パスワード変更</a></li>
-    <li><a href="#sec9">便利な機能・ショートカット</a></li>
-    <li><a href="#sec10">よくある質問（FAQ）</a></li>
+    <li><a href="#sec9">提出状況カレンダー</a></li>
+    <li><a href="#sec10">セキュリティ機能</a></li>
+    <li><a href="#sec11">便利な機能・ショートカット</a></li>
+    <li><a href="#sec12">よくある質問（FAQ）</a></li>
   </ol>
 </div>
 
@@ -109,7 +111,12 @@ body{background:white}
   <img src="/screenshots/01_login.png" alt="ログイン画面" class="screenshot">
   <p class="caption">図1-1: ログイン画面</p>
 
-  <div class="tip">初回ログイン後は、設定画面からパスワードを変更することをお勧めします。パスワードは8文字以上で設定してください。</div>
+  <div class="warn"><strong>初回ログイン時のパスワード変更：</strong>初期パスワード（00000000）でログインすると、自動的に設定画面にリダイレクトされ、パスワードの変更が求められます。新しいパスワード（8文字以上）を設定するまで他のページにアクセスできません。変更完了後、自動的にダッシュボードに遷移します。</div>
+
+  <img src="/release-notes/screenshots/05_password_change_required.png" alt="パスワード変更要求画面" class="screenshot">
+  <p class="caption">図1-2: 初回ログイン時のパスワード変更画面</p>
+
+  <div class="tip">パスワード変更後は次回ログインから新しいパスワードが必要です。パスワードは8文字以上で設定してください。</div>
 
   <div class="warn">パスワードを5回連続で間違えると、15分間ログインできなくなります。パスワードを忘れた場合は管理者にご連絡ください。</div>
 
@@ -425,9 +432,60 @@ body{background:white}
   <p>ログインIDとして使用しているメールアドレスを変更できます。新しいメールアドレスを入力して「ユーザー名を更新」ボタンをクリックします。</p>
 </div>
 
-<!-- ======== 9. 便利な機能 ======== -->
+<!-- ======== 9. 提出状況カレンダー ======== -->
 <div class="container section" id="sec9">
-  <h2 class="section-title">9. 便利な機能・ショートカット</h2>
+  <h2 class="section-title">9. 提出状況カレンダー</h2>
+
+  <p>管理画面の「承認管理」ページにある提出状況カレンダーで、全社員の日報提出状況を一覧で確認できます。</p>
+
+  <img src="/release-notes/screenshots/01_calendar_overview.png" alt="提出状況カレンダー" class="screenshot">
+  <p class="caption">図9-1: 提出状況カレンダー</p>
+
+  <h3>カレンダーの見方</h3>
+  <table>
+    <tr><th>表示</th><th>意味</th></tr>
+    <tr><td><span style="background:#10b981;color:white;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:700">営</span> 緑バッジ</td><td>営業日報を提出済み</td></tr>
+    <tr><td><span style="background:#3b82f6;color:white;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:700">作</span> 青バッジ</td><td>作業日報を提出済み</td></tr>
+    <tr><td>金色リング付きバッジ</td><td>承認済みの日報</td></tr>
+    <tr><td><span style="background:#f43f5e;color:white;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:700">有</span> ピンクバッジ</td><td>有給休暇</td></tr>
+    <tr><td>空欄</td><td>未提出</td></tr>
+  </table>
+
+  <h3>日報の詳細を確認する</h3>
+  <ol class="steps">
+    <li>カレンダー上のバッジ（営・作）をクリックします</li>
+    <li>詳細モーダルが表示され、提出済みの日報種別が確認できます</li>
+    <li>各日報の右側にある「→」矢印をクリックすると、実際の日報ページにジャンプします</li>
+  </ol>
+
+  <div class="tip">承認済みの日報は金色のリングで囲まれるため、未承認の日報を優先的に確認できます。</div>
+
+  <h3>期間の切り替え</h3>
+  <p>カレンダー上部の「◀」「▶」ボタンで表示期間（半月単位）を切り替えられます。ユーザー名のセレクトボックスで特定の社員に絞り込むことも可能です。</p>
+</div>
+
+<!-- ======== 10. セキュリティ機能 ======== -->
+<div class="container section" id="sec10">
+  <h2 class="section-title">10. セキュリティ機能</h2>
+
+  <h3>未認証アクセスの保護</h3>
+  <p>ログインしていない状態でシステムのページにアクセスすると、自動的にログインページにリダイレクトされます。URLを直接入力しても、認証なしではアクセスできません。</p>
+
+  <h3>自己承認の防止</h3>
+  <p>承認権限を持つユーザーであっても、自分自身の日報を承認することはできません。個別承認・一括承認・全件承認のすべてのパターンでチェックされます。</p>
+
+  <div class="warn">自分の日報を承認しようとすると「自分の日報を承認することはできません」というエラーが表示されます。</div>
+
+  <h3>404 / 500 エラーページ</h3>
+  <p>存在しないページにアクセスした場合は404エラーページ、サーバーエラーが発生した場合は500エラーページが表示されます。いずれもトップページへの導線を用意しています。</p>
+
+  <img src="/release-notes/screenshots/04_404_page.png" alt="404エラーページ" class="screenshot">
+  <p class="caption">図10-1: 404エラーページ</p>
+</div>
+
+<!-- ======== 11. 便利な機能 ======== -->
+<div class="container section" id="sec11">
+  <h2 class="section-title">11. 便利な機能・ショートカット</h2>
 
   <h3>コマンドパレット</h3>
   <p>キーボードの <kbd>⌘</kbd> + <kbd>K</kbd>（Macの場合）または <kbd>Ctrl</kbd> + <kbd>K</kbd>（Windowsの場合）で、コマンドパレットを呼び出せます。</p>
@@ -455,9 +513,9 @@ body{background:white}
   <p>各日報の詳細画面から印刷用レイアウトで出力できます。A4用紙に最適化されたレイアウトで、そのまま提出・保管に使えます。</p>
 </div>
 
-<!-- ======== 10. FAQ ======== -->
-<div class="container section" id="sec10">
-  <h2 class="section-title">10. よくある質問（FAQ）</h2>
+<!-- ======== 12. FAQ ======== -->
+<div class="container section" id="sec12">
+  <h2 class="section-title">12. よくある質問（FAQ）</h2>
 
   <h3>Q. パスワードを忘れました</h3>
   <p>管理者にご連絡ください。管理者がパスワードをリセットできます。</p>
@@ -495,7 +553,7 @@ body{background:white}
 <!-- ======== フッター ======== -->
 <div class="container" style="text-align:center;padding:40px 32px 60px;color:#94a3b8;font-size:12px;border-top:1px solid #e2e8f0;margin-top:48px">
   <p>安島工業株式会社 日報システム 取扱説明書</p>
-  <p>Version 1.0 ― 2026年3月 発行</p>
+  <p>Version 2.0 ― 2026年3月 発行</p>
   <p style="margin-top:8px">© 2026 安島工業株式会社</p>
 </div>
 

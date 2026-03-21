@@ -36,8 +36,12 @@ export default function LoginPage() {
         throw new Error(data.error || 'ログインに失敗しました')
       }
 
-      // ログイン成功 - 全員ダッシュボードへ
-      router.push('/dashboard')
+      // 初回ログイン時はパスワード変更を強制
+      if (data.user?.mustChangePassword) {
+        router.push('/settings?change_password=1')
+      } else {
+        router.push('/dashboard')
+      }
       router.refresh()
     } catch (err: any) {
       setError(err.message)

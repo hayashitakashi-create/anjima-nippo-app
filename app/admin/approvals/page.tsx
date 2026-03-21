@@ -93,14 +93,14 @@ interface SubmissionStatus {
   periodStart: string // YYYY-MM-DD形式
   periodEnd: string   // YYYY-MM-DD形式
   submissionMap: Record<string, Record<string, boolean>>
-  submissionTypeMap?: Record<string, Record<string, string[]>> // userId -> dateKey -> ['sales','work']
+  submissionTypeMap?: Record<string, Record<string, { type: string; id: string }[]>>
   leaveMap?: Record<string, Record<string, { id: string; type: string; reason?: string; attachmentName?: string }>>
   approvalMap?: Record<string, Record<string, string>> // userId -> dateKey -> 'approved'
 }
 
 // 休暇種別の色定義（カレンダーバッジ用）
 const LEAVE_TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  '有給': { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-600' },
+  '有給': { bg: 'bg-rose-500', text: 'text-white', border: 'border-rose-600' },
   '振替': { bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-600' },
   '代休': { bg: 'bg-teal-500', text: 'text-white', border: 'border-teal-600' },
   '看護': { bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-600' },
@@ -182,7 +182,7 @@ export default function ApprovalsPage() {
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarOffset, setCalendarOffset] = useState(0) // 0: 今期, -1: 前期, -2: 前々期...
   const [calendarNameFilter, setCalendarNameFilter] = useState('') // カレンダー氏名絞り込み
-  const [calendarDetail, setCalendarDetail] = useState<{ userName: string; dateKey: string; types?: string[]; leave?: { id: string; type: string; reason?: string; attachmentName?: string } } | null>(null)
+  const [calendarDetail, setCalendarDetail] = useState<{ userName: string; dateKey: string; types?: { type: string; id: string }[]; leave?: { id: string; type: string; reason?: string; attachmentName?: string } } | null>(null)
 
   // 絞り込み条件
   const [selectedUserId, setSelectedUserId] = useState('')
@@ -996,10 +996,19 @@ export default function ApprovalsPage() {
                                       </span>
                                     ) : isFuture ? (
                                       <span className="text-gray-300">-</span>
-                                    ) : isSubmitted && isApproved ? (
-                                      <CheckCheck className="w-4 h-4 text-blue-500 inline" />
                                     ) : isSubmitted ? (
-                                      <CheckCircle className="w-4 h-4 text-emerald-500 inline" />
+                                      <div className="flex flex-col items-center gap-0.5">
+                                        {submissionTypes?.some(e => e.type === 'sales') && (
+                                          <span className={`inline-block w-5 h-3.5 leading-[14px] rounded text-[8px] font-bold text-white bg-emerald-500 ${isApproved ? 'ring-1 ring-amber-400' : ''}`}>
+                                            営
+                                          </span>
+                                        )}
+                                        {submissionTypes?.some(e => e.type === 'work') && (
+                                          <span className={`inline-block w-5 h-3.5 leading-[14px] rounded text-[8px] font-bold text-white bg-blue-500 ${isApproved ? 'ring-1 ring-amber-400' : ''}`}>
+                                            作
+                                          </span>
+                                        )}
+                                      </div>
                                     ) : (
                                       <XCircle className="w-4 h-4 text-red-500 inline" />
                                     )}
@@ -1015,15 +1024,21 @@ export default function ApprovalsPage() {
                   {/* 凡例 */}
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-600">
                     <div className="flex items-center gap-1">
-                      <CheckCheck className="w-3 h-3 text-blue-500" />
+                      <span className="inline-block w-4 h-3 leading-3 rounded bg-emerald-500 text-white text-[7px] font-bold text-center">営</span>
+                      営業日報
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="inline-block w-4 h-3 leading-3 rounded bg-blue-500 text-white text-[7px] font-bold text-center">作</span>
+                      作業日報
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="inline-block w-4 h-3 leading-3 rounded bg-emerald-500 text-white text-[7px] font-bold text-center ring-1 ring-amber-400">営</span>
+                      /
+                      <span className="inline-block w-4 h-3 leading-3 rounded bg-blue-500 text-white text-[7px] font-bold text-center ring-1 ring-amber-400">作</span>
                       承認済み
                     </div>
                     <div className="flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3 text-emerald-500" />
-                      提出済み
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="inline-block w-4 h-3 leading-3 rounded bg-blue-500 text-white text-[7px] font-bold text-center">有</span>
+                      <span className="inline-block w-4 h-3 leading-3 rounded bg-rose-500 text-white text-[7px] font-bold text-center">有</span>
                       有給
                     </div>
                     <div className="flex items-center gap-1">
@@ -1090,17 +1105,29 @@ export default function ApprovalsPage() {
                 {calendarDetail.types && calendarDetail.types.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-gray-700">日報提出</p>
-                    <div className="flex flex-wrap gap-2">
-                      {calendarDetail.types.includes('sales') && (
-                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
+                    <div className="flex flex-col gap-2">
+                      {calendarDetail.types.filter(e => e.type === 'sales').map((e, i) => (
+                        <a
+                          key={`sales-${i}`}
+                          href={`/nippo/${e.id}`}
+                          className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-800 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
                           営業日報 提出済み
-                        </span>
-                      )}
-                      {calendarDetail.types.includes('work') && (
-                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
+                          <span className="ml-auto text-emerald-500">→</span>
+                        </a>
+                      ))}
+                      {calendarDetail.types.filter(e => e.type === 'work').map((e, i) => (
+                        <a
+                          key={`work-${i}`}
+                          href={`/work-report/${e.id}`}
+                          className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-800 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
                           作業日報 提出済み
-                        </span>
-                      )}
+                          <span className="ml-auto text-blue-500">→</span>
+                        </a>
+                      ))}
                     </div>
                   </div>
                 )}

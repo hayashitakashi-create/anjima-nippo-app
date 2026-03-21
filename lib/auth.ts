@@ -9,7 +9,7 @@ if (!process.env.JWT_SECRET) {
 }
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 
-// トークン有効期限: 30日
+// トークン有効期限: 60日
 const TOKEN_EXPIRY = '60d'
 
 // ログイン試行回数制限

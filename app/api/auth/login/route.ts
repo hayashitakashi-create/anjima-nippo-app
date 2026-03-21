@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         role: true,
         isActive: true,
         defaultReportType: true,
+        mustChangePassword: true,
       },
     })
 
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
         position: user.position,
         role: user.role,
         defaultReportType: user.defaultReportType,
+        mustChangePassword: user.mustChangePassword,
       },
     })
 

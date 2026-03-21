@@ -145,6 +145,17 @@ export async function PUT(
         },
         visitRecords: {
           orderBy: { order: 'asc' }
+        },
+        approvals: {
+          include: {
+            approver: {
+              select: {
+                name: true,
+                position: true,
+              }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
         }
       }
     })

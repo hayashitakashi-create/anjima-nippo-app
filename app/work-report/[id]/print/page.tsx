@@ -214,7 +214,7 @@ export default function WorkReportPrintPage() {
                 <th>工事種別</th>
                 <td>{report.projectType || ''}</td>
                 <th>工事番号</th>
-                <td colSpan={5}>{report.projectRefId || ''}</td>
+                <td colSpan={5}>{report.projectId || ''}</td>
               </tr>
             </tbody>
           </table>

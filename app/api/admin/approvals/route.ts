@@ -103,6 +103,7 @@ export async function GET(request: NextRequest) {
             date: { gte: periodStart, lte: periodEnd },
           },
           select: {
+            id: true,
             userId: true,
             date: true,
             approvals: {
@@ -117,6 +118,7 @@ export async function GET(request: NextRequest) {
             date: { gte: periodStart, lte: periodEnd },
           },
           select: {
+            id: true,
             userId: true,
             date: true,
             workerRecords: {
@@ -161,7 +163,7 @@ export async function GET(request: NextRequest) {
 
       // マップ作成（提出種別も記録: 'sales'=営業日報, 'work'=作業日報）
       const submissionMap: Record<string, Record<string, boolean>> = {}
-      const submissionTypeMap: Record<string, Record<string, string[]>> = {}
+      const submissionTypeMap: Record<string, Record<string, { type: string; id: string }[]>> = {}
       activeUsers.forEach(u => {
         submissionMap[u.id] = {}
         submissionTypeMap[u.id] = {}
@@ -179,7 +181,7 @@ export async function GET(request: NextRequest) {
         if (submissionMap[r.userId]) {
           submissionMap[r.userId][dateKey] = true
           if (!submissionTypeMap[r.userId][dateKey]) submissionTypeMap[r.userId][dateKey] = []
-          if (!submissionTypeMap[r.userId][dateKey].includes('sales')) submissionTypeMap[r.userId][dateKey].push('sales')
+          if (!submissionTypeMap[r.userId][dateKey].some(e => e.type === 'sales')) submissionTypeMap[r.userId][dateKey].push({ type: 'sales', id: r.id })
           // 承認状況
           if (r.approvals && r.approvals.length > 0) {
             const allApproved = r.approvals.every((a: any) => a.status === 'approved')
@@ -197,7 +199,7 @@ export async function GET(request: NextRequest) {
         if (submissionMap[r.userId]) {
           submissionMap[r.userId][dateKey] = true
           if (!submissionTypeMap[r.userId][dateKey]) submissionTypeMap[r.userId][dateKey] = []
-          if (!submissionTypeMap[r.userId][dateKey].includes('work')) submissionTypeMap[r.userId][dateKey].push('work')
+          if (!submissionTypeMap[r.userId][dateKey].some(e => e.type === 'work' && e.id === r.id)) submissionTypeMap[r.userId][dateKey].push({ type: 'work', id: r.id })
         }
         // workerRecordsに含まれる名前と一致するユーザーも提出済みにする
         r.workerRecords.forEach(worker => {
@@ -215,7 +217,7 @@ export async function GET(request: NextRequest) {
               if (submissionMap[uid]) {
                 submissionMap[uid][dateKey] = true
                 if (!submissionTypeMap[uid][dateKey]) submissionTypeMap[uid][dateKey] = []
-                if (!submissionTypeMap[uid][dateKey].includes('work')) submissionTypeMap[uid][dateKey].push('work')
+                if (!submissionTypeMap[uid][dateKey].some(e => e.type === 'work' && e.id === r.id)) submissionTypeMap[uid][dateKey].push({ type: 'work', id: r.id })
               }
             })
           }
@@ -295,6 +297,18 @@ export async function PUT(request: NextRequest) {
         )
       }
 
+      // 自己承認チェック（一括）
+      const ownReports = await prisma.dailyReport.findMany({
+        where: { id: { in: reportIds }, userId: admin.id },
+        select: { id: true },
+      })
+      if (ownReports.length > 0) {
+        return NextResponse.json(
+          { error: '自分の日報を承認することはできません' },
+          { status: 403 }
+        )
+      }
+
       const newStatus = action === 'bulk_approve' ? 'approved' : 'rejected'
 
       // トランザクションで一括処理
@@ -337,6 +351,18 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json(
           { error: 'reportId は必須です' },
           { status: 400 }
+        )
+      }
+
+      // 自己承認チェック
+      const targetReport = await prisma.dailyReport.findUnique({
+        where: { id: reportId },
+        select: { userId: true },
+      })
+      if (targetReport?.userId === admin.id) {
+        return NextResponse.json(
+          { error: '自分の日報を承認することはできません' },
+          { status: 403 }
         )
       }
 
@@ -408,6 +434,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: '承認レコードが見つかりません' },
         { status: 404 }
+      )
+    }
+
+    // 自己承認チェック（個別）
+    const approvalReport = await prisma.dailyReport.findUnique({
+      where: { id: approval.dailyReportId },
+      select: { userId: true },
+    })
+    if (approvalReport?.userId === admin.id) {
+      return NextResponse.json(
+        { error: '自分の日報を承認することはできません' },
+        { status: 403 }
       )
     }
 

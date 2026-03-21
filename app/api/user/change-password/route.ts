@@ -65,10 +65,10 @@ export async function PUT(request: NextRequest) {
     // 新しいパスワードをハッシュ化
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
-    // パスワードを更新
+    // パスワードを更新（初回変更フラグも解除）
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, mustChangePassword: false },
     })
 
     return NextResponse.json({ message: 'パスワードを変更しました' })
