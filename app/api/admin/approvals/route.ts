@@ -141,12 +141,22 @@ export async function GET(request: NextRequest) {
       ])
 
       // ユーザー名からIDへのマッピングを作成（workerRecord.nameでの照合用）
+      // スペース除去版でもマッピングを作成して柔軟に照合
       const nameToUserIds: Record<string, string[]> = {}
+      const normalizedNameToUserIds: Record<string, string[]> = {}
       activeUsers.forEach(u => {
+        // 元の名前でマッピング
         if (!nameToUserIds[u.name]) {
           nameToUserIds[u.name] = []
         }
         nameToUserIds[u.name].push(u.id)
+
+        // 正規化（全角・半角スペース除去）版でもマッピング
+        const normalized = u.name.replace(/[\s　]+/g, '')
+        if (!normalizedNameToUserIds[normalized]) {
+          normalizedNameToUserIds[normalized] = []
+        }
+        normalizedNameToUserIds[normalized].push(u.id)
       })
 
       // マップ作成（提出種別も記録: 'sales'=営業日報, 'work'=作業日報）
@@ -191,7 +201,15 @@ export async function GET(request: NextRequest) {
         }
         // workerRecordsに含まれる名前と一致するユーザーも提出済みにする
         r.workerRecords.forEach(worker => {
-          const matchedUserIds = nameToUserIds[worker.name]
+          // まず完全一致を試す
+          let matchedUserIds = nameToUserIds[worker.name]
+
+          // 完全一致しない場合は、スペースを除去して照合
+          if (!matchedUserIds) {
+            const normalizedWorkerName = worker.name.replace(/[\s　]+/g, '')
+            matchedUserIds = normalizedNameToUserIds[normalizedWorkerName]
+          }
+
           if (matchedUserIds) {
             matchedUserIds.forEach(uid => {
               if (submissionMap[uid]) {
