@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日報システム 機能追加リリースノート v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#1e293b;background:#f0f4ff;line-height:1.8;font-size:15px}
+.header{background:linear-gradient(135deg,#0E3091 0%,#1a4ab8 50%,#2563eb 100%);color:white;padding:48px 32px;text-align:center}
+.header h1{font-size:32px;letter-spacing:.08em;margin-bottom:8px;font-weight:700}
+.header .sub{font-size:15px;color:#93c5fd;margin-bottom:4px}
+.header .date{font-size:13px;color:#bfdbfe;margin-top:12px;background:rgba(255,255,255,.1);display:inline-block;padding:4px 16px;border-radius:20px}
+.header .prev-link{margin-top:12px;font-size:12px}
+.header .prev-link a{color:#93c5fd;text-decoration:none}
+.header .prev-link a:hover{text-decoration:underline}
+.container{max-width:960px;margin:0 auto;padding:32px 20px 60px}
+.summary-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:-28px 0 32px;position:relative;z-index:1}
+.summary-chip{background:white;border-radius:12px;padding:12px 20px;box-shadow:0 2px 12px rgba(14,48,145,.12);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#334155}
+.summary-chip .num{font-size:24px;font-weight:800;color:#0E3091}
+.feature{background:white;border-radius:16px;margin-bottom:24px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;transition:box-shadow .2s}
+.feature:hover{box-shadow:0 4px 20px rgba(14,48,145,.12)}
+.feature-header{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid #f1f5f9}
+.feature-num{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:white;flex-shrink:0}
+.feature-num.n1{background:linear-gradient(135deg,#0E3091,#2563eb)}
+.feature-num.n2{background:linear-gradient(135deg,#059669,#10b981)}
+.feature-num.n3{background:linear-gradient(135deg,#7c3aed,#8b5cf6)}
+.feature-num.n4{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.feature-num.n5{background:linear-gradient(135deg,#dc2626,#ef4444)}
+.feature-num.n6{background:linear-gradient(135deg,#0891b2,#06b6d4)}
+.feature-num.n7{background:linear-gradient(135deg,#be185d,#ec4899)}
+.feature-num.n8{background:linear-gradient(135deg,#4f46e5,#818cf8)}
+.feature-title{font-size:18px;font-weight:700;color:#0f172a}
+.feature-tag{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap}
+.tag-new{background:#dbeafe;color:#1d4ed8}
+.tag-improve{background:#fef3c7;color:#92400e}
+.tag-fix{background:#fee2e2;color:#991b1b}
+.tag-security{background:#ede9fe;color:#6d28d9}
+.feature-body{padding:20px 24px}
+.feature-desc{color:#475569;margin-bottom:16px;font-size:14px}
+.screenshot-wrap{border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;margin:12px 0}
+.screenshot-bar{background:#1e293b;padding:6px 12px;display:flex;align-items:center;gap:6px}
+.screenshot-dot{width:8px;height:8px;border-radius:50%}
+.screenshot-dot.r{background:#ef4444}
+.screenshot-dot.y{background:#f59e0b}
+.screenshot-dot.g{background:#22c55e}
+.screenshot-url{color:#94a3b8;font-size:11px;margin-left:8px;font-family:monospace}
+.screenshot-wrap img{width:100%;display:block}
+.changes-list{list-style:none;padding:0;margin-top:12px}
+.changes-list li{padding:4px 0 4px 20px;position:relative;font-size:13px;color:#475569}
+.changes-list li::before{content:"✓";position:absolute;left:0;color:#059669;font-weight:700}
+.footer{text-align:center;padding:32px;color:#94a3b8;font-size:12px}
+.footer a{color:#0E3091;text-decoration:none}
+@media(max-width:640px){
+.header{padding:32px 16px}
+.header h1{font-size:24px}
+.container{padding:20px 12px 48px}
+.summary-bar{margin:-20px 0 24px;gap:8px}
+.summary-chip{padding:8px 14px;font-size:12px}
+.summary-chip .num{font-size:18px}
+.feature-header{padding:16px;gap:10px}
+.feature-title{font-size:16px}
+.feature-body{padding:16px}
+}
+@media print{
+body{background:white;font-size:12px}
+.header{padding:24px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.feature{break-inside:avoid;page-break-inside:avoid}
+.container{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="sub">安島工業株式会社 日報システム</div>
+  <h1>機能追加リリースノート v2</h1>
+  <div class="date">2026年3月21日 リリース</div>
+  <div class="prev-link"><a href="/release-notes/">← 前回のリリースノート (v1) を見る</a></div>
+</div>
+
+<div class="container">
+  <div class="summary-bar">
+    <div class="summary-chip"><span class="num">8</span> 実装項目</div>
+    <div class="summary-chip"><span class="num">3</span> 新機能</div>
+    <div class="summary-chip"><span class="num">3</span> 改善</div>
+    <div class="summary-chip"><span class="num">2</span> バグ修正</div>
+  </div>
+
+  <!-- Feature 1: カレンダー 営業/作業 区別 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n1">1</div>
+      <div style="flex:1">
+        <div class="feature-title">提出状況カレンダー 営業/作業日報の区別表示</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        提出状況カレンダーで営業日報と作業日報を色分けして区別表示するようになりました。<br>
+        <strong>営業日報は緑（営）</strong>、<strong>作業日報は青（作）</strong>のバッジで一目で判別可能。<br>
+        承認済みの日報には金色のリングが付きます。
+      </p>
+      <div class="screenshot-wrap">
+        <div class="screenshot-bar">
+          <div class="screenshot-dot r"></div><div class="screenshot-dot y"></div><div class="screenshot-dot g"></div>
+          <span class="screenshot-url">管理画面 → 承認管理（提出状況カレンダー）</span>
+        </div>
+        <img src="screenshots/01_calendar_overview.png" alt="提出状況カレンダー">
+      </div>
+      <ul class="changes-list">
+        <li>営業日報: 緑バッジ「営」で表示</li>
+        <li>作業日報: 青バッジ「作」で表示</li>
+        <li>承認済みの日報には金色のリングが付く</li>
+        <li>有給休暇はピンク色に変更（緑との重複解消）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 2: カレンダー詳細モーダルからリンク -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n2">2</div>
+      <div style="flex:1">
+        <div class="feature-title">カレンダー詳細から日報ページへの直接リンク</div>
+      </div>
+      <span class="feature-tag tag-improve">改善</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        提出状況カレンダーのアイコンをクリックした詳細モーダルから、実際の日報ページに直接ジャンプできるようになりました。<br>
+        営業日報・作業日報それぞれに矢印リンクが表示され、クリックで該当の日報を即座に確認できます。
+      </p>
+      <ul class="changes-list">
+        <li>営業日報リンク → /nippo/{id} へ遷移</li>
+        <li>作業日報リンク → /work-report/{id} へ遷移</li>
+        <li>提出済み・承認済みの状態も表示</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 3: 初回パスワード変更強制 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n3">3</div>
+      <div style="flex:1">
+        <div class="feature-title">初回ログイン時パスワード変更の強制</div>
+      </div>
+      <span class="feature-tag tag-security">セキュリティ</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        新規ユーザーが初期パスワード（00000000）でログインした場合、設定画面に自動リダイレクトされ、パスワード変更が求められます。<br>
+        変更完了後に自動的にダッシュボードへ遷移します。
+      </p>
+      <div class="screenshot-wrap">
+        <div class="screenshot-bar">
+          <div class="screenshot-dot r"></div><div class="screenshot-dot y"></div><div class="screenshot-dot g"></div>
+          <span class="screenshot-url">/settings?change_password=1</span>
+        </div>
+        <img src="screenshots/05_password_change_required.png" alt="パスワード変更要求画面">
+      </div>
+      <ul class="changes-list">
+        <li>初期パスワードでのログイン後、設定画面に自動リダイレクト</li>
+        <li>警告バナーでパスワード変更を促す</li>
+        <li>変更完了後、ダッシュボードに自動遷移</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 4: 自己承認防止 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n4">4</div>
+      <div style="flex:1">
+        <div class="feature-title">自己承認の防止</div>
+      </div>
+      <span class="feature-tag tag-security">セキュリティ</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        承認権限を持つユーザーが自分自身の日報を承認できないよう制限を追加しました。<br>
+        個別承認・一括承認・全件承認のすべてのパターンで自己承認をブロックします。
+      </p>
+      <ul class="changes-list">
+        <li>個別承認: 自分の日報は承認ボタンを押してもエラー表示</li>
+        <li>一括承認: 自分の日報が含まれる場合はエラー表示</li>
+        <li>全件承認: 自分の日報を除外して承認処理を実行</li>
+        <li>エラーメッセージ: 「自分の日報を承認することはできません」</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 5: 404ページ -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n5">5</div>
+      <div style="flex:1">
+        <div class="feature-title">404エラーページの追加</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        存在しないページにアクセスした際に、ブランドデザインの404エラーページを表示するようになりました。<br>
+        トップページへの導線を用意し、ユーザーが迷子にならないようにしています。
+      </p>
+      <div class="screenshot-wrap">
+        <div class="screenshot-bar">
+          <div class="screenshot-dot r"></div><div class="screenshot-dot y"></div><div class="screenshot-dot g"></div>
+          <span class="screenshot-url">/nonexistent-page</span>
+        </div>
+        <img src="screenshots/04_404_page.png" alt="404エラーページ">
+      </div>
+      <ul class="changes-list">
+        <li>安島工業のブランドカラーを使用したデザイン</li>
+        <li>「トップページに戻る」リンクで復帰可能</li>
+        <li>500エラーページも同時に追加</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 6: ミドルウェア認証 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n6">6</div>
+      <div style="flex:1">
+        <div class="feature-title">未認証アクセスの自動リダイレクト</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        ログインしていない状態でシステムにアクセスした場合、自動的にログインページにリダイレクトされるようになりました。<br>
+        以前はログインページ以外のURLを直接入力すると白画面になることがありましたが、解消されました。
+      </p>
+      <div class="screenshot-wrap">
+        <div class="screenshot-bar">
+          <div class="screenshot-dot r"></div><div class="screenshot-dot y"></div><div class="screenshot-dot g"></div>
+          <span class="screenshot-url">/login</span>
+        </div>
+        <img src="screenshots/11_login.png" alt="ログインページ">
+      </div>
+      <ul class="changes-list">
+        <li>ページアクセス時に認証チェックを実施</li>
+        <li>未認証の場合はログインページへ自動リダイレクト</li>
+        <li>APIアクセス時は401エラーを返却</li>
+        <li>マニュアル・利用規約・リリースノートは認証不要でアクセス可能</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 7: 工事番号表示修正 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n7">7</div>
+      <div style="flex:1">
+        <div class="feature-title">作業日報 工事番号の表示修正</div>
+      </div>
+      <span class="feature-tag tag-fix">バグ修正</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        作業日報の詳細画面・印刷ページで、工事番号欄にデータベースの内部IDが表示されていた不具合を修正しました。<br>
+        正しい工事番号（例: 10-01）が表示されるようになりました。
+      </p>
+      <div class="screenshot-wrap">
+        <div class="screenshot-bar">
+          <div class="screenshot-dot r"></div><div class="screenshot-dot y"></div><div class="screenshot-dot g"></div>
+          <span class="screenshot-url">/work-report/new</span>
+        </div>
+        <img src="screenshots/07_work_report_new.png" alt="作業日報作成画面">
+      </div>
+      <ul class="changes-list">
+        <li>詳細画面: 内部ID → 正しい工事番号を表示</li>
+        <li>印刷ページ: 同様に修正済み</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 8: 有給色変更 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n8">8</div>
+      <div style="flex:1">
+        <div class="feature-title">有給休暇の色変更（色かぶり解消）</div>
+      </div>
+      <span class="feature-tag tag-fix">バグ修正</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        提出状況カレンダーで有給休暇と作業日報のアイコンが同じ青色で区別しにくかった問題を修正しました。<br>
+        有給休暇をピンク色に変更し、視認性を向上させました。
+      </p>
+      <ul class="changes-list">
+        <li>有給: 青 → ピンク（bg-rose-500）に変更</li>
+        <li>凡例の色も同期して更新</li>
+        <li>営業日報（緑）・作業日報（青）・有給（ピンク）で明確に区別可能</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>安島工業株式会社 日報システム — <a href="/login">ログイン画面へ</a> | <a href="/release-notes/">v1</a> | <a href="/release-notes/v3.html">v3 リリースノート →</a> | <a href="/manual/">取扱説明書</a></p>
+  <p style="margin-top:4px">&copy; 2026 ダンドリワーク株式会社</p>
+</div>
+
+</body>
+</html>

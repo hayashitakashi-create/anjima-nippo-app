@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日報システム 機能追加リリースノート v3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#1e293b;background:#f0f4ff;line-height:1.8;font-size:15px}
+.header{background:linear-gradient(135deg,#0E3091 0%,#1a4ab8 50%,#2563eb 100%);color:white;padding:48px 32px;text-align:center}
+.header h1{font-size:32px;letter-spacing:.08em;margin-bottom:8px;font-weight:700}
+.header .sub{font-size:15px;color:#93c5fd;margin-bottom:4px}
+.header .date{font-size:13px;color:#bfdbfe;margin-top:12px;background:rgba(255,255,255,.1);display:inline-block;padding:4px 16px;border-radius:20px}
+.header .prev-link{margin-top:12px;font-size:12px}
+.header .prev-link a{color:#93c5fd;text-decoration:none;margin:0 8px}
+.header .prev-link a:hover{text-decoration:underline}
+.container{max-width:960px;margin:0 auto;padding:32px 20px 60px}
+.summary-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:-28px 0 32px;position:relative;z-index:1}
+.summary-chip{background:white;border-radius:12px;padding:12px 20px;box-shadow:0 2px 12px rgba(14,48,145,.12);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#334155}
+.summary-chip .num{font-size:24px;font-weight:800;color:#0E3091}
+.feature{background:white;border-radius:16px;margin-bottom:24px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;transition:box-shadow .2s}
+.feature:hover{box-shadow:0 4px 20px rgba(14,48,145,.12)}
+.feature-header{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid #f1f5f9}
+.feature-num{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:white;flex-shrink:0}
+.feature-num.n1{background:linear-gradient(135deg,#0E3091,#2563eb)}
+.feature-num.n2{background:linear-gradient(135deg,#059669,#10b981)}
+.feature-num.n3{background:linear-gradient(135deg,#7c3aed,#8b5cf6)}
+.feature-num.n4{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.feature-num.n5{background:linear-gradient(135deg,#dc2626,#ef4444)}
+.feature-title{font-size:18px;font-weight:700;color:#0f172a}
+.feature-tag{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;white-space:nowrap}
+.tag-new{background:#dbeafe;color:#1d4ed8}
+.tag-improve{background:#fef3c7;color:#92400e}
+.tag-fix{background:#fee2e2;color:#991b1b}
+.feature-body{padding:20px 24px}
+.feature-desc{color:#475569;margin-bottom:16px;font-size:14px}
+.changes-list{list-style:none;padding:0;margin-top:12px}
+.changes-list li{padding:4px 0 4px 20px;position:relative;font-size:13px;color:#475569}
+.changes-list li::before{content:"✓";position:absolute;left:0;color:#059669;font-weight:700}
+.unit-demo{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.unit-badge{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600}
+.unit-full{background:#dbeafe;color:#1d4ed8}
+.unit-am{background:#fef3c7;color:#92400e}
+.unit-pm{background:#fed7aa;color:#9a3412}
+.unit-hourly{background:#ede9fe;color:#6d28d9}
+.print-preview{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:24px;margin:16px 0}
+.print-preview h3{text-align:center;font-size:20px;letter-spacing:.2em;border-bottom:2px solid #1e293b;display:inline-block;padding-bottom:4px;margin:0 auto 16px;display:block}
+.print-table{width:100%;border-collapse:collapse;font-size:13px}
+.print-table th{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 12px;text-align:left;font-weight:600;width:25%}
+.print-table td{border:1px solid #cbd5e1;padding:8px 12px}
+.stamp-area{display:flex;justify-content:flex-end;gap:0;margin-top:16px}
+.stamp-box{border:1px solid #cbd5e1;text-align:center;width:80px}
+.stamp-box-header{background:#f1f5f9;padding:4px;font-size:11px;font-weight:600;border-bottom:1px solid #cbd5e1}
+.stamp-box-body{height:48px}
+.footer{text-align:center;padding:32px;color:#94a3b8;font-size:12px}
+.footer a{color:#0E3091;text-decoration:none}
+@media(max-width:640px){
+.header{padding:32px 16px}
+.header h1{font-size:24px}
+.container{padding:20px 12px 48px}
+.summary-bar{margin:-20px 0 24px;gap:8px}
+.summary-chip{padding:8px 14px;font-size:12px}
+.summary-chip .num{font-size:18px}
+.feature-header{padding:16px;gap:10px}
+.feature-title{font-size:16px}
+.feature-body{padding:16px}
+}
+@media print{
+body{background:white;font-size:12px}
+.header{padding:24px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.feature{break-inside:avoid;page-break-inside:avoid}
+.container{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="sub">安島工業株式会社 日報システム</div>
+  <h1>機能追加リリースノート v3</h1>
+  <div class="date">2026年3月24日 リリース</div>
+  <div class="prev-link">
+    <a href="/release-notes/">← v1 リリースノート</a>
+    <a href="/release-notes/v2.html">← v2 リリースノート</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="summary-bar">
+    <div class="summary-chip"><span class="num">5</span> 実装項目</div>
+    <div class="summary-chip"><span class="num">2</span> 新機能</div>
+    <div class="summary-chip"><span class="num">2</span> 改善</div>
+    <div class="summary-chip"><span class="num">1</span> バグ修正</div>
+  </div>
+
+  <!-- Feature 1: 時間休対応 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n1">1</div>
+      <div style="flex:1">
+        <div class="feature-title">休暇届 時間休（部分休暇）に対応</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        休暇届の申請時に、従来の「全日」に加えて<strong>午前半休・午後半休・時間休</strong>を選択できるようになりました。<br>
+        時間休の場合は開始時刻と終了時刻を指定して申請できます。
+      </p>
+      <div class="unit-demo">
+        <span class="unit-badge unit-full">全日</span>
+        <span class="unit-badge unit-am">午前半休</span>
+        <span class="unit-badge unit-pm">午後半休</span>
+        <span class="unit-badge unit-hourly">時間休</span>
+      </div>
+      <ul class="changes-list">
+        <li>休暇単位の選択UI（4つのボタンから選択）</li>
+        <li>時間休選択時に開始時刻・終了時刻の入力欄を表示</li>
+        <li>同日に全日休暇がある場合の重複チェック</li>
+        <li>午前半休と午後半休の同日登録が可能（全日と部分休暇の混在はブロック）</li>
+        <li>カレンダー上で休暇単位をバッジ表示（午前/午後/時間）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 2: PDF印刷 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n2">2</div>
+      <div style="flex:1">
+        <div class="feature-title">休暇届のPDF出力・印刷機能</div>
+      </div>
+      <span class="feature-tag tag-new">新機能</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        休暇届をA4フォーマットの正式書類として<strong>PDF出力・印刷</strong>できるようになりました。<br>
+        一覧画面のプリンターアイコンから印刷ページを開き、「PDF出力 / 印刷」ボタンで出力できます。
+      </p>
+      <!-- Print preview mockup -->
+      <div class="print-preview">
+        <h3>休 暇 届</h3>
+        <div style="text-align:right;font-size:12px;color:#64748b;margin-bottom:12px">申請日: 2026年3月24日</div>
+        <div style="font-size:13px;margin-bottom:12px">安島工業株式会社 御中</div>
+        <div style="text-align:right;margin-bottom:16px">
+          <div style="font-size:11px;color:#64748b">申請者</div>
+          <div style="font-size:16px;font-weight:700">山田 太郎</div>
+          <div style="font-size:11px;color:#64748b">作業員</div>
+        </div>
+        <table class="print-table">
+          <tr><th>休暇日</th><td>2026年3月25日（水）</td></tr>
+          <tr><th>休暇種別</th><td>有給</td></tr>
+          <tr><th>休暇単位</th><td>時間休（09:00 〜 12:00）</td></tr>
+          <tr><th>理由</th><td>通院のため</td></tr>
+          <tr><th>承認状況</th><td>承認済み</td></tr>
+        </table>
+        <div class="stamp-area">
+          <div class="stamp-box">
+            <div class="stamp-box-header">承認者</div>
+            <div class="stamp-box-body"></div>
+          </div>
+          <div class="stamp-box">
+            <div class="stamp-box-header">申請者</div>
+            <div class="stamp-box-body"></div>
+          </div>
+        </div>
+      </div>
+      <ul class="changes-list">
+        <li>A4サイズの正式な休暇届フォーマット</li>
+        <li>ブラウザの印刷機能でPDF保存が可能</li>
+        <li>ファイル名が自動設定（例: 休暇届_山田太郎_2026年3月25日）</li>
+        <li>承認印欄（承認者・申請者）を用意</li>
+        <li>ユーザー画面・管理者画面の両方からアクセス可能</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 3: 管理者画面の時間休表示 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n3">3</div>
+      <div style="flex:1">
+        <div class="feature-title">管理者画面の休暇届一覧に休暇単位を表示</div>
+      </div>
+      <span class="feature-tag tag-improve">改善</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        管理者の休暇届一覧画面で、各申請の<strong>休暇単位（全日/午前半休/午後半休/時間休）</strong>が確認できるようになりました。<br>
+        詳細モーダルでも休暇単位と時刻が表示されます。印刷ボタンも追加されました。
+      </p>
+      <ul class="changes-list">
+        <li>一覧テーブルの種別列に休暇単位のバッジを表示</li>
+        <li>詳細モーダルに「休暇単位」行を追加</li>
+        <li>時間休の場合は時刻範囲も表示（例: 09:00 〜 12:00）</li>
+        <li>操作列にプリンターアイコンを追加（印刷ページへ遷移）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 4: 操作説明書アイコン -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n4">4</div>
+      <div style="flex:1">
+        <div class="feature-title">ヘッダーに操作説明書へのリンクアイコンを追加</div>
+      </div>
+      <span class="feature-tag tag-improve">改善</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        ダッシュボードのヘッダーに本のアイコンを追加しました。<br>
+        アイコンをクリックすると操作説明書（マニュアル）ページに遷移します。
+      </p>
+      <ul class="changes-list">
+        <li>ヘッダー右上に操作説明書アイコン（本のアイコン）を配置</li>
+        <li>クリックで /manual/ ページに遷移</li>
+        <li>通知アイコンの隣に配置し、いつでもアクセス可能</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feature 5: 両方権限のバグ修正 -->
+  <div class="feature">
+    <div class="feature-header">
+      <div class="feature-num n5">5</div>
+      <div style="flex:1">
+        <div class="feature-title">「両方」権限ユーザーの営業/作業タブ表示バグを修正</div>
+      </div>
+      <span class="feature-tag tag-fix">バグ修正</span>
+    </div>
+    <div class="feature-body">
+      <p class="feature-desc">
+        日報タイプが「両方（作業日報＋営業日報）」に設定されたユーザーがログインした際、営業日報タブが表示されず、作業日報の入力欄も出てこない不具合を修正しました。
+      </p>
+      <ul class="changes-list">
+        <li>ダッシュボード: 「両方」権限で営業タブ・作業タブの両方を表示</li>
+        <li>日報作成画面: 「両方」権限でタブ切り替えが正常動作</li>
+        <li>営業日報データの取得処理を「両方」権限に対応</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>安島工業株式会社 日報システム — <a href="/login">ログイン画面へ</a> | <a href="/release-notes/">v1</a> | <a href="/release-notes/v2.html">v2</a> | <a href="/manual/">取扱説明書</a></p>
+  <p style="margin-top:4px">&copy; 2026 ダンドリワーク株式会社</p>
+</div>
+
+</body>
+</html>
