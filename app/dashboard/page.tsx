@@ -91,7 +91,7 @@ export default function DashboardPage() {
       .then(data => {
         if (data && data.user) {
           setCurrentUser(data.user)
-          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
+          setReportType(data.user.defaultReportType === 'work' ? 'work' : data.user.defaultReportType === 'both' ? 'work' : 'sales')
         }
         setLoading(false)
       })
@@ -126,7 +126,7 @@ export default function DashboardPage() {
     }
 
     // 営業日報取得（salesユーザーのみ）
-    if (currentUser.defaultReportType === 'sales') {
+    if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
       fetch('/api/nippo/list')
         .then(res => {
           if (!res.ok) return null
@@ -237,7 +237,7 @@ export default function DashboardPage() {
     )
   }
 
-  const showBothTabs = currentUser?.defaultReportType === 'sales'
+  const showBothTabs = currentUser?.defaultReportType === 'sales' || currentUser?.defaultReportType === 'both'
   const reportTypeName = reportType === 'sales' ? '営業日報' : '作業日報'
   const recentReports = reportType === 'sales' ? salesReports : workReports
   const stats = reportType === 'sales' ? salesStats : workStats

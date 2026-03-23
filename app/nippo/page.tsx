@@ -140,7 +140,7 @@ export default function NippoListPage() {
       .then(data => {
         if (data && data.user) {
           setCurrentUser(data.user)
-          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
+          setReportType(data.user.defaultReportType === 'work' ? 'work' : data.user.defaultReportType === 'both' ? 'work' : 'sales')
         }
       })
       .catch(error => {
@@ -157,7 +157,7 @@ export default function NippoListPage() {
     if (!currentUser) return
 
     // 営業日報取得（salesユーザーのみ）
-    if (currentUser.defaultReportType === 'sales') {
+    if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
       fetch('/api/nippo/list')
         .then(res => res.json())
         .then(data => {
@@ -207,7 +207,7 @@ export default function NippoListPage() {
 
       let salesData: any = { reports: [] }
       // 営業日報検索（salesユーザーのみ）
-      if (currentUser.defaultReportType === 'sales') {
+      if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
         const salesRes = await fetch(`/api/nippo/list?${params.toString()}`)
         salesData = await salesRes.json()
       }
@@ -503,7 +503,7 @@ export default function NippoListPage() {
           </div>
 
           {/* 日報タイプ切り替え（営業の人は両方表示、作業の人は作業のみ） */}
-          {currentUser?.defaultReportType === 'sales' ? (
+          {(currentUser?.defaultReportType === 'sales' || currentUser?.defaultReportType === 'both') ? (
             <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1 w-fit">
               <button
                 type="button"
