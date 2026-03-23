@@ -315,6 +315,9 @@ model LeaveRequest {
   userId         String   // 申請者
   date           DateTime // 休暇日
   leaveType      String   // 有給, 振替, 代休, 看護, 介護, 特別休暇, その他
+  leaveUnit      String   @default("full") // full(全日), am(午前半休), pm(午後半休), hourly(時間休)
+  startTime      String?  // 時間休の開始時刻 (HH:MM)
+  endTime        String?  // 時間休の終了時刻 (HH:MM)
   reason         String?  // 理由
   attachmentData String?  // 添付ファイル (base64)
   attachmentName String?  // 添付ファイル名
@@ -323,7 +326,6 @@ model LeaveRequest {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([userId, date])
   @@index([userId])
   @@index([date])
   @@index([userId, date])

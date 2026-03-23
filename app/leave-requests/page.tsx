@@ -21,6 +21,7 @@ import {
   Download,
   Clock,
   XCircle,
+  Printer,
 } from 'lucide-react'
 
 interface LeaveRequest {
@@ -28,11 +29,25 @@ interface LeaveRequest {
   userId: string
   date: string
   leaveType: string
+  leaveUnit: string
+  startTime: string | null
+  endTime: string | null
   reason: string | null
   attachmentName: string | null
   attachmentType: string | null
   status: string
   createdAt: string
+}
+
+const LEAVE_UNITS = [
+  { value: 'full', label: '全日' },
+  { value: 'am', label: '午前半休' },
+  { value: 'pm', label: '午後半休' },
+  { value: 'hourly', label: '時間休' },
+]
+
+function leaveUnitLabel(unit: string): string {
+  return LEAVE_UNITS.find(u => u.value === unit)?.label || '全日'
 }
 
 const LEAVE_TYPES = ['有給', '振替', '代休', '看護', '介護', '特別休暇', 'その他']
@@ -71,6 +86,9 @@ export default function LeaveRequestsPage() {
   // Form state
   const [formDate, setFormDate] = useState(toDateString(new Date()))
   const [formLeaveType, setFormLeaveType] = useState('有給')
+  const [formLeaveUnit, setFormLeaveUnit] = useState('full')
+  const [formStartTime, setFormStartTime] = useState('')
+  const [formEndTime, setFormEndTime] = useState('')
   const [formReason, setFormReason] = useState('')
   const [formAttachment, setFormAttachment] = useState<{ data: string; name: string; type: string } | null>(null)
 
@@ -144,6 +162,9 @@ export default function LeaveRequestsPage() {
         body: JSON.stringify({
           date: formDate,
           leaveType: formLeaveType,
+          leaveUnit: formLeaveUnit,
+          startTime: formLeaveUnit === 'hourly' ? formStartTime : undefined,
+          endTime: formLeaveUnit === 'hourly' ? formEndTime : undefined,
           reason: formReason || undefined,
           attachmentData: formAttachment?.data,
           attachmentName: formAttachment?.name,
@@ -161,6 +182,9 @@ export default function LeaveRequestsPage() {
       if (res.ok) {
         setMessage('休暇届を申請しました（承認待ち）')
         setFormReason('')
+        setFormLeaveUnit('full')
+        setFormStartTime('')
+        setFormEndTime('')
         setFormAttachment(null)
         // Refetch if submitted date is in current calendar month
         const submittedDate = new Date(formDate)
@@ -208,20 +232,22 @@ export default function LeaveRequestsPage() {
     const lastDay = new Date(year, month + 1, 0)
     const startDayOfWeek = firstDay.getDay() // 0=Sun
 
-    // Leave dates set for quick lookup
-    const leaveDates = new Map<string, LeaveRequest>()
+    // Leave dates set for quick lookup (multiple per day possible)
+    const leaveDates = new Map<string, LeaveRequest[]>()
     leaveRequests.forEach(lr => {
       const d = new Date(lr.date)
       const key = toDateString(d)
-      leaveDates.set(key, lr)
+      const existing = leaveDates.get(key) || []
+      existing.push(lr)
+      leaveDates.set(key, existing)
     })
 
-    const weeks: Array<Array<{ day: number | null; dateStr: string; leave: LeaveRequest | null; isToday: boolean }>> = []
-    let currentWeek: Array<{ day: number | null; dateStr: string; leave: LeaveRequest | null; isToday: boolean }> = []
+    const weeks: Array<Array<{ day: number | null; dateStr: string; leaves: LeaveRequest[]; isToday: boolean }>> = []
+    let currentWeek: Array<{ day: number | null; dateStr: string; leaves: LeaveRequest[]; isToday: boolean }> = []
 
     // Fill blanks before first day
     for (let i = 0; i < startDayOfWeek; i++) {
-      currentWeek.push({ day: null, dateStr: '', leave: null, isToday: false })
+      currentWeek.push({ day: null, dateStr: '', leaves: [], isToday: false })
     }
 
     const today = toDateString(new Date())
@@ -231,7 +257,7 @@ export default function LeaveRequestsPage() {
       currentWeek.push({
         day: d,
         dateStr,
-        leave: leaveDates.get(dateStr) || null,
+        leaves: leaveDates.get(dateStr) || [],
         isToday: dateStr === today,
       })
       if (currentWeek.length === 7) {
@@ -243,7 +269,7 @@ export default function LeaveRequestsPage() {
     // Fill blanks after last day
     if (currentWeek.length > 0) {
       while (currentWeek.length < 7) {
-        currentWeek.push({ day: null, dateStr: '', leave: null, isToday: false })
+        currentWeek.push({ day: null, dateStr: '', leaves: [], isToday: false })
       }
       weeks.push(currentWeek)
     }
@@ -385,6 +411,59 @@ export default function LeaveRequestsPage() {
               </div>
             </div>
 
+            {/* Leave unit */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                休暇単位 <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {LEAVE_UNITS.map(unit => (
+                  <button
+                    key={unit.value}
+                    type="button"
+                    onClick={() => setFormLeaveUnit(unit.value)}
+                    className={`px-2 py-2 rounded-lg text-xs sm:text-sm font-medium border transition-all ${
+                      formLeaveUnit === unit.value
+                        ? 'bg-[#0E3091] text-white border-[#0E3091]'
+                        : 'bg-white text-gray-700 border-slate-300 hover:border-[#0E3091] hover:text-[#0E3091]'
+                    }`}
+                  >
+                    {unit.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time inputs for hourly leave */}
+            {formLeaveUnit === 'hourly' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    開始時刻 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={formStartTime}
+                    onChange={(e) => setFormStartTime(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    終了時刻 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={formEndTime}
+                    onChange={(e) => setFormEndTime(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Reason */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -521,13 +600,15 @@ export default function LeaveRequestsPage() {
                         }`}>
                           {cell.day}
                         </span>
-                        {cell.leave && (
-                          <div className="mt-0.5">
-                            <span className={`inline-block text-[10px] sm:text-xs px-1 py-0.5 rounded font-medium leading-tight ${
-                              LEAVE_TYPE_COLORS[cell.leave.leaveType] || 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {cell.leave.leaveType}
-                            </span>
+                        {cell.leaves.length > 0 && (
+                          <div className="mt-0.5 space-y-0.5">
+                            {cell.leaves.map(leave => (
+                              <span key={leave.id} className={`inline-block text-[10px] sm:text-xs px-1 py-0.5 rounded font-medium leading-tight ${
+                                LEAVE_TYPE_COLORS[leave.leaveType] || 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {leave.leaveUnit === 'full' ? leave.leaveType : leave.leaveUnit === 'am' ? '午前' : leave.leaveUnit === 'pm' ? '午後' : '時間'}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </>
@@ -595,6 +676,14 @@ export default function LeaveRequestsPage() {
                             }`}>
                               {request.leaveType}
                             </span>
+                            {request.leaveUnit && request.leaveUnit !== 'full' && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {leaveUnitLabel(request.leaveUnit)}
+                                {request.leaveUnit === 'hourly' && request.startTime && request.endTime && (
+                                  <span className="ml-1">{request.startTime}〜{request.endTime}</span>
+                                )}
+                              </span>
+                            )}
                             {statusBadge(request.status)}
                           </div>
                           {request.reason && (
@@ -613,15 +702,25 @@ export default function LeaveRequestsPage() {
                           )}
                         </div>
                       </div>
-                      {(request.status === 'pending' || request.status === 'rejected') && (
-                        <button
-                          onClick={() => setDeleteTarget(request)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                          title="削除"
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        <Link
+                          href={`/leave-requests/${request.id}/print`}
+                          target="_blank"
+                          className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="印刷"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                          <Printer className="w-4 h-4" />
+                        </Link>
+                        {(request.status === 'pending' || request.status === 'rejected') && (
+                          <button
+                            onClick={() => setDeleteTarget(request)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="削除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}

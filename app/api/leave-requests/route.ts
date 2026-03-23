@@ -52,6 +52,9 @@ export async function GET(request: NextRequest) {
         userId: true,
         date: true,
         leaveType: true,
+        leaveUnit: true,
+        startTime: true,
+        endTime: true,
         reason: true,
         attachmentName: true,
         attachmentType: true,
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
     const { user } = authResult
 
     const body = await request.json()
-    const { date, leaveType, reason, attachmentData, attachmentName, attachmentType } = body
+    const { date, leaveType, leaveUnit, startTime, endTime, reason, attachmentData, attachmentName, attachmentType } = body
 
     if (!date) {
       return NextResponse.json({ error: '日付は必須です' }, { status: 400 })
@@ -104,18 +107,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '無効な休暇種別です' }, { status: 400 })
     }
 
-    // 同じ日に既に休暇届がないかチェック
-    const existing = await prisma.leaveRequest.findUnique({
+    const validUnits = ['full', 'am', 'pm', 'hourly']
+    const unit = leaveUnit || 'full'
+    if (!validUnits.includes(unit)) {
+      return NextResponse.json({ error: '無効な休暇単位です' }, { status: 400 })
+    }
+
+    // 時間休の場合は開始・終了時刻が必須
+    if (unit === 'hourly' && (!startTime || !endTime)) {
+      return NextResponse.json({ error: '時間休の場合は開始時刻と終了時刻を入力してください' }, { status: 400 })
+    }
+
+    // 同じ日に全日休暇が既にある場合はエラー
+    const existingFullDay = await prisma.leaveRequest.findFirst({
       where: {
-        userId_date: {
-          userId: user.id,
-          date: new Date(date),
-        },
+        userId: user.id,
+        date: new Date(date),
+        leaveUnit: 'full',
       },
     })
+    if (existingFullDay) {
+      return NextResponse.json({ error: 'この日付には既に全日の休暇届が登録されています' }, { status: 409 })
+    }
 
-    if (existing) {
-      return NextResponse.json({ error: 'この日付には既に休暇届が登録されています' }, { status: 409 })
+    // 全日で申請する場合、同日に既存の休暇届があればエラー
+    if (unit === 'full') {
+      const existingAny = await prisma.leaveRequest.findFirst({
+        where: { userId: user.id, date: new Date(date) },
+      })
+      if (existingAny) {
+        return NextResponse.json({ error: 'この日付には既に休暇届が登録されています' }, { status: 409 })
+      }
+    }
+
+    // 同じ時間帯（午前/午後）の重複チェック
+    if (unit === 'am' || unit === 'pm') {
+      const existingSameUnit = await prisma.leaveRequest.findFirst({
+        where: { userId: user.id, date: new Date(date), leaveUnit: unit },
+      })
+      if (existingSameUnit) {
+        return NextResponse.json({ error: `この日付には既に${unit === 'am' ? '午前' : '午後'}半休が登録されています` }, { status: 409 })
+      }
     }
 
     // 添付ファイルサイズチェック (base64で約5MB = 約6.7MB文字列)
@@ -128,6 +160,9 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         date: new Date(date),
         leaveType,
+        leaveUnit: unit,
+        startTime: unit === 'hourly' ? startTime : null,
+        endTime: unit === 'hourly' ? endTime : null,
         reason: reason || null,
         attachmentData: attachmentData || null,
         attachmentName: attachmentName || null,

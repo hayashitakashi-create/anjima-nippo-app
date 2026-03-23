@@ -20,6 +20,7 @@ import {
   CheckCheck,
   Clock,
   CheckCircle2,
+  Printer,
 } from 'lucide-react'
 
 interface User {
@@ -35,11 +36,23 @@ interface LeaveRequest {
   userName?: string
   date: string
   leaveType: string
+  leaveUnit?: string
+  startTime?: string | null
+  endTime?: string | null
   reason: string | null
   attachmentName: string | null
   attachmentType: string | null
   status: string
   createdAt: string
+}
+
+function leaveUnitLabel(unit?: string): string {
+  switch (unit) {
+    case 'am': return '午前半休'
+    case 'pm': return '午後半休'
+    case 'hourly': return '時間休'
+    default: return '全日'
+  }
 }
 
 const LEAVE_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -540,6 +553,12 @@ export default function AdminLeaveRequestsPage() {
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
                               {lr.leaveType}
                             </span>
+                            {lr.leaveUnit && lr.leaveUnit !== 'full' && (
+                              <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-indigo-100 text-indigo-800">
+                                {leaveUnitLabel(lr.leaveUnit)}
+                                {lr.leaveUnit === 'hourly' && lr.startTime && lr.endTime && ` ${lr.startTime}〜${lr.endTime}`}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
                             {lr.reason || '-'}
@@ -579,6 +598,15 @@ export default function AdminLeaveRequestsPage() {
                                   </button>
                                 </>
                               )}
+                              <a
+                                href={`/leave-requests/${lr.id}/print`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors inline-block"
+                                title="印刷"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </a>
                               <button
                                 onClick={() => setDeleteTarget(lr)}
                                 className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -698,6 +726,15 @@ export default function AdminLeaveRequestsPage() {
                   </span>
                 </div>
                 <div>
+                  <p className="text-xs text-gray-500 mb-1">休暇単位</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {leaveUnitLabel(selectedRequest.leaveUnit)}
+                    {selectedRequest.leaveUnit === 'hourly' && selectedRequest.startTime && selectedRequest.endTime && (
+                      <span className="ml-1 text-gray-600">({selectedRequest.startTime}〜{selectedRequest.endTime})</span>
+                    )}
+                  </p>
+                </div>
+                <div>
                   <p className="text-xs text-gray-500 mb-1">ステータス</p>
                   <StatusBadge status={selectedRequest.status} />
                 </div>
@@ -746,6 +783,15 @@ export default function AdminLeaveRequestsPage() {
                     </button>
                   </>
                 )}
+                <a
+                  href={`/leave-requests/${selectedRequest.id}/print`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors inline-flex items-center"
+                >
+                  <Printer className="w-4 h-4 mr-1.5" />
+                  印刷
+                </a>
                 <button
                   onClick={() => { setDeleteTarget(selectedRequest); setSelectedRequest(null) }}
                   className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors inline-flex items-center"
