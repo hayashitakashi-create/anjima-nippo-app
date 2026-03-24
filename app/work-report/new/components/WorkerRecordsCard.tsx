@@ -208,12 +208,14 @@ export function WorkerRecordsCard({
               <div className="col-span-1 lg:col-span-2">
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 当日</label>
                 <input
-                  type="text"
+                  type="number"
                   inputMode="decimal"
+                  step="0.001"
+                  min="0"
                   value={record.dailyHours || ''}
                   onChange={(e) => {
-                    const halfWidth = toHalfWidth(e.target.value)
-                    updateRecord(index, 'dailyHours', parseFloat(halfWidth) || 0)
+                    const val = e.target.value
+                    updateRecord(index, 'dailyHours', val === '' ? 0 : parseFloat(val) || 0)
                   }}
                   className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   placeholder="0"
@@ -224,12 +226,14 @@ export function WorkerRecordsCard({
               <div className="col-span-1 lg:col-span-2">
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 累計</label>
                 <input
-                  type="text"
+                  type="number"
                   inputMode="decimal"
+                  step="0.001"
+                  min="0"
                   value={record.totalHours || ''}
                   onChange={(e) => {
-                    const halfWidth = toHalfWidth(e.target.value)
-                    updateRecord(index, 'totalHours', parseFloat(halfWidth) || 0)
+                    const val = e.target.value
+                    updateRecord(index, 'totalHours', val === '' ? 0 : parseFloat(val) || 0)
                   }}
                   className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   placeholder="0"
