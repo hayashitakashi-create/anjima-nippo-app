@@ -16,8 +16,6 @@ import {
   ArrowLeft,
   Pencil,
   Check,
-  ChevronUp,
-  ChevronDown,
   GripVertical,
 } from 'lucide-react'
 
@@ -52,6 +50,10 @@ export default function SubcontractorsPage() {
   // 編集用
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
+
+  // ドラッグ&ドロップ用
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   // デフォルト外注先リスト
   const defaultSubcontractors = [
@@ -255,6 +257,48 @@ export default function SubcontractorsPage() {
     }
   }
 
+  const handleDragStart = (index: number) => {
+    setDragIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleDrop = async (index: number) => {
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+
+    const newList = [...subcontractors]
+    const [moved] = newList.splice(dragIndex, 1)
+    newList.splice(index, 0, moved)
+
+    const reorder = newList.map((s, i) => ({ id: s.id, sortOrder: i }))
+    setSubcontractors(newList)
+    setDragIndex(null)
+    setDragOverIndex(null)
+
+    try {
+      await fetch('/api/admin/subcontractors', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reorder }),
+      })
+    } catch {
+      setSubcontractors(subcontractors)
+      setError('並び替えに失敗しました')
+    }
+  }
+
+  const handleDragEnd = () => {
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
@@ -418,30 +462,19 @@ export default function SubcontractorsPage() {
                   subcontractors.map((subcontractor, index) => (
                     <tr
                       key={subcontractor.id}
-                      className={`hover:bg-gray-50 transition-colors ${
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDrop={() => handleDrop(index)}
+                      onDragEnd={handleDragEnd}
+                      className={`transition-colors ${
                         !subcontractor.isActive ? 'opacity-50' : ''
+                      } ${dragIndex === index ? 'opacity-30 bg-indigo-50' : 'hover:bg-gray-50'} ${
+                        dragOverIndex === index && dragIndex !== index ? 'border-t-2 border-indigo-500' : ''
                       }`}
                     >
-                      <td className="px-2 py-3 text-center">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <button
-                            onClick={() => handleMoveOrder(index, 'up')}
-                            disabled={index === 0}
-                            className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
-                            title="上に移動"
-                          >
-                            <ChevronUp className="w-4 h-4" />
-                          </button>
-                          <GripVertical className="w-3 h-3 text-gray-300" />
-                          <button
-                            onClick={() => handleMoveOrder(index, 'down')}
-                            disabled={index === subcontractors.length - 1}
-                            className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
-                            title="下に移動"
-                          >
-                            <ChevronDown className="w-4 h-4" />
-                          </button>
-                        </div>
+                      <td className="px-2 py-3 text-center cursor-grab active:cursor-grabbing">
+                        <GripVertical className="w-4 h-4 text-gray-400 mx-auto" />
                       </td>
                       <td className="px-4 py-3">
                         {editingId === subcontractor.id ? (
