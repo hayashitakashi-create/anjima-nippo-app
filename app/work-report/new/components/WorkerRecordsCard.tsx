@@ -2,7 +2,7 @@
 
 import { Users, Plus, Copy, Trash2, UserPlus } from 'lucide-react'
 import { WorkerRecord, calculateManHoursFromTime } from '../types'
-import { WORKER_NAMES, TIME_OPTIONS, MAX_WORKER_RECORDS } from '../constants'
+import { TIME_OPTIONS, MAX_WORKER_RECORDS } from '../constants'
 import { toHalfWidth } from '../utils'
 
 interface WorkerRecordsCardProps {
@@ -13,6 +13,7 @@ interface WorkerRecordsCardProps {
   onCopyPrevious: () => void
   copyLoading: string
   projectTypesList: string[]
+  workerNames?: string[]
 }
 
 export function WorkerRecordsCard({
@@ -23,6 +24,7 @@ export function WorkerRecordsCard({
   onCopyPrevious,
   copyLoading,
   projectTypesList,
+  workerNames = [],
 }: WorkerRecordsCardProps) {
   // 工数を自動計算（共通関数を使用）
   const calculateManHours = calculateManHoursFromTime
@@ -139,7 +141,7 @@ export function WorkerRecordsCard({
                   className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                 >
                   <option value="">選択してください</option>
-                  {WORKER_NAMES.map(name => (
+                  {workerNames.map(name => (
                     <option key={name} value={name}>{name}</option>
                   ))}
                 </select>

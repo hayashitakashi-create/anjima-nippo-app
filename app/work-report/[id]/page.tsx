@@ -171,6 +171,9 @@ export default function WorkReportDetailPage() {
   // 単位マスタから取得したリスト
   const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
 
+  // 作業者名マスタから取得したリスト
+  const [workerNamesList, setWorkerNamesList] = useState<string[]>(WORKER_NAMES)
+
   // 基本情報
   const [date, setDate] = useState('')
   const [projectName, setProjectName] = useState('')
@@ -284,6 +287,24 @@ export default function WorkReportDetailPage() {
         }
       })
       .catch(err => console.error('単位マスタ取得エラー:', err))
+
+    // 作業者名マスタを取得
+    fetch('/api/admin/workers', { credentials: 'include' })
+      .then(res => {
+        if (res.ok) return res.json()
+        return null
+      })
+      .then(data => {
+        if (data?.workers) {
+          const activeWorkers = data.workers
+            .filter((w: any) => w.isActive)
+            .map((w: any) => w.name)
+          if (activeWorkers.length > 0) {
+            setWorkerNamesList(activeWorkers)
+          }
+        }
+      })
+      .catch(err => console.error('作業者名マスタ取得エラー:', err))
 
     // 作業日報データ取得
     fetch(`/api/work-report/${reportId}`)
@@ -938,7 +959,7 @@ export default function WorkReportDetailPage() {
                               className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
                             >
                               <option value="">選択してください</option>
-                              {WORKER_NAMES.map(name => (
+                              {workerNamesList.map(name => (
                                 <option key={name} value={name}>{name}</option>
                               ))}
                             </select>

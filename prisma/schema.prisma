@@ -284,6 +284,18 @@ model Subcontractor {
   @@index([isActive])
 }
 
+// 作業者名マスタ
+model WorkerName {
+  id        String   @id @default(cuid())
+  name      String   // 作業者名
+  isActive  Boolean  @default(true) // 有効/無効
+  sortOrder Int      @default(0) // 並び順
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
 // 工事種別マスタ
 model ProjectType {
   id        String   @id @default(cuid())

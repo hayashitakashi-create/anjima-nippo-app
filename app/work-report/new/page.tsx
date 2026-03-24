@@ -28,7 +28,7 @@ import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
 
 // Types
 import { User, WorkerRecord, MaterialRecord, SubcontractorRecord, calculateManHoursFromTime } from './types'
-import { DEFAULT_PROJECT_TYPES, DEFAULT_VOLUME_UNITS, DEFAULT_SUBCONTRACTORS } from './constants'
+import { WORKER_NAMES, DEFAULT_PROJECT_TYPES, DEFAULT_VOLUME_UNITS, DEFAULT_SUBCONTRACTORS } from './constants'
 
 // Components
 import {
@@ -60,6 +60,7 @@ function WorkReportNewPageContent() {
   const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
   const [subcontractorMasterList, setSubcontractorMasterList] = useState<string[]>(DEFAULT_SUBCONTRACTORS)
   const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
+  const [workerNamesList, setWorkerNamesList] = useState<string[]>(WORKER_NAMES)
 
   // 前日コピー
   const [copyLoading, setCopyLoading] = useState('')
@@ -144,7 +145,8 @@ function WorkReportNewPageContent() {
       fetch('/api/admin/project-types', { credentials: 'include' }),
       fetch('/api/admin/subcontractors', { credentials: 'include' }),
       fetch('/api/admin/units', { credentials: 'include' }),
-    ]).then(async ([materialsRes, projectTypesRes, subcontractorsRes, unitsRes]) => {
+      fetch('/api/admin/workers', { credentials: 'include' }),
+    ]).then(async ([materialsRes, projectTypesRes, subcontractorsRes, unitsRes, workersRes]) => {
       if (materialsRes.ok) {
         const data = await materialsRes.json()
         if (data?.materials) {
@@ -170,6 +172,13 @@ function WorkReportNewPageContent() {
         if (data?.units) {
           const activeUnits = data.units.filter((u: any) => u.isActive).map((u: any) => u.name)
           if (activeUnits.length > 0) setUnitMasterList(activeUnits)
+        }
+      }
+      if (workersRes.ok) {
+        const data = await workersRes.json()
+        if (data?.workers) {
+          const activeWorkers = data.workers.filter((w: any) => w.isActive).map((w: any) => w.name)
+          if (activeWorkers.length > 0) setWorkerNamesList(activeWorkers)
         }
       }
     }).catch(err => console.error('マスタデータ取得エラー:', err))
@@ -497,6 +506,7 @@ function WorkReportNewPageContent() {
             onCopyPrevious={handleCopyWorkerRecords}
             copyLoading={copyLoading}
             projectTypesList={projectTypesList}
+            workerNames={workerNamesList}
           />
 
           {/* 使用材料 */}

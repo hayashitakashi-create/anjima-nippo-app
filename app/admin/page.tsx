@@ -540,6 +540,17 @@ export default function AdminPage() {
                   </div>
                 </div>
               </Link>
+              <Link href="/admin/workers" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center group-hover:bg-teal-200 transition-colors">
+                    <Users className="w-5 h-5 text-teal-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">作業者名</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">作業者名マスタ管理</p>
+                  </div>
+                </div>
+              </Link>
             </>
           )}
           {/* 操作ログ: ログ書き込み未実装のため非表示 */}
