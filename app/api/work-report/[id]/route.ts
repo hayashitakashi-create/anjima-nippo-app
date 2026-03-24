@@ -128,76 +128,71 @@ export async function PUT(
       )
     }
 
-    // 既存の子レコードを削除
-    await Promise.all([
-      prisma.workerRecord.deleteMany({ where: { workReportId: id } }),
-      prisma.materialRecord.deleteMany({ where: { workReportId: id } }),
-      prisma.subcontractorRecord.deleteMany({ where: { workReportId: id } }),
-    ])
+    // トランザクションで子レコード削除＋日報更新を実行
+    const updatedReport = await prisma.$transaction(async (tx) => {
+      await Promise.all([
+        tx.workerRecord.deleteMany({ where: { workReportId: id } }),
+        tx.materialRecord.deleteMany({ where: { workReportId: id } }),
+        tx.subcontractorRecord.deleteMany({ where: { workReportId: id } }),
+      ])
 
-    // 日報を更新（子レコードも再作成）
-    const updatedReport = await prisma.workReport.update({
-      where: { id },
-      data: {
-        date: new Date(body.date),
-        projectName: body.projectName,
-        projectType: body.projectType,
-        projectId: body.projectId,
-        weather: body.weather,
-        contactNotes: body.contactNotes,
-        remoteDepartureTime: body.remoteDepartureTime,
-        remoteArrivalTime: body.remoteArrivalTime,
-        remoteDepartureTime2: body.remoteDepartureTime2,
-        remoteArrivalTime2: body.remoteArrivalTime2,
-        trafficGuardCount: body.trafficGuardCount,
-        trafficGuardStart: body.trafficGuardStart,
-        trafficGuardEnd: body.trafficGuardEnd,
-        workerRecords: {
-          create: body.workerRecords.map((record) => ({
-            name: record.name,
-            startTime: record.startTime,
-            endTime: record.endTime,
-            workHours: record.workHours || calcWorkHours(record.startTime, record.endTime),
-            workType: record.workType,
-            details: record.details,
-            dailyHours: record.dailyHours,
-            totalHours: record.totalHours,
-            remainHours: record.remainHours,
-            order: record.order,
-          })),
+      return tx.workReport.update({
+        where: { id },
+        data: {
+          date: new Date(body.date),
+          projectName: body.projectName,
+          projectType: body.projectType,
+          projectId: body.projectId,
+          weather: body.weather,
+          contactNotes: body.contactNotes,
+          remoteDepartureTime: body.remoteDepartureTime,
+          remoteArrivalTime: body.remoteArrivalTime,
+          remoteDepartureTime2: body.remoteDepartureTime2,
+          remoteArrivalTime2: body.remoteArrivalTime2,
+          trafficGuardCount: body.trafficGuardCount,
+          trafficGuardStart: body.trafficGuardStart,
+          trafficGuardEnd: body.trafficGuardEnd,
+          workerRecords: {
+            create: body.workerRecords.map((record: any) => ({
+              name: record.name,
+              startTime: record.startTime,
+              endTime: record.endTime,
+              workHours: record.workHours || calcWorkHours(record.startTime, record.endTime),
+              workType: record.workType,
+              details: record.details,
+              dailyHours: record.dailyHours,
+              totalHours: record.totalHours,
+              remainHours: record.remainHours,
+              order: record.order,
+            })),
+          },
+          materialRecords: {
+            create: body.materialRecords.map((record: any) => ({
+              name: record.name,
+              volume: record.volume,
+              volumeUnit: record.volumeUnit,
+              quantity: record.quantity,
+              unitPrice: record.unitPrice,
+              amount: (record.quantity || 0) * (record.unitPrice || 0),
+              subcontractor: record.subcontractor,
+              order: record.order,
+            })),
+          },
+          subcontractorRecords: {
+            create: (body.subcontractorRecords || []).map((record: any) => ({
+              name: record.name,
+              workerCount: record.workerCount,
+              workContent: record.workContent,
+              order: record.order,
+            })),
+          },
         },
-        materialRecords: {
-          create: body.materialRecords.map((record) => ({
-            name: record.name,
-            volume: record.volume,
-            volumeUnit: record.volumeUnit,
-            quantity: record.quantity,
-            unitPrice: record.unitPrice,
-            amount: (record.quantity || 0) * (record.unitPrice || 0),
-            subcontractor: record.subcontractor,
-            order: record.order,
-          })),
+        include: {
+          workerRecords: { orderBy: { order: 'asc' } },
+          materialRecords: { orderBy: { order: 'asc' } },
+          subcontractorRecords: { orderBy: { order: 'asc' } },
         },
-        subcontractorRecords: {
-          create: (body.subcontractorRecords || []).map((record) => ({
-            name: record.name,
-            workerCount: record.workerCount,
-            workContent: record.workContent,
-            order: record.order,
-          })),
-        },
-      },
-      include: {
-        workerRecords: {
-          orderBy: { order: 'asc' },
-        },
-        materialRecords: {
-          orderBy: { order: 'asc' },
-        },
-        subcontractorRecords: {
-          orderBy: { order: 'asc' },
-        },
-      },
+      })
     })
 
     return NextResponse.json(updatedReport)

@@ -8,6 +8,7 @@ import {
   recordLoginFailure,
   resetLoginAttempts,
 } from '@/lib/auth'
+import { logAuditEvent } from '@/lib/audit-log'
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,6 +79,13 @@ export async function POST(request: NextRequest) {
 
     // ログイン成功 - 試行回数リセット
     resetLoginAttempts(username)
+
+    logAuditEvent({
+      userId: user.id,
+      action: 'login',
+      targetType: 'user',
+      targetId: user.id,
+    })
 
     // JWT トークンを生成
     const token = await createToken({

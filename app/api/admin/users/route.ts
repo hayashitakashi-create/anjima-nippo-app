@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { requirePermission, authErrorResponse } from '@/lib/auth'
+import { logAuditEvent } from '@/lib/audit-log'
+import { userCreateSchema, validateRequest } from '@/lib/validations'
 
 // ユーザー一覧取得
 export async function GET(request: NextRequest) {
@@ -53,21 +55,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, username, password, position, role, defaultReportType } = body
-
-    if (!name || !username || !password) {
-      return NextResponse.json(
-        { error: '氏名、ユーザー名、パスワードは必須です' },
-        { status: 400 }
-      )
+    const validation = validateRequest(userCreateSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'パスワードは8文字以上で設定してください' },
-        { status: 400 }
-      )
-    }
+    const { name, username, password, position, role, defaultReportType } = validation.data
 
     // ユーザー名の重複チェック
     const existing = await prisma.user.findUnique({
@@ -102,6 +94,14 @@ export async function POST(request: NextRequest) {
         createdAt: true,
         updatedAt: true,
       },
+    })
+
+    logAuditEvent({
+      userId: authResult.user.id,
+      action: 'user_created',
+      targetType: 'user',
+      targetId: newUser.id,
+      details: { name, username, role: role || 'user' },
     })
 
     return NextResponse.json({ user: newUser }, { status: 201 })
@@ -167,6 +167,14 @@ export async function PUT(request: NextRequest) {
       data: updateData,
     })
 
+    logAuditEvent({
+      userId: authResult.user.id,
+      action: 'user_updated',
+      targetType: 'user',
+      targetId: userId,
+      details: updateData,
+    })
+
     return NextResponse.json({ user: updatedUser })
   } catch (error) {
     console.error('ユーザー更新エラー:', error)
@@ -222,12 +230,18 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // 通知を先に削除
-    await prisma.notification.deleteMany({ where: { userId } })
+    // トランザクションで通知削除＋ユーザー削除
+    const deletedUser = await prisma.$transaction(async (tx) => {
+      await tx.notification.deleteMany({ where: { userId } })
+      return tx.user.delete({ where: { id: userId }, select: { name: true, username: true } })
+    })
 
-    // ユーザーを削除
-    await prisma.user.delete({
-      where: { id: userId },
+    logAuditEvent({
+      userId: admin.id,
+      action: 'user_deleted',
+      targetType: 'user',
+      targetId: userId,
+      details: { name: deletedUser.name, username: deletedUser.username },
     })
 
     return NextResponse.json({ success: true, message: 'ユーザーを削除しました' })

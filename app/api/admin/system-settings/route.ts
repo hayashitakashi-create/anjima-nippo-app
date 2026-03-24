@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, authErrorResponse } from '@/lib/auth'
 import { PERMISSION_DEFINITIONS, ADMIN_LOCKED_PERMISSIONS, type PermissionKey } from '@/lib/permissions'
+import { logAuditEvent } from '@/lib/audit-log'
 
 // デフォルト値の定義
 const DEFAULT_SETTINGS = {
@@ -130,6 +131,14 @@ export async function PUT(request: NextRequest) {
       update: { value: stringValue },
       create: { key, value: stringValue },
       select: { key: true, value: true, updatedAt: true },
+    })
+
+    logAuditEvent({
+      userId: authResult.user.id,
+      action: 'setting_updated',
+      targetType: 'system',
+      targetId: key,
+      details: { key, value: stringValue },
     })
 
     return NextResponse.json({

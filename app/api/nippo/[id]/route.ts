@@ -114,50 +114,36 @@ export async function PUT(
       )
     }
 
-    // 既存の訪問記録を削除して新しいものを作成
-    await prisma.visitRecord.deleteMany({
-      where: { dailyReportId: id }
-    })
+    // トランザクションで訪問記録削除＋日報更新を実行
+    const updatedReport = await prisma.$transaction(async (tx) => {
+      await tx.visitRecord.deleteMany({ where: { dailyReportId: id } })
 
-    const updatedReport = await prisma.dailyReport.update({
-      where: { id },
-      data: {
-        date: new Date(body.date),
-        specialNotes: body.specialNotes,
-        visitRecords: {
-          create: body.visitRecords.map((record) => ({
-            destination: record.destination,
-            contactPerson: record.contactPerson,
-            startTime: record.startTime,
-            endTime: record.endTime,
-            content: record.content,
-            expense: record.expense,
-            order: record.order,
-          })),
-        },
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            position: true,
-          }
-        },
-        visitRecords: {
-          orderBy: { order: 'asc' }
-        },
-        approvals: {
-          include: {
-            approver: {
-              select: {
-                name: true,
-                position: true,
-              }
-            }
+      return tx.dailyReport.update({
+        where: { id },
+        data: {
+          date: new Date(body.date),
+          specialNotes: body.specialNotes,
+          visitRecords: {
+            create: body.visitRecords.map((record: any) => ({
+              destination: record.destination,
+              contactPerson: record.contactPerson,
+              startTime: record.startTime,
+              endTime: record.endTime,
+              content: record.content,
+              expense: record.expense,
+              order: record.order,
+            })),
           },
-          orderBy: { createdAt: 'asc' }
-        }
-      }
+        },
+        include: {
+          user: { select: { name: true, position: true } },
+          visitRecords: { orderBy: { order: 'asc' } },
+          approvals: {
+            include: { approver: { select: { name: true, position: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      })
     })
 
     return NextResponse.json(updatedReport)

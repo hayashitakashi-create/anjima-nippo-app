@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
 import { getUserPermissions } from '@/lib/permissions'
 import { notifyLeaveSubmitted } from '@/lib/notifications'
+import { leaveRequestSchema, validateRequest } from '@/lib/validations'
 
 // 休暇届一覧取得
 export async function GET(request: NextRequest) {
@@ -93,25 +94,12 @@ export async function POST(request: NextRequest) {
     const { user } = authResult
 
     const body = await request.json()
-    const { date, leaveType, leaveUnit, startTime, endTime, reason, attachmentData, attachmentName, attachmentType } = body
-
-    if (!date) {
-      return NextResponse.json({ error: '日付は必須です' }, { status: 400 })
+    const validation = validateRequest(leaveRequestSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    if (!leaveType) {
-      return NextResponse.json({ error: '休暇種別は必須です' }, { status: 400 })
-    }
-
-    const validTypes = ['有給', '振替', '代休', '看護', '介護', '特別休暇', 'その他']
-    if (!validTypes.includes(leaveType)) {
-      return NextResponse.json({ error: '無効な休暇種別です' }, { status: 400 })
-    }
-
-    const validUnits = ['full', 'am', 'pm', 'hourly']
-    const unit = leaveUnit || 'full'
-    if (!validUnits.includes(unit)) {
-      return NextResponse.json({ error: '無効な休暇単位です' }, { status: 400 })
-    }
+    const { date, leaveType, leaveUnit, startTime, endTime, reason, attachmentData, attachmentName, attachmentType } = validation.data
+    const unit = leaveUnit
 
     // 時間休の場合は開始・終了時刻が必須
     if (unit === 'hourly' && (!startTime || !endTime)) {

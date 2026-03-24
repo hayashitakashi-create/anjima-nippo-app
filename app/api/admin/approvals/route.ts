@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { notifyReportApproved, notifyReportRejected } from '@/lib/notifications'
 import { requirePermission, authErrorResponse } from '@/lib/auth'
+import { logAuditEvent } from '@/lib/audit-log'
 
 // 承認待ち日報一覧を取得（管理者用）
 export async function GET(request: NextRequest) {
@@ -339,6 +340,13 @@ export async function PUT(request: NextRequest) {
         }
       })
 
+      logAuditEvent({
+        userId: admin.id,
+        action: action === 'bulk_approve' ? 'report_bulk_approved' : 'report_bulk_rejected',
+        targetType: 'nippo',
+        details: { reportIds, count: reportIds.length },
+      })
+
       return NextResponse.json({
         success: true,
         message: action === 'bulk_approve' ? `${reportIds.length}件を承認しました` : `${reportIds.length}件を差戻ししました`,
@@ -403,6 +411,13 @@ export async function PUT(request: NextRequest) {
           notifyReportRejected(updatedReport.user.id, dateStr, reportId, admin.name).catch(() => {})
         }
       }
+
+      logAuditEvent({
+        userId: admin.id,
+        action: action === 'approve_all' ? 'report_approved' : 'report_rejected',
+        targetType: 'nippo',
+        targetId: reportId,
+      })
 
       return NextResponse.json({
         success: true,
@@ -478,6 +493,13 @@ export async function PUT(request: NextRequest) {
         notifyReportRejected(report.userId, dateStr, report.id, admin.name).catch(() => {})
       }
     }
+
+    logAuditEvent({
+      userId: admin.id,
+      action: action === 'approve' ? 'report_approved' : 'report_rejected',
+      targetType: 'nippo',
+      targetId: approval.dailyReportId,
+    })
 
     return NextResponse.json({
       success: true,
