@@ -117,9 +117,10 @@ export default function WorkReportPrintPage() {
   const weekdays = ['日', '月', '火', '水', '木', '金', '土']
   const formattedDate = `${dateObj.getFullYear()}年${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${weekdays[dateObj.getDay()]}）`
 
-  // パディング: 作業者11行、材料5行、外注5行
+  // パディング: 作業者は実データ数 or 最低11行、材料5行、外注3行
+  const minWorkerRows = Math.max(11, report.workerRecords.length)
   const paddedWorkers: (WorkerRecord | null)[] = [...report.workerRecords]
-  while (paddedWorkers.length < 11) paddedWorkers.push(null)
+  while (paddedWorkers.length < minWorkerRows) paddedWorkers.push(null)
 
   const paddedMaterials: (MaterialRecord | null)[] = [...report.materialRecords]
   while (paddedMaterials.length < 5) paddedMaterials.push(null)
@@ -127,8 +128,8 @@ export default function WorkReportPrintPage() {
   const paddedSubs: (SubcontractorRecord | null)[] = [...report.subcontractorRecords]
   while (paddedSubs.length < 3) paddedSubs.push(null)
 
-  // 区画線工事かどうか（材料セクション表示の判定）
-  const isKukakusen = report.projectType === '区画線工事'
+  // 材料データがあるかどうか（入力がある場合のみ表示）
+  const hasMaterials = report.materialRecords.length > 0
 
   // 金額合計
   const totalAmount = report.materialRecords.reduce(
@@ -255,7 +256,7 @@ export default function WorkReportPrintPage() {
           {/* 使用材料・外注先を横並び */}
           <div style={{ display: 'flex', gap: '8px' }}>
             {/* 使用材料（区画線工事の場合のみ表示） */}
-            {isKukakusen && (
+            {hasMaterials && (
               <div style={{ flex: '1' }}>
                 <div className="section-title">使用材料・消耗品</div>
                 <table className="print-table">
@@ -304,7 +305,7 @@ export default function WorkReportPrintPage() {
             )}
 
             {/* 外注先 + 遠隔地情報 */}
-            <div style={isKukakusen ? { width: '300px', flexShrink: 0 } : { flex: '1' }}>
+            <div style={hasMaterials ? { width: '260px', flexShrink: 0 } : { flex: '1', maxWidth: '400px' }}>
               <div className="section-title">外注先</div>
               <table className="print-table mb-1">
                 <thead>
@@ -361,7 +362,7 @@ export default function WorkReportPrintPage() {
             <tbody>
               <tr>
                 <th style={{ width: '80px' }}>連絡事項</th>
-                <td style={{ minHeight: isKukakusen ? '30px' : '80px', whiteSpace: 'pre-wrap', fontSize: '10px', padding: '4px 6px' }}>
+                <td style={{ minHeight: '100px', height: '100px', whiteSpace: 'pre-wrap', fontSize: '10px', padding: '4px 6px', verticalAlign: 'top' }}>
                   {report.contactNotes || ''}
                 </td>
               </tr>

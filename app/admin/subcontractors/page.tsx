@@ -14,6 +14,11 @@ import {
   Save,
   X,
   ArrowLeft,
+  Pencil,
+  Check,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
 } from 'lucide-react'
 
 interface User {
@@ -26,6 +31,7 @@ interface Subcontractor {
   id: string
   name: string
   isActive: boolean
+  sortOrder: number
   createdAt: string
   updatedAt: string
 }
@@ -42,6 +48,10 @@ export default function SubcontractorsPage() {
   // 新規外注先追加フォーム
   const [newSubcontractor, setNewSubcontractor] = useState('')
   const [addingNew, setAddingNew] = useState(false)
+
+  // 編集用
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   // デフォルト外注先リスト
   const defaultSubcontractors = [
@@ -194,6 +204,57 @@ export default function SubcontractorsPage() {
     }
   }
 
+  const handleEditName = async (id: string) => {
+    if (!editingName.trim()) {
+      setError('外注先名を入力してください')
+      return
+    }
+    setError('')
+    try {
+      const res = await fetch('/api/admin/subcontractors', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name: editingName }),
+      })
+      if (res.ok) {
+        setSubcontractors(prev =>
+          prev.map(s => (s.id === id ? { ...s, name: editingName.trim() } : s))
+        )
+        setEditingId(null)
+        setEditingName('')
+        setMessage('外注先名を更新しました')
+      } else {
+        const data = await res.json()
+        setError(data.error || '更新に失敗しました')
+      }
+    } catch {
+      setError('更新に失敗しました')
+    }
+  }
+
+  const handleMoveOrder = async (index: number, direction: 'up' | 'down') => {
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= subcontractors.length) return
+
+    const newList = [...subcontractors]
+    ;[newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]]
+
+    const reorder = newList.map((s, i) => ({ id: s.id, sortOrder: i }))
+    setSubcontractors(newList)
+
+    try {
+      await fetch('/api/admin/subcontractors', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reorder }),
+      })
+    } catch {
+      // ロールバック
+      setSubcontractors(subcontractors)
+      setError('並び替えに失敗しました')
+    }
+  }
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
@@ -338,32 +399,84 @@ export default function SubcontractorsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">外注先名</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状態</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">順序</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">外注先名</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">状態</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-48">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {subcontractors.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center">
+                    <td colSpan={4} className="px-6 py-12 text-center">
                       <Truck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-gray-500 mb-2">外注先が登録されていません</p>
                       <p className="text-sm text-gray-400">「新規追加」または「デフォルトを読み込む」から登録してください</p>
                     </td>
                   </tr>
                 ) : (
-                  subcontractors.map(subcontractor => (
+                  subcontractors.map((subcontractor, index) => (
                     <tr
                       key={subcontractor.id}
                       className={`hover:bg-gray-50 transition-colors ${
                         !subcontractor.isActive ? 'opacity-50' : ''
                       }`}
                     >
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-gray-900">{subcontractor.name}</span>
+                      <td className="px-2 py-3 text-center">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button
+                            onClick={() => handleMoveOrder(index, 'up')}
+                            disabled={index === 0}
+                            className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                            title="上に移動"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <GripVertical className="w-3 h-3 text-gray-300" />
+                          <button
+                            onClick={() => handleMoveOrder(index, 'down')}
+                            disabled={index === subcontractors.length - 1}
+                            className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                            title="下に移動"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
+                        {editingId === subcontractor.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editingName}
+                              onChange={e => setEditingName(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') handleEditName(subcontractor.id)
+                                if (e.key === 'Escape') { setEditingId(null); setEditingName('') }
+                              }}
+                              className="flex-1 px-2 py-1 border border-indigo-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleEditName(subcontractor.id)}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded"
+                              title="保存"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => { setEditingId(null); setEditingName('') }}
+                              className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                              title="キャンセル"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium text-gray-900">{subcontractor.name}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             subcontractor.isActive
@@ -374,11 +487,21 @@ export default function SubcontractorsPage() {
                           {subcontractor.isActive ? '有効' : '無効'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end space-x-2">
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end space-x-1.5">
+                          <button
+                            onClick={() => {
+                              setEditingId(subcontractor.id)
+                              setEditingName(subcontractor.name)
+                            }}
+                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="名前を編集"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => handleToggleActive(subcontractor.id, subcontractor.isActive)}
-                            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                            className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
                               subcontractor.isActive
                                 ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                                 : 'bg-green-100 text-green-700 hover:bg-green-200'

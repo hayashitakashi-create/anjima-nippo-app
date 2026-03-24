@@ -277,6 +277,7 @@ model Subcontractor {
   id        String   @id @default(cuid())
   name      String   // 外注先名
   isActive  Boolean  @default(true) // 有効/無効
+  sortOrder Int      @default(0) // 並び順
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

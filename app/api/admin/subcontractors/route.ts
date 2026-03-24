@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const subcontractors = await prisma.subcontractor.findMany({
       orderBy: [
         { isActive: 'desc' },
+        { sortOrder: 'asc' },
         { name: 'asc' },
       ],
     })
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 外注先更新（有効/無効切り替え）
+// 外注先更新（有効/無効切り替え、名前変更、並び替え）
 export async function PUT(request: NextRequest) {
   try {
     const authResult = await requirePermission(request, 'manage_masters')
@@ -75,7 +76,20 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, isActive } = body
+
+    // 並び替え一括更新
+    if (body.reorder && Array.isArray(body.reorder)) {
+      const updates = body.reorder.map((item: { id: string; sortOrder: number }) =>
+        prisma.subcontractor.update({
+          where: { id: item.id },
+          data: { sortOrder: item.sortOrder },
+        })
+      )
+      await Promise.all(updates)
+      return NextResponse.json({ message: '並び替えを保存しました' })
+    }
+
+    const { id, isActive, name } = body
 
     if (!id) {
       return NextResponse.json(
@@ -84,9 +98,20 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    const data: { isActive?: boolean; name?: string } = {}
+    if (typeof isActive === 'boolean') data.isActive = isActive
+    if (typeof name === 'string' && name.trim()) data.name = name.trim()
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json(
+        { error: '更新する項目がありません' },
+        { status: 400 }
+      )
+    }
+
     const subcontractor = await prisma.subcontractor.update({
       where: { id },
-      data: { isActive },
+      data,
     })
 
     return NextResponse.json({ subcontractor })
