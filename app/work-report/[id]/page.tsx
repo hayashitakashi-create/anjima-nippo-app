@@ -160,7 +160,7 @@ export default function WorkReportDetailPage() {
   const [deleting, setDeleting] = useState(false)
 
   // 使用材料マスタから取得したリスト
-  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number }[]>([])
+  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number; defaultVolume?: string }[]>([])
 
   // 工事種別マスタから取得したリスト
   const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
@@ -231,7 +231,7 @@ export default function WorkReportDetailPage() {
       .then(data => {
         if (data?.materials) {
           setMaterialMasterList(
-            data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0 }))
+            data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0, defaultVolume: m.defaultVolume || '' }))
           )
         }
       })
@@ -386,8 +386,8 @@ export default function WorkReportDetailPage() {
 
   // 作業者記録の追加
   const handleAddWorkerRecord = () => {
-    if (workerRecords.length >= 11) {
-      alert('作業者記録は最大11件までです')
+    if (workerRecords.length >= 50) {
+      alert('作業者記録は最大50件までです')
       return
     }
     const newId = Date.now().toString()
@@ -916,7 +916,7 @@ export default function WorkReportDetailPage() {
                   <button
                     type="button"
                     onClick={handleAddWorkerRecord}
-                    disabled={workerRecords.length >= 11}
+                    disabled={workerRecords.length >= 50}
                     className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-[#0E3091] text-white rounded-lg hover:bg-[#0a2470] disabled:bg-gray-300 disabled:cursor-not-allowed text-xs sm:text-sm font-medium shadow-sm transition-all"
                   >
                     <Plus className="w-4 h-4" />
@@ -1170,7 +1170,7 @@ export default function WorkReportDetailPage() {
                     </div>
                     {isEditing ? (
                       <>
-                        <div className="grid grid-cols-2 sm:grid-cols-12 gap-3 sm:gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-10 gap-3 sm:gap-4">
                           <div className="col-span-2 sm:col-span-4">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">材料名</label>
                             <select
@@ -1180,8 +1180,13 @@ export default function WorkReportDetailPage() {
                                 const newRecords = [...materialRecords]
                                 newRecords[index].name = selectedName
                                 const master = materialMasterList.find(m => m.name === selectedName)
-                                if (master && master.unitPrice > 0) {
-                                  newRecords[index].unitPrice = master.unitPrice
+                                if (master) {
+                                  if (master.unitPrice > 0) {
+                                    newRecords[index].unitPrice = master.unitPrice
+                                  }
+                                  if (master.defaultVolume) {
+                                    newRecords[index].volume = master.defaultVolume
+                                  }
                                 }
                                 setMaterialRecords(newRecords)
                               }}
@@ -1205,23 +1210,6 @@ export default function WorkReportDetailPage() {
                               }}
                               className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
                             />
-                          </div>
-                          <div className="col-span-1 sm:col-span-2">
-                            <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単位</label>
-                            <select
-                              value={record.volumeUnit}
-                              onChange={(e) => {
-                                const newRecords = [...materialRecords]
-                                newRecords[index].volumeUnit = e.target.value
-                                setMaterialRecords(newRecords)
-                              }}
-                              className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                            >
-                              <option value="">選択</option>
-                              {unitMasterList.map(unit => (
-                                <option key={unit} value={unit}>{unit}</option>
-                              ))}
-                            </select>
                           </div>
                           <div className="col-span-1 sm:col-span-2">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">数量</label>
@@ -1272,7 +1260,7 @@ export default function WorkReportDetailPage() {
                         </div>
                         <div>
                           <span className="text-xs text-gray-500">容量</span>
-                          <p className="text-sm font-medium text-gray-900">{record.volume || '-'} {record.volumeUnit}</p>
+                          <p className="text-sm font-medium text-gray-900">{record.volume || '-'}</p>
                         </div>
                         <div>
                           <span className="text-xs text-gray-500">数量 / 単価</span>

@@ -1240,12 +1240,6 @@ export default function ApprovalsPage() {
                                 {report.user.name}
                                 {report.user.position && <span className="text-gray-400">({report.user.position})</span>}
                               </span>
-                              {report.approvalRoute && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded">
-                                  <Route className="w-3 h-3" />
-                                  {report.approvalRoute.name}
-                                </span>
-                              )}
                               {destinations.length > 0 && (
                                 <span className="inline-flex items-center gap-1 truncate">
                                   <MapPin className="w-3.5 h-3.5 flex-shrink-0" />

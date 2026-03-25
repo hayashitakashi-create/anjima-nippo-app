@@ -12,7 +12,7 @@ interface MaterialRecordsCardProps {
   onDelete: (id: string) => void
   onCopyPrevious: () => void
   copyLoading: string
-  materialMasterList: { name: string; unitPrice: number }[]
+  materialMasterList: { name: string; unitPrice: number; defaultVolume?: string }[]
   unitMasterList: string[]
   totalAmount: number
 }
@@ -83,8 +83,8 @@ export function MaterialRecordsCard({
               </button>
             </div>
 
-            {/* 上段: 材料名 | 容量 | 単位 | 数量 | 単価 */}
-            <div className="grid grid-cols-2 sm:grid-cols-12 gap-3 sm:gap-4">
+            {/* 上段: 材料名 | 容量 | 数量 | 単価 */}
+            <div className="grid grid-cols-2 sm:grid-cols-10 gap-3 sm:gap-4">
               {/* 材料名 */}
               <div className="col-span-2 sm:col-span-4">
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">材料名</label>
@@ -92,14 +92,18 @@ export function MaterialRecordsCard({
                   value={record.name}
                   onChange={(e) => {
                     const selectedName = e.target.value
-                    updateRecord(index, 'name', selectedName)
                     const master = materialMasterList.find(m => m.name === selectedName)
-                    if (master && master.unitPrice > 0) {
-                      const newRecords = [...materialRecords]
-                      ;(newRecords[index] as any).name = selectedName
-                      ;(newRecords[index] as any).unitPrice = master.unitPrice
-                      setMaterialRecords(newRecords)
+                    const newRecords = [...materialRecords]
+                    ;(newRecords[index] as any).name = selectedName
+                    if (master) {
+                      if (master.unitPrice > 0) {
+                        ;(newRecords[index] as any).unitPrice = master.unitPrice
+                      }
+                      if (master.defaultVolume) {
+                        ;(newRecords[index] as any).volume = master.defaultVolume
+                      }
                     }
+                    setMaterialRecords(newRecords)
                   }}
                   className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                 >
@@ -120,21 +124,6 @@ export function MaterialRecordsCard({
                   className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
                   placeholder="容量"
                 />
-              </div>
-
-              {/* 単位 */}
-              <div className="col-span-1 sm:col-span-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">単位</label>
-                <select
-                  value={record.volumeUnit}
-                  onChange={(e) => updateRecord(index, 'volumeUnit', e.target.value)}
-                  className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                >
-                  <option value="">選択</option>
-                  {unitMasterList.map(unit => (
-                    <option key={unit} value={unit}>{unit}</option>
-                  ))}
-                </select>
               </div>
 
               {/* 数量 */}

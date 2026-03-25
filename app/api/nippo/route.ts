@@ -102,60 +102,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { approvalRouteId } = body as { approvalRouteId?: string } & DailyReportInput
-
     // 認証ユーザーのIDを使用（なりすまし防止）
     body.userId = authResult.user.id
-
-    // 承認ルートから承認者役職リストを取得
-    let approvalRoles: string[] = []
-    let routeId: string | undefined = undefined
-
-    if (approvalRouteId) {
-      // 指定されたルートを使用
-      const route = await prisma.approvalRoute.findUnique({
-        where: { id: approvalRouteId },
-      })
-      if (route && route.isActive) {
-        try { approvalRoles = JSON.parse(route.roles) } catch {}
-        routeId = route.id
-      }
-    }
-
-    if (approvalRoles.length === 0) {
-      // デフォルトルートを検索
-      const defaultRoute = await prisma.approvalRoute.findFirst({
-        where: { isDefault: true, isActive: true },
-      })
-      if (defaultRoute) {
-        try { approvalRoles = JSON.parse(defaultRoute.roles) } catch {}
-        routeId = defaultRoute.id
-      }
-    }
-
-    if (approvalRoles.length === 0) {
-      // ルートが一つもない場合、最初の有効ルートを使用
-      const firstRoute = await prisma.approvalRoute.findFirst({
-        where: { isActive: true },
-        orderBy: { order: 'asc' },
-      })
-      if (firstRoute) {
-        try { approvalRoles = JSON.parse(firstRoute.roles) } catch {}
-        routeId = firstRoute.id
-      }
-    }
-
-    if (approvalRoles.length === 0) {
-      // フォールバック: ハードコード
-      approvalRoles = ['社長', '専務', '常務', '部長']
-    }
 
     const dailyReport = await prisma.dailyReport.create({
       data: {
         date: new Date(body.date),
         userId: body.userId,
         specialNotes: body.specialNotes,
-        approvalRouteId: routeId || null,
         visitRecords: {
           create: body.visitRecords.map((record: any) => ({
             destination: record.destination,
@@ -168,10 +122,10 @@ export async function POST(request: NextRequest) {
           })),
         },
         approvals: {
-          create: approvalRoles.map(role => ({
-            approverRole: role,
+          create: [{
+            approverRole: '確認者',
             status: 'pending',
-          })),
+          }],
         },
       },
       include: {

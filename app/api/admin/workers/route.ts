@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ workers }, {
-      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+      headers: { 'Cache-Control': 'no-store' },
     })
   } catch (error) {
     console.error('作業者名一覧取得エラー:', error)

@@ -529,17 +529,6 @@ export default function AdminPage() {
                   </div>
                 </div>
               </Link>
-              <Link href="/admin/units" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors">
-                    <Ruler className="w-5 h-5 text-violet-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">単位設定</p>
-                    <p className="text-xs text-gray-500 hidden sm:block">単位マスタ管理</p>
-                  </div>
-                </div>
-              </Link>
               <Link href="/admin/workers" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
                 <div className="flex flex-col items-center text-center space-y-2">
                   <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center group-hover:bg-teal-200 transition-colors">
@@ -556,17 +545,6 @@ export default function AdminPage() {
           {/* 操作ログ: ログ書き込み未実装のため非表示 */}
           {currentUser.permissions?.system_settings && (
             <>
-            <Link href="/admin/system-settings#approvalRoutes" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                  <ClipboardList className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">承認ルート</p>
-                  <p className="text-xs text-gray-500 hidden sm:block">承認フロー設定</p>
-                </div>
-              </div>
-            </Link>
             <Link href="/admin/system-settings" className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-purple-300 transition-all">
               <div className="flex flex-col items-center text-center space-y-2">
                 <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">

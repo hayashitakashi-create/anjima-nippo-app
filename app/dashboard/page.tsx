@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [reportType, setReportType] = useState<'sales' | 'work'>('work')
+  const [reportType, setReportType] = useState<'sales' | 'work' | 'leave'>('work')
   const [salesReports, setSalesReports] = useState<RecentReport[]>([])
   const [workReports, setWorkReports] = useState<RecentReport[]>([])
   const [salesStats, setSalesStats] = useState<Stats>({
@@ -75,6 +75,7 @@ export default function DashboardPage() {
     pendingApproval: 0,
     approved: 0
   })
+  const [leaveRequests, setLeaveRequests] = useState<Array<{ id: string; date: string; leaveType: string; status: string }>>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [unsubmitted, setUnsubmitted] = useState<UnsubmittedData | null>(null)
 
@@ -91,7 +92,7 @@ export default function DashboardPage() {
       .then(data => {
         if (data && data.user) {
           setCurrentUser(data.user)
-          setReportType(data.user.defaultReportType === 'work' ? 'work' : data.user.defaultReportType === 'both' ? 'work' : 'sales')
+          setReportType(data.user.defaultReportType === 'sales' ? 'sales' : 'work')
         }
         setLoading(false)
       })
@@ -173,6 +174,22 @@ export default function DashboardPage() {
         })
     }
 
+    // 休暇届取得
+    fetch('/api/leave-requests')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.leaveRequests) {
+          setLeaveRequests(data.leaveRequests.slice(0, 10).map((r: any) => ({
+            id: r.id,
+            date: r.date,
+            leaveType: r.leaveType,
+            status: r.status,
+            applicantName: r.applicantName,
+          })))
+        }
+      })
+      .catch(err => console.error('休暇届取得エラー:', err))
+
     // 作業日報取得
     fetch(`/api/work-report?userId=${currentUser.id}`)
       .then(res => {
@@ -238,7 +255,7 @@ export default function DashboardPage() {
   }
 
   const showBothTabs = currentUser?.defaultReportType === 'sales' || currentUser?.defaultReportType === 'both'
-  const reportTypeName = reportType === 'sales' ? '営業日報' : '作業日報'
+  const reportTypeName = reportType === 'leave' ? '休暇届' : reportType === 'sales' ? '営業日報' : '作業日報'
   const recentReports = reportType === 'sales' ? salesReports : workReports
   const stats = reportType === 'sales' ? salesStats : workStats
 
@@ -296,9 +313,9 @@ export default function DashboardPage() {
                 </div>
               </Link>
 
-              {/* タブ切り替え（営業の人は両方表示、作業の人は作業のみ） */}
-              {showBothTabs ? (
-                <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
+              {/* タブ切り替え */}
+              <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
+                {showBothTabs && (
                   <button
                     onClick={() => setReportType('sales')}
                     className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
@@ -309,24 +326,28 @@ export default function DashboardPage() {
                   >
                     営業<span className="hidden sm:inline">日報</span>
                   </button>
-                  <button
-                    onClick={() => setReportType('work')}
-                    className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                      reportType === 'work'
-                        ? 'bg-white text-[#0E3091] shadow'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    作業<span className="hidden sm:inline">日報</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
-                  <div className="px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium bg-white text-[#0E3091] shadow">
-                    作業<span className="hidden sm:inline">日報</span>
-                  </div>
-                </div>
-              )}
+                )}
+                <button
+                  onClick={() => setReportType('work')}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                    reportType === 'work'
+                      ? 'bg-white text-[#0E3091] shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  作業<span className="hidden sm:inline">日報</span>
+                </button>
+                <button
+                  onClick={() => setReportType('leave')}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                    reportType === 'leave'
+                      ? 'bg-white text-green-600 shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  休暇<span className="hidden sm:inline">届</span>
+                </button>
+              </div>
             </div>
 
             {/* 右側: アイコンメニュー */}
@@ -447,7 +468,86 @@ export default function DashboardPage() {
             )
           )}
 
-          {/* 12列グリッド */}
+          {/* 休暇届タブ */}
+          {reportType === 'leave' ? (
+            <div className="space-y-4 sm:space-y-6">
+              {/* クイックアクション */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
+              >
+                <Link href="/leave-requests" className="group relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl transition-transform group-hover:scale-105 bg-gradient-to-br from-green-500 to-emerald-500"></div>
+                  <div className="relative p-6 text-white">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <Plus className="w-6 h-6" />
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">休暇届 申請・一覧</h3>
+                    <p className="text-green-100 text-sm">休暇届の新規申請・過去の申請一覧</p>
+                  </div>
+                </Link>
+              </motion.div>
+
+              {/* 最近の休暇届 */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                    <Palmtree className="w-5 h-5 mr-2 text-green-600" />
+                    最近の休暇届
+                  </h3>
+                  <Link href="/leave-requests" className="text-sm font-medium text-green-600 hover:text-green-700">
+                    すべて表示 →
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  {leaveRequests.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">まだ休暇届が登録されていません</p>
+                  ) : (
+                    leaveRequests.map((req, index) => (
+                      <motion.div
+                        key={req.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-green-300 transition-all"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
+                            <Palmtree className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {formatDate(req.date)} — {req.leaveType}
+                            </p>
+                            {(req as any).applicantName && (
+                              <p className="text-sm text-gray-500">{(req as any).applicantName}</p>
+                            )}
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          req.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
+                          req.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {req.status === 'approved' ? '承認済み' : req.status === 'rejected' ? '差戻し' : '承認待ち'}
+                        </span>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          ) : (
+          /* 12列グリッド */
           <div className="grid grid-cols-12 gap-4 sm:gap-6">
             {/* 左8列 */}
             <div className="col-span-12 lg:col-span-8 space-y-4 sm:space-y-6">
@@ -787,6 +887,7 @@ export default function DashboardPage() {
               </motion.div>
             </div>
           </div>
+          )}
         </div>
       </main>
     </div>

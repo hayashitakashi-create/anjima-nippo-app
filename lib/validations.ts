@@ -74,6 +74,7 @@ export const nippoCreateSchema = z.object({
 
 // 休暇届
 export const leaveRequestSchema = z.object({
+  applicantName: z.string().max(100).optional().nullable(),
   date: dateString,
   leaveType: z.enum(['有給', '振替', '代休', '看護', '介護', '特別休暇', 'その他']),
   leaveUnit: z.enum(['full', 'am', 'pm', 'hourly']).optional().default('full'),

@@ -207,15 +207,15 @@ export default function WorkReportPrintPage() {
                 <th style={{ width: '55px' }}>天候</th>
                 <td style={{ width: '80px' }}>{report.weather || ''}</td>
                 <th style={{ width: '55px' }}>氏名</th>
-                <td style={{ width: '120px' }}>{userName}</td>
-                <th style={{ width: '60px' }}>工事名</th>
-                <td>{report.projectName}</td>
+                <td>{userName}</td>
               </tr>
               <tr>
                 <th>工事種別</th>
                 <td>{report.projectType || ''}</td>
                 <th>工事番号</th>
-                <td colSpan={5}>{report.projectId || ''}</td>
+                <td>{report.projectId || ''}</td>
+                <th>工事名</th>
+                <td>{report.projectName}</td>
               </tr>
             </tbody>
           </table>
@@ -268,7 +268,6 @@ export default function WorkReportPrintPage() {
                       <th style={{ width: '40px' }}>数量</th>
                       <th style={{ width: '55px' }}>単価</th>
                       <th style={{ width: '65px' }}>金額</th>
-                      <th style={{ width: '70px' }}>外注先</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -288,7 +287,6 @@ export default function WorkReportPrintPage() {
                           <td className="text-right">
                             {amt > 0 ? `¥${amt.toLocaleString()}` : ''}
                           </td>
-                          <td>{record?.subcontractor || ''}</td>
                         </tr>
                       )
                     })}
@@ -297,7 +295,6 @@ export default function WorkReportPrintPage() {
                       <td className="text-right font-bold">
                         {totalAmount > 0 ? `¥${totalAmount.toLocaleString()}` : ''}
                       </td>
-                      <td></td>
                     </tr>
                   </tbody>
                 </table>

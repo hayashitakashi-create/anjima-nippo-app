@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     const body = await request.json()
-    const { reportIds, approvalRouteId } = body
+    const { reportIds } = body
 
     if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
       return NextResponse.json(
@@ -55,58 +55,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 承認ルートから承認者役職リストを取得
-    let approvalRoles: string[] = []
-    let routeId: string | undefined = undefined
-
-    if (approvalRouteId) {
-      const route = await prisma.approvalRoute.findUnique({
-        where: { id: approvalRouteId },
-      })
-      if (route && route.isActive) {
-        try { approvalRoles = JSON.parse(route.roles) } catch {}
-        routeId = route.id
-      }
-    }
-
-    if (approvalRoles.length === 0) {
-      const defaultRoute = await prisma.approvalRoute.findFirst({
-        where: { isDefault: true, isActive: true },
-      })
-      if (defaultRoute) {
-        try { approvalRoles = JSON.parse(defaultRoute.roles) } catch {}
-        routeId = defaultRoute.id
-      }
-    }
-
-    if (approvalRoles.length === 0) {
-      // フォールバック
-      approvalRoles = ['社長', '専務', '常務', '部長']
-    }
-
-    // 各日報に対して承認レコードを作成
+    // 各日報に対して承認レコードを作成（簡略化: 1件の確認者レコード）
     const approvalRecords: { dailyReportId: string; approverRole: string; status: string }[] = []
     for (const reportId of reportIds) {
-      for (const role of approvalRoles) {
-        approvalRecords.push({
-          dailyReportId: reportId,
-          approverRole: role,
-          status: 'pending',
-        })
-      }
+      approvalRecords.push({
+        dailyReportId: reportId,
+        approverRole: '確認者',
+        status: 'pending',
+      })
     }
 
     await prisma.approval.createMany({
       data: approvalRecords
     })
-
-    // 承認ルートIDを日報に記録
-    if (routeId) {
-      await prisma.dailyReport.updateMany({
-        where: { id: { in: reportIds } },
-        data: { approvalRouteId: routeId },
-      })
-    }
 
     return NextResponse.json({
       success: true,

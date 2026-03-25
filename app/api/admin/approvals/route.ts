@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
       // 並列でクエリ実行（営業日報 + 作業日報 + 休暇届の3つを取得）
       const [activeUsers, periodReports, periodWorkReports, periodLeaveRequests] = await Promise.all([
         prisma.user.findMany({
-          where: { isActive: true },
+          where: { isActive: true, showInCalendar: true },
           select: { id: true, name: true, position: true },
           orderBy: { name: 'asc' },
         }),

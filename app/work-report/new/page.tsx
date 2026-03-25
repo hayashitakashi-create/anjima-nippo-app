@@ -56,7 +56,7 @@ function WorkReportNewPageContent() {
   const [projectLoaded, setProjectLoaded] = useState(false)
 
   // マスタデータ
-  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number }[]>([])
+  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number; defaultVolume?: string }[]>([])
   const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
   const [subcontractorMasterList, setSubcontractorMasterList] = useState<string[]>(DEFAULT_SUBCONTRACTORS)
   const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
@@ -150,7 +150,7 @@ function WorkReportNewPageContent() {
       if (materialsRes.ok) {
         const data = await materialsRes.json()
         if (data?.materials) {
-          setMaterialMasterList(data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0 })))
+          setMaterialMasterList(data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0, defaultVolume: m.defaultVolume || '' })))
         }
       }
       if (projectTypesRes.ok) {

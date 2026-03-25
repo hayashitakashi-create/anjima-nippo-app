@@ -21,6 +21,7 @@ model User {
   role              String   @default("user") // ユーザー権限 (admin/user)
   isApprover        Boolean  @default(false)  // 承認者かどうか
   isActive          Boolean  @default(true)   // アカウント有効/無効
+  showInCalendar    Boolean  @default(true)   // 提出状況カレンダーに表示するか
   mustChangePassword Boolean @default(true)   // 初回ログイン時にパスワード変更を要求
   defaultReportType String   @default("work") // デフォルト日報タイプ (sales: 営業日報, work: 作業日報)
   createdAt         DateTime @default(now())
@@ -325,7 +326,8 @@ model Unit {
 // 休暇届
 model LeaveRequest {
   id             String   @id @default(cuid())
-  userId         String   // 申請者
+  userId         String   // 申請者(ログインユーザー)
+  applicantName  String?  // 申請対象者名（作業者名マスタから選択）
   date           DateTime // 休暇日
   leaveType      String   // 有給, 振替, 代休, 看護, 介護, 特別休暇, その他
   leaveUnit      String   @default("full") // full(全日), am(午前半休), pm(午後半休), hourly(時間休)

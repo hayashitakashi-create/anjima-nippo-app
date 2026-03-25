@@ -594,13 +594,7 @@ export default function EditNippoPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">承認状況</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {approvals.map((approval) => {
-                  const roleLabels: Record<string, string> = {
-                    president: '社長',
-                    executive_vice_president: '専務',
-                    managing_director: '常務',
-                    department_manager: '部長',
-                  }
-                  const roleLabel = roleLabels[approval.approverRole] || approval.approverRole
+                  const roleLabel = approval.approverRole
 
                   let statusIcon, statusLabel, statusStyle
                   switch (approval.status) {

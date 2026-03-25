@@ -87,9 +87,12 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    const { name, defaultVolume, defaultUnitPrice: bodyPrice } = body
     const updateData: any = {}
     if (isActive !== undefined) updateData.isActive = isActive
-    if (defaultUnitPrice !== undefined) updateData.defaultUnitPrice = defaultUnitPrice
+    if (bodyPrice !== undefined) updateData.defaultUnitPrice = bodyPrice
+    if (typeof name === 'string' && name.trim()) updateData.name = name.trim()
+    if (defaultVolume !== undefined) updateData.defaultVolume = defaultVolume?.trim() || null
 
     const material = await prisma.material.update({
       where: { id },

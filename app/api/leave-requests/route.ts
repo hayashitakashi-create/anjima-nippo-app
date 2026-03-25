@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         userId: true,
+        applicantName: true,
         date: true,
         leaveType: true,
         leaveUnit: true,
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { date, leaveType, leaveUnit, startTime, endTime, reason, attachmentData, attachmentName, attachmentType } = validation.data
+    const { applicantName, date, leaveType, leaveUnit, startTime, endTime, reason, attachmentData, attachmentName, attachmentType } = validation.data
     const unit = leaveUnit
 
     // 時間休の場合は開始・終了時刻が必須
@@ -146,6 +147,7 @@ export async function POST(request: NextRequest) {
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
         userId: user.id,
+        applicantName: applicantName || null,
         date: new Date(date),
         leaveType,
         leaveUnit: unit,

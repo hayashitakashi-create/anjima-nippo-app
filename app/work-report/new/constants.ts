@@ -42,7 +42,7 @@ export const generateTimeOptions = (): string[] => {
 export const TIME_OPTIONS = generateTimeOptions()
 
 // 最大件数
-export const MAX_WORKER_RECORDS = 11
+export const MAX_WORKER_RECORDS = 50
 export const MAX_MATERIAL_RECORDS = 5
 export const MAX_SUBCONTRACTOR_RECORDS = 10
 export const MAX_CONTACT_NOTES_LENGTH = 500

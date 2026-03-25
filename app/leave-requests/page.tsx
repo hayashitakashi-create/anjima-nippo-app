@@ -27,6 +27,7 @@ import {
 interface LeaveRequest {
   id: string
   userId: string
+  applicantName: string | null
   date: string
   leaveType: string
   leaveUnit: string
@@ -84,6 +85,7 @@ export default function LeaveRequestsPage() {
   const [deleting, setDeleting] = useState(false)
 
   // Form state
+  const [formApplicantName, setFormApplicantName] = useState('')
   const [formDate, setFormDate] = useState(toDateString(new Date()))
   const [formLeaveType, setFormLeaveType] = useState('有給')
   const [formLeaveUnit, setFormLeaveUnit] = useState('full')
@@ -91,6 +93,9 @@ export default function LeaveRequestsPage() {
   const [formEndTime, setFormEndTime] = useState('')
   const [formReason, setFormReason] = useState('')
   const [formAttachment, setFormAttachment] = useState<{ data: string; name: string; type: string } | null>(null)
+
+  // 作業者名マスタ
+  const [workerNames, setWorkerNames] = useState<string[]>([])
 
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date())
@@ -100,6 +105,17 @@ export default function LeaveRequestsPage() {
   useEffect(() => {
     fetchLeaveRequests()
   }, [currentMonth])
+
+  useEffect(() => {
+    fetch('/api/admin/workers', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.workers) {
+          setWorkerNames(data.workers.filter((w: any) => w.isActive).map((w: any) => w.name))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchLeaveRequests = async () => {
     try {
@@ -160,6 +176,7 @@ export default function LeaveRequestsPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
+          applicantName: formApplicantName || undefined,
           date: formDate,
           leaveType: formLeaveType,
           leaveUnit: formLeaveUnit,
@@ -378,6 +395,24 @@ export default function LeaveRequestsPage() {
             </h2>
           </div>
           <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+            {/* 申請者名 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                申請者名 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formApplicantName}
+                onChange={(e) => setFormApplicantName(e.target.value)}
+                required
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
+              >
+                <option value="">選択してください</option>
+                {workerNames.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Date */}
               <div>
@@ -606,7 +641,7 @@ export default function LeaveRequestsPage() {
                               <span key={leave.id} className={`inline-block text-[10px] sm:text-xs px-1 py-0.5 rounded font-medium leading-tight ${
                                 LEAVE_TYPE_COLORS[leave.leaveType] || 'bg-gray-100 text-gray-800'
                               }`}>
-                                {leave.leaveUnit === 'full' ? leave.leaveType : leave.leaveUnit === 'am' ? '午前' : leave.leaveUnit === 'pm' ? '午後' : '時間'}
+                                {leave.applicantName ? `${leave.applicantName} ` : ''}{leave.leaveUnit === 'full' ? leave.leaveType : leave.leaveUnit === 'am' ? '午前' : leave.leaveUnit === 'pm' ? '午後' : '時間'}
                               </span>
                             ))}
                           </div>
@@ -671,6 +706,11 @@ export default function LeaveRequestsPage() {
                             <p className="font-medium text-gray-900">
                               {formatDisplayDate(request.date)}
                             </p>
+                            {request.applicantName && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                {request.applicantName}
+                              </span>
+                            )}
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                               LEAVE_TYPE_COLORS[request.leaveType] || 'bg-gray-100 text-gray-800'
                             }`}>
