@@ -15,17 +15,38 @@ body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans
 .cover p{color:#ffffff !important}
 .cover .logo{width:120px;height:120px;margin:0 auto 32px}
 .cover .logo img{width:100%;height:100%;object-fit:contain}
-.sidebar-nav{position:fixed;top:0;left:0;width:220px;height:100vh;background:#fff;border-right:1px solid #e2e8f0;overflow-y:auto;padding:16px 0;z-index:100;font-size:13px}
-.sidebar-nav .nav-title{font-size:14px;font-weight:700;color:#0E3091;padding:12px 16px 8px;border-bottom:1px solid #e2e8f0;margin-bottom:8px}
-.sidebar-nav ol{list-style:none;counter-reset:sidenav;padding:0 8px}
-.sidebar-nav ol li{counter-increment:sidenav}
-.sidebar-nav ol li a{display:block;padding:6px 12px;color:#475569;text-decoration:none;border-radius:6px;transition:all .2s;line-height:1.4}
-.sidebar-nav ol li a::before{content:counter(sidenav) ". ";color:#0E3091;font-weight:600}
-.sidebar-nav ol li a:hover{background:#f0f9ff;color:#0E3091}
-.sidebar-nav ol li a.active{background:#eff6ff;color:#0E3091;font-weight:600}
-.main-content{margin-left:220px}
+html{scroll-behavior:smooth}
+.sidebar-nav{position:fixed;top:0;left:0;width:240px;height:100vh;background:linear-gradient(180deg,#fafbff 0%,#fff 100%);border-right:1px solid #e2e8f0;overflow-y:auto;padding:0;z-index:100;font-size:13px;display:flex;flex-direction:column;box-shadow:2px 0 8px rgba(0,0,0,.04);scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+.sidebar-nav::-webkit-scrollbar{width:4px}
+.sidebar-nav::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+.sidebar-nav .nav-header{position:sticky;top:0;background:linear-gradient(135deg,#0E3091,#1a4ab8);padding:16px 20px;z-index:1}
+.sidebar-nav .nav-header .nav-title{font-size:13px;font-weight:700;color:#fff;letter-spacing:.1em;margin:0}
+.sidebar-nav .nav-header .nav-subtitle{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px}
+.sidebar-nav .nav-body{flex:1;overflow-y:auto;padding:12px 10px 80px}
+.sidebar-nav ol{list-style:none;counter-reset:sidenav;padding:0}
+.sidebar-nav ol li{counter-increment:sidenav;margin-bottom:2px}
+.sidebar-nav ol li a{display:flex;align-items:baseline;gap:8px;padding:8px 12px;color:#64748b;text-decoration:none;border-radius:8px;transition:all .15s;line-height:1.4;border-left:3px solid transparent}
+.sidebar-nav ol li a .nav-num{min-width:20px;font-size:11px;font-weight:700;color:#94a3b8;text-align:right;transition:color .15s}
+.sidebar-nav ol li a .nav-text{flex:1}
+.sidebar-nav ol li a:hover{background:#f0f4ff;color:#0E3091;border-left-color:#93c5fd}
+.sidebar-nav ol li a:hover .nav-num{color:#0E3091}
+.sidebar-nav ol li a.active{background:#eff6ff;color:#0E3091;font-weight:600;border-left-color:#0E3091;box-shadow:0 1px 3px rgba(14,48,145,.1)}
+.sidebar-nav ol li a.active .nav-num{color:#0E3091}
+.sidebar-nav .nav-progress{position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:10px 16px}
+.sidebar-nav .nav-progress .progress-bar{height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden}
+.sidebar-nav .nav-progress .progress-fill{height:100%;background:linear-gradient(90deg,#0E3091,#3b82f6);border-radius:2px;transition:width .3s;width:0%}
+.sidebar-nav .nav-progress .progress-text{font-size:10px;color:#94a3b8;margin-top:4px;text-align:center}
+.main-content{margin-left:240px}
 .container{max-width:900px;margin:0 auto;padding:40px 32px}
-@media (max-width:768px){.sidebar-nav{display:none}.main-content{margin-left:0}}
+@media (max-width:768px){
+.sidebar-nav{transform:translateX(-100%);transition:transform .3s}
+.sidebar-nav.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.15)}
+.main-content{margin-left:0}
+.mobile-menu-btn{display:flex !important}
+.mobile-overlay{display:block !important}
+}
+.mobile-menu-btn{display:none;position:fixed;bottom:20px;left:20px;z-index:200;width:48px;height:48px;background:#0E3091;color:#fff;border:none;border-radius:50%;align-items:center;justify-content:center;font-size:20px;cursor:pointer;box-shadow:0 4px 12px rgba(14,48,145,.3)}
+.mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
 .toc{page-break-after:always}
 .toc h2{font-size:22px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:24px}
 .toc ol{list-style:none;counter-reset:toc}
@@ -67,6 +88,8 @@ body{background:white}
 .pdf-btn{display:none !important}
 .sidebar-nav{display:none !important}
 .main-content{margin-left:0 !important}
+.mobile-menu-btn{display:none !important}
+.mobile-overlay{display:none !important}
 }
 </style>
 </head>
@@ -79,23 +102,36 @@ body{background:white}
 
 <!-- ======== 左サイドバー目次 ======== -->
 <nav class="sidebar-nav" id="sidebarNav">
-  <div class="nav-title">📖 目次</div>
-  <ol>
-    <li><a href="#sec1">ログイン・ログアウト</a></li>
-    <li><a href="#sec2">ダッシュボード</a></li>
-    <li><a href="#sec3">営業日報</a></li>
-    <li><a href="#sec4">作業日報</a></li>
-    <li><a href="#sec5">物件管理</a></li>
-    <li><a href="#sec5b">休暇届</a></li>
-    <li><a href="#sec6">承認ワークフロー</a></li>
-    <li><a href="#sec7">管理者機能</a></li>
-    <li><a href="#sec8">設定・パスワード</a></li>
-    <li><a href="#sec9">提出状況カレンダー</a></li>
-    <li><a href="#sec10">セキュリティ</a></li>
-    <li><a href="#sec11">便利な機能</a></li>
-    <li><a href="#sec12">FAQ</a></li>
-  </ol>
+  <div class="nav-header">
+    <div class="nav-title">取扱説明書</div>
+    <div class="nav-subtitle">安島工業株式会社 日報システム</div>
+  </div>
+  <div class="nav-body">
+    <ol>
+      <li><a href="#sec1"><span class="nav-num">1</span><span class="nav-text">ログイン・ログアウト</span></a></li>
+      <li><a href="#sec2"><span class="nav-num">2</span><span class="nav-text">ダッシュボード</span></a></li>
+      <li><a href="#sec3"><span class="nav-num">3</span><span class="nav-text">営業日報</span></a></li>
+      <li><a href="#sec4"><span class="nav-num">4</span><span class="nav-text">作業日報</span></a></li>
+      <li><a href="#sec5"><span class="nav-num">5</span><span class="nav-text">物件管理</span></a></li>
+      <li><a href="#sec5b"><span class="nav-num">6</span><span class="nav-text">休暇届</span></a></li>
+      <li><a href="#sec6"><span class="nav-num">7</span><span class="nav-text">承認ワークフロー</span></a></li>
+      <li><a href="#sec7"><span class="nav-num">8</span><span class="nav-text">管理者機能</span></a></li>
+      <li><a href="#sec8"><span class="nav-num">9</span><span class="nav-text">設定・パスワード</span></a></li>
+      <li><a href="#sec9"><span class="nav-num">10</span><span class="nav-text">提出状況カレンダー</span></a></li>
+      <li><a href="#sec10"><span class="nav-num">11</span><span class="nav-text">セキュリティ</span></a></li>
+      <li><a href="#sec11"><span class="nav-num">12</span><span class="nav-text">便利な機能</span></a></li>
+      <li><a href="#sec12"><span class="nav-num">13</span><span class="nav-text">よくある質問</span></a></li>
+    </ol>
+  </div>
+  <div class="nav-progress">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText">0%</div>
+  </div>
 </nav>
+
+<!-- モバイル用メニューボタン・オーバーレイ -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" onclick="document.getElementById('sidebarNav').classList.toggle('open');document.getElementById('mobileOverlay').classList.toggle('active')">☰</button>
+<div class="mobile-overlay" id="mobileOverlay" onclick="document.getElementById('sidebarNav').classList.remove('open');this.classList.remove('active')"></div>
 
 <div class="main-content">
 
@@ -663,30 +699,62 @@ body{background:white}
 </div><!-- /.main-content -->
 
 <script>
-// サイドバー目次のスクロール追従ハイライト
 document.addEventListener('DOMContentLoaded', function() {
-  const links = document.querySelectorAll('.sidebar-nav a');
-  const sections = [];
+  var links = document.querySelectorAll('.sidebar-nav .nav-body a');
+  var sections = [];
+  var progressFill = document.getElementById('progressFill');
+  var progressText = document.getElementById('progressText');
+
   links.forEach(function(link) {
-    const id = link.getAttribute('href').replace('#', '');
-    const el = document.getElementById(id);
+    var id = link.getAttribute('href').replace('#', '');
+    var el = document.getElementById(id);
     if (el) sections.push({ id: id, el: el, link: link });
   });
 
   function updateActive() {
-    let current = '';
-    for (let i = sections.length - 1; i >= 0; i--) {
-      if (sections[i].el.getBoundingClientRect().top <= 120) {
+    var current = '';
+    var currentIdx = 0;
+    for (var i = sections.length - 1; i >= 0; i--) {
+      if (sections[i].el.getBoundingClientRect().top <= 150) {
         current = sections[i].id;
+        currentIdx = i;
         break;
       }
     }
+
     links.forEach(function(link) {
-      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+      var isActive = link.getAttribute('href') === '#' + current;
+      link.classList.toggle('active', isActive);
+      // アクティブ項目をサイドバー内でスクロール表示
+      if (isActive) {
+        link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
     });
+
+    // 読了プログレス
+    var scrollTop = window.pageYOffset;
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    var progress = docHeight > 0 ? Math.min(100, Math.round((scrollTop / docHeight) * 100)) : 0;
+    if (progressFill) progressFill.style.width = progress + '%';
+    if (progressText) progressText.textContent = (currentIdx + 1) + ' / ' + sections.length + '　(' + progress + '%)';
   }
 
-  window.addEventListener('scroll', updateActive);
+  // モバイル：リンククリックでサイドバー閉じる
+  links.forEach(function(link) {
+    link.addEventListener('click', function() {
+      document.getElementById('sidebarNav').classList.remove('open');
+      var overlay = document.getElementById('mobileOverlay');
+      if (overlay) overlay.classList.remove('active');
+    });
+  });
+
+  var ticking = false;
+  window.addEventListener('scroll', function() {
+    if (!ticking) {
+      requestAnimationFrame(function() { updateActive(); ticking = false; });
+      ticking = true;
+    }
+  });
   updateActive();
 });
 </script>
