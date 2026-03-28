@@ -72,7 +72,7 @@ body{background:white}
   <p class="subtitle" style="color:#ffffff">取扱説明書</p>
   <div class="meta" style="color:#ffffff">
     <p style="font-size:18px;font-weight:600;color:#ffffff">安島工業株式会社</p>
-    <p style="color:#ffffff">Version 2.0 ― 2026年3月</p>
+    <p style="color:#ffffff">Version 3.0 ― 2026年3月</p>
     <p style="color:#ffffff">本マニュアルは管理者・一般ユーザー共通のドキュメントです</p>
   </div>
 </div>
@@ -86,7 +86,7 @@ body{background:white}
     <li><a href="#sec3">営業日報の作成・閲覧</a></li>
     <li><a href="#sec4">作業日報の作成・閲覧</a></li>
     <li><a href="#sec5">物件管理</a></li>
-    <li><a href="#sec6">承認ワークフロー</a></li>
+    <li><a href="#sec6">承認ワークフロー（4段階並列承認）</a></li>
     <li><a href="#sec7">管理者機能</a></li>
     <li><a href="#sec8">設定・パスワード変更</a></li>
     <li><a href="#sec9">提出状況カレンダー</a></li>
@@ -325,28 +325,44 @@ body{background:white}
 <div class="container section" id="sec6">
   <h2 class="section-title">6. 承認ワークフロー</h2>
 
-  <p>営業日報には承認機能があります。日報を提出すると、設定された承認経路に従って承認者に通知が届きます。</p>
+  <p>営業日報には<strong>4段階の並列承認</strong>機能があります。日報を提出すると、4つの承認ステップが同時に作成され、各承認者が独立して承認を行います。</p>
+
+  <h3>4段階承認の仕組み</h3>
+  <p>日報が提出されると、以下の4つの承認が同時に発生します。順番に関係なく、各承認者がいつでも承認できます。</p>
+  <table>
+    <tr><th>承認ロール</th><th>該当する役職</th></tr>
+    <tr><td><strong>上長</strong></td><td>部長（古川一彦・福田誠・安島篤志）、課長（安島圭介・田中剛士・福代司）</td></tr>
+    <tr><td><strong>常務</strong></td><td>常務（金山昭徳）</td></tr>
+    <tr><td><strong>専務</strong></td><td>専務</td></tr>
+    <tr><td><strong>社長</strong></td><td>社長</td></tr>
+  </table>
 
   <h3>承認の流れ</h3>
   <ol class="steps">
     <li>社員が営業日報を提出します</li>
-    <li>承認経路に設定された承認者（社長・専務・常務・部長など）に通知が届きます</li>
-    <li>承認者は承認画面で内容を確認し、「承認」または「差戻し」を行います</li>
-    <li>全承認者が承認すると、日報のステータスが「承認済み」に変わります</li>
+    <li>上長・常務・専務・社長の4つの承認が同時に作成されます</li>
+    <li>各承認者は自分の担当分をいつでも承認・差戻しできます（順番を待つ必要はありません）</li>
+    <li>4名すべてが承認すると、日報のステータスが「承認済み」に変わります</li>
   </ol>
 
   <img src="/screenshots/13_admin_approvals.png" alt="承認管理画面" class="screenshot">
-  <p class="caption">図6-1: 承認管理画面</p>
+  <p class="caption">図6-1: 承認管理画面（各承認者のステータスが色分け表示されます）</p>
 
-  <h3>承認ステータス</h3>
+  <h3>承認ステータスの見方</h3>
+  <p>承認管理画面および日報詳細画面では、4段階の承認状況がバッジで表示されます。</p>
   <table>
-    <tr><th>ステータス</th><th>説明</th></tr>
-    <tr><td>承認待ち</td><td>提出済みで、承認者の対応を待っている状態</td></tr>
-    <tr><td>承認済み</td><td>全承認者が承認した状態</td></tr>
-    <tr><td>差戻し</td><td>承認者が内容に問題ありとして差し戻した状態。修正後に再提出が必要</td></tr>
+    <tr><th>表示</th><th>意味</th></tr>
+    <tr><td><span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">承認待ち</span></td><td>まだ承認されていない状態</td></tr>
+    <tr><td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">承認済み</span></td><td>承認者が承認した状態</td></tr>
+    <tr><td><span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">差戻し</span></td><td>承認者が差し戻した状態</td></tr>
   </table>
 
-  <div class="tip">承認経路は管理者が「管理画面 → 承認経路設定」で変更できます。</div>
+  <h3>一括承認</h3>
+  <p>承認管理画面では、複数の日報をまとめて承認する「一括承認」機能があります。自分の承認権限に該当する日報のみが一括承認の対象となります。</p>
+
+  <div class="tip">管理画面で未承認者が一目でわかるよう表示されるため、承認漏れを防ぐことができます。</div>
+
+  <div class="warn">自分の日報を承認することはできません。また、自分の役職に対応する承認ロール以外の承認は行えません。</div>
 </div>
 
 <!-- ======== 7. 管理者機能 ======== -->
@@ -357,6 +373,16 @@ body{background:white}
 
   <img src="/screenshots/11_admin_top.png" alt="管理画面トップ" class="screenshot">
   <p class="caption">図7-1: 管理画面トップ</p>
+
+  <h3>管理画面のナビゲーション</h3>
+  <p>各管理サブページには共通のナビゲーションが用意されています。</p>
+  <table>
+    <tr><th>操作</th><th>説明</th></tr>
+    <tr><td><strong>ページタイトル（左上アイコン）</strong></td><td>クリックすると管理画面TOPに戻ります</td></tr>
+    <tr><td><strong>「管理画面に戻る」ボタン</strong></td><td>ページ上部に表示され、管理画面TOPに戻ります</td></tr>
+    <tr><td><strong>盾アイコン（ヘッダー右）</strong></td><td>管理画面TOPに戻ります</td></tr>
+    <tr><td><strong>家アイコン（ヘッダー右）</strong></td><td>ダッシュボード（TOP画面）に戻ります</td></tr>
+  </table>
 
   <h3>ユーザー管理</h3>
   <p>社員の追加・編集・無効化を行います。</p>
@@ -511,6 +537,10 @@ body{background:white}
 
   <h3>印刷機能</h3>
   <p>各日報の詳細画面から印刷用レイアウトで出力できます。A4用紙に最適化されたレイアウトで、そのまま提出・保管に使えます。</p>
+  <p>印刷時のテキストは黒色で出力されるため、視認性に優れています。</p>
+
+  <h4>休暇届の印刷</h4>
+  <p>休暇届の印刷画面では、申請者名が正しく表示されます。印刷画面上部の「戻る」ボタンをクリックすると、休暇届一覧に戻ります。</p>
 </div>
 
 <!-- ======== 12. FAQ ======== -->
@@ -553,7 +583,7 @@ body{background:white}
 <!-- ======== フッター ======== -->
 <div class="container" style="text-align:center;padding:40px 32px 60px;color:#94a3b8;font-size:12px;border-top:1px solid #e2e8f0;margin-top:48px">
   <p>安島工業株式会社 日報システム 取扱説明書</p>
-  <p>Version 2.0 ― 2026年3月 発行</p>
+  <p>Version 3.0 ― 2026年3月 発行</p>
   <p style="margin-top:8px">© 2026 安島工業株式会社</p>
 </div>
 

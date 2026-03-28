@@ -327,7 +327,7 @@ export default function AdminLeaveRequestsPage() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
+            <Link href="/admin" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-green-600 flex items-center justify-center">
                 <Palmtree className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
@@ -335,7 +335,7 @@ export default function AdminLeaveRequestsPage() {
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">休暇届管理</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">全社員の休暇届</p>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center space-x-1 sm:space-x-3">
               <Link href="/admin" className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="管理画面">
                 <Shield className="h-5 w-5" />
@@ -352,6 +352,17 @@ export default function AdminLeaveRequestsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
+        {/* 管理画面に戻る */}
+        <div className="mb-4">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            管理画面に戻る
+          </Link>
+        </div>
+
         {/* メッセージ */}
         {message && (
           <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex justify-between items-center">

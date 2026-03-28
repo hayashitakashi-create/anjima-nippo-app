@@ -65,6 +65,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </div>
 
+          {/* 管理画面TOPに戻る */}
+          <div className="px-4 pt-4">
+            <Link
+              href="/admin"
+              className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>管理画面に戻る</span>
+            </Link>
+          </div>
+
           {/* メニュー */}
           <nav className="flex-1 p-4">
             <ul className="space-y-2">

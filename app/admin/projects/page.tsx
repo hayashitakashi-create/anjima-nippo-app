@@ -372,7 +372,7 @@ export default function AdminProjectsPage() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+            <Link href="/admin" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-600 flex items-center justify-center">
                 <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>

@@ -234,7 +234,7 @@ export default function AuditLogPage() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           <div className="flex justify-between items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+            <Link href="/admin" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-600 flex items-center justify-center">
                 <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
@@ -259,6 +259,19 @@ export default function AuditLogPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
+        {/* 管理画面に戻る */}
+        <div className="mb-4">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            管理画面に戻る
+          </Link>
+        </div>
+
         {/* エラーメッセージ */}
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex justify-between items-center">
