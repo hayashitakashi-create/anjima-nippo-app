@@ -15,7 +15,17 @@ body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans
 .cover p{color:#ffffff !important}
 .cover .logo{width:120px;height:120px;margin:0 auto 32px}
 .cover .logo img{width:100%;height:100%;object-fit:contain}
+.sidebar-nav{position:fixed;top:0;left:0;width:220px;height:100vh;background:#fff;border-right:1px solid #e2e8f0;overflow-y:auto;padding:16px 0;z-index:100;font-size:13px}
+.sidebar-nav .nav-title{font-size:14px;font-weight:700;color:#0E3091;padding:12px 16px 8px;border-bottom:1px solid #e2e8f0;margin-bottom:8px}
+.sidebar-nav ol{list-style:none;counter-reset:sidenav;padding:0 8px}
+.sidebar-nav ol li{counter-increment:sidenav}
+.sidebar-nav ol li a{display:block;padding:6px 12px;color:#475569;text-decoration:none;border-radius:6px;transition:all .2s;line-height:1.4}
+.sidebar-nav ol li a::before{content:counter(sidenav) ". ";color:#0E3091;font-weight:600}
+.sidebar-nav ol li a:hover{background:#f0f9ff;color:#0E3091}
+.sidebar-nav ol li a.active{background:#eff6ff;color:#0E3091;font-weight:600}
+.main-content{margin-left:220px}
 .container{max-width:900px;margin:0 auto;padding:40px 32px}
+@media (max-width:768px){.sidebar-nav{display:none}.main-content{margin-left:0}}
 .toc{page-break-after:always}
 .toc h2{font-size:22px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:24px}
 .toc ol{list-style:none;counter-reset:toc}
@@ -55,6 +65,8 @@ body{background:white}
 .screenshot{max-width:95%;box-shadow:none}
 .tip,.warn{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .pdf-btn{display:none !important}
+.sidebar-nav{display:none !important}
+.main-content{margin-left:0 !important}
 }
 </style>
 </head>
@@ -64,6 +76,28 @@ body{background:white}
   <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
   PDF ダウンロード
 </button>
+
+<!-- ======== 左サイドバー目次 ======== -->
+<nav class="sidebar-nav" id="sidebarNav">
+  <div class="nav-title">📖 目次</div>
+  <ol>
+    <li><a href="#sec1">ログイン・ログアウト</a></li>
+    <li><a href="#sec2">ダッシュボード</a></li>
+    <li><a href="#sec3">営業日報</a></li>
+    <li><a href="#sec4">作業日報</a></li>
+    <li><a href="#sec5">物件管理</a></li>
+    <li><a href="#sec5b">休暇届</a></li>
+    <li><a href="#sec6">承認ワークフロー</a></li>
+    <li><a href="#sec7">管理者機能</a></li>
+    <li><a href="#sec8">設定・パスワード</a></li>
+    <li><a href="#sec9">提出状況カレンダー</a></li>
+    <li><a href="#sec10">セキュリティ</a></li>
+    <li><a href="#sec11">便利な機能</a></li>
+    <li><a href="#sec12">FAQ</a></li>
+  </ol>
+</nav>
+
+<div class="main-content">
 
 <!-- ======== カバーページ ======== -->
 <div class="cover">
@@ -86,6 +120,7 @@ body{background:white}
     <li><a href="#sec3">営業日報の作成・閲覧</a></li>
     <li><a href="#sec4">作業日報の作成・閲覧</a></li>
     <li><a href="#sec5">物件管理</a></li>
+    <li><a href="#sec5b">休暇届の申請・管理</a></li>
     <li><a href="#sec6">承認ワークフロー（4段階並列承認）</a></li>
     <li><a href="#sec7">管理者機能</a></li>
     <li><a href="#sec8">設定・パスワード変更</a></li>
@@ -319,6 +354,44 @@ body{background:white}
   </ol>
 
   <div class="warn">日報が紐づいている物件は削除できません。不要な物件は「アーカイブ」に変更してください。</div>
+</div>
+
+<!-- ======== 5b. 休暇届 ======== -->
+<div class="container section" id="sec5b">
+  <h2 class="section-title">休暇届の申請・管理</h2>
+
+  <p>社員は休暇届を申請し、管理者が一覧で確認・管理できます。</p>
+
+  <h3>休暇届の申請方法</h3>
+  <ol class="steps">
+    <li>ダッシュボードの「休暇届」タブを選択します</li>
+    <li>「新規申請」ボタンをクリックします</li>
+    <li>休暇の種別（有給休暇・特別休暇など）を選択します</li>
+    <li>開始日・終了日を入力します</li>
+    <li>理由を入力し、「申請」ボタンをクリックします</li>
+  </ol>
+
+  <h3>休暇届の種別</h3>
+  <table>
+    <tr><th>種別</th><th>説明</th></tr>
+    <tr><td>有給休暇</td><td>年次有給休暇の取得</td></tr>
+    <tr><td>特別休暇</td><td>慶弔休暇など会社規定の特別休暇</td></tr>
+    <tr><td>振替休日</td><td>休日出勤の代替休暇</td></tr>
+    <tr><td>その他</td><td>上記に該当しない休暇</td></tr>
+  </table>
+
+  <h3>休暇届の管理（管理者）</h3>
+  <p>管理者は「管理画面 → 休暇届管理」から全社員の休暇届を確認できます。承認・却下の操作が行えます。</p>
+
+  <h3>休暇届の印刷</h3>
+  <p>休暇届の詳細画面から印刷用レイアウトで出力できます。</p>
+  <ul style="margin:8px 0 16px 20px;font-size:14px;color:#475569">
+    <li><strong>申請者名</strong>が印刷画面に正しく反映されます</li>
+    <li>印刷画面の「戻る」ボタンで休暇届一覧に戻ります</li>
+    <li>「印刷 / PDF保存」ボタンでブラウザの印刷機能が起動します</li>
+  </ul>
+
+  <div class="tip">提出状況カレンダーでは、有給休暇はピンク色の「有」バッジで表示されます。</div>
 </div>
 
 <!-- ======== 6. 承認ワークフロー ======== -->
@@ -587,5 +660,35 @@ body{background:white}
   <p style="margin-top:8px">© 2026 安島工業株式会社</p>
 </div>
 
+</div><!-- /.main-content -->
+
+<script>
+// サイドバー目次のスクロール追従ハイライト
+document.addEventListener('DOMContentLoaded', function() {
+  const links = document.querySelectorAll('.sidebar-nav a');
+  const sections = [];
+  links.forEach(function(link) {
+    const id = link.getAttribute('href').replace('#', '');
+    const el = document.getElementById(id);
+    if (el) sections.push({ id: id, el: el, link: link });
+  });
+
+  function updateActive() {
+    let current = '';
+    for (let i = sections.length - 1; i >= 0; i--) {
+      if (sections[i].el.getBoundingClientRect().top <= 120) {
+        current = sections[i].id;
+        break;
+      }
+    }
+    links.forEach(function(link) {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+  }
+
+  window.addEventListener('scroll', updateActive);
+  updateActive();
+});
+</script>
 </body>
 </html>
