@@ -4,6 +4,24 @@ import { notifyReportApproved, notifyReportRejected } from '@/lib/notifications'
 import { requirePermission, authErrorResponse } from '@/lib/auth'
 import { logAuditEvent } from '@/lib/audit-log'
 
+// 承認者の役職 → 承認可能なapproverRoleの対応
+function getApprovalRolesForUser(position: string | null | undefined): string[] {
+  if (!position) return []
+  switch (position) {
+    case '部長':
+    case '課長':
+      return ['上長']
+    case '常務':
+      return ['常務']
+    case '専務':
+      return ['専務']
+    case '社長':
+      return ['社長']
+    default:
+      return []
+  }
+}
+
 // 承認待ち日報一覧を取得（管理者用）
 export async function GET(request: NextRequest) {
   try {
@@ -312,10 +330,18 @@ export async function PUT(request: NextRequest) {
 
       const newStatus = action === 'bulk_approve' ? 'approved' : 'rejected'
 
+      // 承認者の役職に対応するロールのみ更新
+      const adminUser = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true } })
+      const allowedRoles = getApprovalRolesForUser(adminUser?.position)
+
       // トランザクションで一括処理
       await prisma.$transaction(async (tx) => {
+        const whereClause: any = { dailyReportId: { in: reportIds } }
+        if (allowedRoles.length > 0) {
+          whereClause.approverRole = { in: allowedRoles }
+        }
         await tx.approval.updateMany({
-          where: { dailyReportId: { in: reportIds } },
+          where: whereClause,
           data: {
             status: newStatus,
             approverUserId: admin.id,
@@ -376,8 +402,16 @@ export async function PUT(request: NextRequest) {
 
       const newStatus = action === 'approve_all' ? 'approved' : 'rejected'
 
+      // 承認者の役職に対応するロールのみ更新
+      const adminUserForAll = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true } })
+      const allowedRolesForAll = getApprovalRolesForUser(adminUserForAll?.position)
+      const whereClauseForAll: any = { dailyReportId: reportId }
+      if (allowedRolesForAll.length > 0) {
+        whereClauseForAll.approverRole = { in: allowedRolesForAll }
+      }
+
       await prisma.approval.updateMany({
-        where: { dailyReportId: reportId },
+        where: whereClauseForAll,
         data: {
           status: newStatus,
           approverUserId: admin.id,
@@ -460,6 +494,16 @@ export async function PUT(request: NextRequest) {
     if (approvalReport?.userId === admin.id) {
       return NextResponse.json(
         { error: '自分の日報を承認することはできません' },
+        { status: 403 }
+      )
+    }
+
+    // 役職チェック: 承認者が該当する役職の承認のみ操作可能
+    const adminUserIndiv = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true } })
+    const allowedRolesIndiv = getApprovalRolesForUser(adminUserIndiv?.position)
+    if (allowedRolesIndiv.length > 0 && !allowedRolesIndiv.includes(approval.approverRole)) {
+      return NextResponse.json(
+        { error: `この承認は${approval.approverRole}のみ操作可能です` },
         { status: 403 }
       )
     }

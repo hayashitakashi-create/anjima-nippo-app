@@ -55,14 +55,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 各日報に対して承認レコードを作成（簡略化: 1件の確認者レコード）
+    // 各日報に対して4段階承認レコードを作成
+    const approvalRoles = ['上長', '常務', '専務', '社長']
     const approvalRecords: { dailyReportId: string; approverRole: string; status: string }[] = []
     for (const reportId of reportIds) {
-      approvalRecords.push({
-        dailyReportId: reportId,
-        approverRole: '確認者',
-        status: 'pending',
-      })
+      for (const role of approvalRoles) {
+        approvalRecords.push({
+          dailyReportId: reportId,
+          approverRole: role,
+          status: 'pending',
+        })
+      }
     }
 
     await prisma.approval.createMany({

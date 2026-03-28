@@ -24,3 +24,27 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* フォーム入力要素のテキスト色を明示的に黒に設定 */
+input,
+select,
+textarea {
+  color: #111827; /* gray-900 */
+}
+
+/* 印刷時はすべてのテキストを黒に */
+@media print {
+  body,
+  input,
+  select,
+  textarea,
+  p,
+  span,
+  td,
+  th,
+  div {
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

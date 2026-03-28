@@ -21,6 +21,7 @@ export async function GET(
       select: {
         id: true,
         userId: true,
+        applicantName: true,
         date: true,
         leaveType: true,
         leaveUnit: true,
@@ -56,6 +57,7 @@ export async function GET(
         ...leaveRequest,
         userName: leaveUser?.name || '',
         userPosition: leaveUser?.position || '',
+        applicantName: leaveRequest.applicantName || '',
       },
     })
   } catch (error) {

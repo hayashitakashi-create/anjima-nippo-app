@@ -588,13 +588,34 @@ export default function EditNippoPage() {
             <div className="text-xs text-gray-500 mt-1 text-right">{(formData.specialNotes || '').length} / 500文字</div>
           </div>
 
-          {/* 承認ステータス */}
+          {/* 承認状況 */}
           {approvals.length > 0 && (
             <div className="bg-white shadow rounded-lg p-8">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">承認状況</h2>
+              {/* 承認バッジ */}
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                {['上長', '常務', '専務', '社長'].map((role) => {
+                  const approval = approvals.find(a => a.approverRole === role)
+                  const status = approval?.status || 'pending'
+                  const style = status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                    : status === 'rejected' ? 'bg-red-100 text-red-700 border-red-300'
+                    : 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                  const icon = status === 'approved' ? <CheckCircle className="w-4 h-4" />
+                    : status === 'rejected' ? <XCircle className="w-4 h-4" />
+                    : <Clock className="w-4 h-4" />
+                  return (
+                    <span key={role} className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold border ${style}`}>
+                      {icon}
+                      {role}
+                    </span>
+                  )
+                })}
+              </div>
+              {/* 各段階の詳細 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {approvals.map((approval) => {
-                  const roleLabel = approval.approverRole
+                {['上長', '常務', '専務', '社長'].map(role => {
+                  const approval = approvals.find(a => a.approverRole === role)
+                  if (!approval) return null
 
                   let statusIcon, statusLabel, statusStyle
                   switch (approval.status) {
@@ -622,7 +643,7 @@ export default function EditNippoPage() {
                       <div className="flex items-center space-x-3">
                         {statusIcon}
                         <div>
-                          <div className="font-medium">{roleLabel}</div>
+                          <div className="font-bold">{role}</div>
                           {approval.approver && (
                             <div className="text-xs opacity-75">
                               {approval.approver.name}

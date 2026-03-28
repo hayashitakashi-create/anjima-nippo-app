@@ -64,6 +64,8 @@ const ROLE_LABELS: Record<string, string> = {
   支店長: '支店長',
   工場長: '工場長',
   所長: '所長',
+  上長: '上長',
+  確認者: '確認者',
 }
 
 export default function NippoPrintPage() {
@@ -195,19 +197,18 @@ export default function NippoPrintPage() {
                   {report.user.position && <span className="ml-1 text-xs">({report.user.position})</span>}
                 </td>
                 <th style={{ width: '60px' }}>承認</th>
-                {/* 承認欄 */}
-                {report.approvals.length > 0 ? (
-                  report.approvals.map(approval => (
-                    <td key={approval.id} className="text-center" style={{ width: '80px' }}>
-                      <div className="text-[10px] text-gray-500">{ROLE_LABELS[approval.approverRole] || approval.approverRole}</div>
-                      <div className="text-xs font-medium">
-                        {approval.status === 'approved' ? '✓' : approval.status === 'rejected' ? '×' : ''}
+                {/* 4段階承認欄 */}
+                {['社長', '専務', '常務', '上長'].map(role => {
+                  const approval = report.approvals.find((a: any) => a.approverRole === role)
+                  return (
+                    <td key={role} className="text-center" style={{ width: '70px' }}>
+                      <div className="text-[10px] font-medium">{role}</div>
+                      <div className="text-xs font-bold">
+                        {approval?.status === 'approved' ? '✓' : approval?.status === 'rejected' ? '×' : ''}
                       </div>
                     </td>
-                  ))
-                ) : (
-                  <td colSpan={4} className="text-center text-xs text-gray-400">-</td>
-                )}
+                  )
+                })}
               </tr>
             </tbody>
           </table>

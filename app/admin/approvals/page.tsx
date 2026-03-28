@@ -1248,6 +1248,28 @@ export default function ApprovalsPage() {
                                 </span>
                               )}
                             </div>
+                            {/* 承認状況バッジ（未承認者がひと目でわかる） */}
+                            <div className="flex items-center gap-1.5 mt-1">
+                              {['上長', '常務', '専務', '社長'].map(role => {
+                                const approval = report.approvals.find((a: Approval) => a.approverRole === role)
+                                const st = approval?.status || 'pending'
+                                return (
+                                  <span
+                                    key={role}
+                                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                      st === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-300' :
+                                      st === 'rejected' ? 'bg-red-100 text-red-700 border-red-300' :
+                                      'bg-yellow-50 text-yellow-700 border-yellow-300'
+                                    }`}
+                                  >
+                                    {st === 'approved' ? <CheckCircle className="w-2.5 h-2.5" /> :
+                                     st === 'rejected' ? <XCircle className="w-2.5 h-2.5" /> :
+                                     <Clock className="w-2.5 h-2.5" />}
+                                    {role}
+                                  </span>
+                                )
+                              })}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-2">
@@ -1348,58 +1370,78 @@ export default function ApprovalsPage() {
                           </div>
                         )}
 
-                        {/* 承認ステータス詳細 */}
+                        {/* 承認状況 */}
                         <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                           <Shield className="w-4 h-4" />
-                          承認ステータス
+                          承認状況
                         </h4>
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          {['上長', '常務', '専務', '社長'].map((role) => {
+                            const approval = report.approvals.find(a => a.approverRole === role)
+                            const status = approval?.status || 'pending'
+                            return (
+                              <span key={role} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusStyle(status)}`}>
+                                {getStatusIcon(status)}
+                                {role}
+                              </span>
+                            )
+                          })}
+                        </div>
                         <div className="space-y-2">
-                          {report.approvals.map(approval => (
-                            <div
-                              key={approval.id}
-                              className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(approval.status)}`}>
-                                  {getStatusIcon(approval.status)}
-                                  {getStatusLabel(approval.status)}
-                                </span>
-                                <span className="text-sm font-medium text-gray-700">{approval.approverRole}</span>
-                                {approval.approver && (
-                                  <span className="text-xs text-gray-500">
-                                    ({approval.approver.name})
+                          {['上長', '常務', '専務', '社長'].map(role => {
+                            const approval = report.approvals.find(a => a.approverRole === role)
+                            if (!approval) return null
+                            return (
+                              <div
+                                key={approval.id}
+                                className={`flex items-center justify-between rounded-lg p-3 ${
+                                  approval.status === 'approved' ? 'bg-emerald-50 border border-emerald-200' :
+                                  approval.status === 'rejected' ? 'bg-red-50 border border-red-200' :
+                                  'bg-gray-50 border border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(approval.status)}`}>
+                                    {getStatusIcon(approval.status)}
+                                    {getStatusLabel(approval.status)}
                                   </span>
-                                )}
-                                {approval.approvedAt && (
-                                  <span className="text-xs text-gray-400">
-                                    {new Date(approval.approvedAt).toLocaleString('ja-JP')}
-                                  </span>
+                                  <span className="text-sm font-bold text-gray-900">{approval.approverRole}</span>
+                                  {approval.approver && (
+                                    <span className="text-xs text-gray-600 font-medium">
+                                      （{approval.approver.name}）
+                                    </span>
+                                  )}
+                                  {approval.approvedAt && (
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(approval.approvedAt).toLocaleString('ja-JP')}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* 個別の承認/差戻しボタン */}
+                                {approval.status === 'pending' && (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => handleApprove(approval.id, report.id)}
+                                      disabled={processing === approval.id}
+                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                      title="承認"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleReject(approval.id, report.id)}
+                                      disabled={processing === approval.id}
+                                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                      title="差戻し"
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
-
-                              {/* 個別の承認/差戻しボタン */}
-                              {approval.status === 'pending' && (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => handleApprove(approval.id, report.id)}
-                                    disabled={processing === approval.id}
-                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                                    title="承認"
-                                  >
-                                    <CheckCircle className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleReject(approval.id, report.id)}
-                                    disabled={processing === approval.id}
-                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                    title="差戻し"
-                                  >
-                                    <XCircle className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
 
                         {/* 日報詳細へのリンク */}

@@ -122,10 +122,12 @@ export async function POST(request: NextRequest) {
           })),
         },
         approvals: {
-          create: [{
-            approverRole: '確認者',
-            status: 'pending',
-          }],
+          create: [
+            { approverRole: '上長', status: 'pending', },
+            { approverRole: '常務', status: 'pending', },
+            { approverRole: '専務', status: 'pending', },
+            { approverRole: '社長', status: 'pending', },
+          ],
         },
       },
       include: {

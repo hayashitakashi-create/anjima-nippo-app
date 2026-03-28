@@ -8,6 +8,7 @@ interface LeaveDetail {
   userId: string
   userName: string
   userPosition: string
+  applicantName: string
   date: string
   leaveType: string
   leaveUnit: string
@@ -69,7 +70,8 @@ export default function LeaveRequestPrintPage() {
 
   useEffect(() => {
     if (data) {
-      document.title = `休暇届_${data.userName}_${formatDate(data.date)}`
+      const displayName = data.applicantName || data.userName
+      document.title = `休暇届_${displayName}_${formatDate(data.date)}`
     }
     return () => { document.title = '安島工業株式会社 日報システム' }
   }, [data])
@@ -103,7 +105,7 @@ export default function LeaveRequestPrintPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error || 'データが見つかりません'}</p>
-          <button onClick={() => router.back()} className="text-blue-600 hover:underline">戻る</button>
+          <button onClick={() => router.push('/leave-requests')} className="text-blue-600 hover:underline">戻る</button>
         </div>
       </div>
     )
@@ -144,7 +146,7 @@ export default function LeaveRequestPrintPage() {
           PDF出力 / 印刷
         </button>
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/leave-requests')}
           className="px-4 py-2.5 bg-white text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors shadow-lg border"
         >
           戻る
@@ -172,10 +174,13 @@ export default function LeaveRequestPrintPage() {
 
         {/* 申請者情報 */}
         <div className="text-right mb-10">
-          <p className="text-sm text-gray-600">申請者</p>
-          <p className="text-lg font-bold">{data.userName}</p>
+          <p className="text-sm text-gray-700">申請者</p>
+          <p className="text-lg font-bold">{data.applicantName || data.userName}</p>
+          {data.applicantName && data.applicantName !== data.userName && (
+            <p className="text-sm text-gray-700">（入力者: {data.userName}）</p>
+          )}
           {data.userPosition && (
-            <p className="text-sm text-gray-600">{data.userPosition}</p>
+            <p className="text-sm text-gray-700">{data.userPosition}</p>
           )}
         </div>
 
@@ -247,7 +252,7 @@ export default function LeaveRequestPrintPage() {
         </div>
 
         {/* フッター */}
-        <div className="mt-16 text-center text-xs text-gray-500">
+        <div className="mt-16 text-center text-xs text-gray-700">
           安島工業株式会社
         </div>
       </div>
