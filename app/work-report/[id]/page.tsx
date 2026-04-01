@@ -1035,14 +1035,12 @@ export default function WorkReportDetailPage() {
                           <div className="col-span-1 lg:col-span-2">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 当日</label>
                             <input
-                              type="number"
+                              type="text"
                               inputMode="decimal"
-                              step="0.001"
-                              min="0"
                               value={record.dailyHours || ''}
                               onChange={(e) => {
                                 const newRecords = [...workerRecords]
-                                const val = e.target.value
+                                const val = e.target.value.replace(/[^\d.]/g, '')
                                 newRecords[index].dailyHours = val === '' ? 0 : parseFloat(val) || 0
                                 setWorkerRecords(newRecords)
                               }}
@@ -1053,14 +1051,12 @@ export default function WorkReportDetailPage() {
                           <div className="col-span-1 lg:col-span-2">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 累計</label>
                             <input
-                              type="number"
+                              type="text"
                               inputMode="decimal"
-                              step="0.001"
-                              min="0"
                               value={record.totalHours || ''}
                               onChange={(e) => {
                                 const newRecords = [...workerRecords]
-                                const val = e.target.value
+                                const val = e.target.value.replace(/[^\d.]/g, '')
                                 newRecords[index].totalHours = val === '' ? 0 : parseFloat(val) || 0
                                 setWorkerRecords(newRecords)
                               }}
