@@ -21,14 +21,7 @@ import {
   DollarSign,
   ChevronDown,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  position?: string
-  role: string
-  permissions?: Record<string, boolean>
-}
+import { useAuth } from '@/hooks/useAuth'
 
 interface Summary {
   totalNippo: number
@@ -82,23 +75,11 @@ interface AnalyticsData {
 
 export default function AnalyticsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [months, setMonths] = useState(6)
   const [viewMode, setViewMode] = useState<'personal' | 'all'>('personal')
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(d => {
-        if (d?.user) setCurrentUser(d.user)
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
 
   useEffect(() => {
     if (!currentUser) return
@@ -120,12 +101,7 @@ export default function AnalyticsPage() {
       })
   }, [currentUser, months, viewMode])
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/login')
-  }
-
-  if (loading || !data) {
+  if (authLoading || loading || !data) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">分析データを読み込み中...</p>

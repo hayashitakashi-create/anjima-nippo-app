@@ -4,43 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminLayout from '@/components/AdminLayout'
 import Link from 'next/link'
-
-interface User {
-  id: string
-  name: string
-  position?: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
 
 export default function AdminSettingsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          if (!data.user.permissions?.system_settings) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-        }
-        setLoading(false)
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
-  }, [router])
+  const { user: currentUser, loading } = useAuth({ requiredPermission: 'system_settings' })
 
   if (loading) {
     return (

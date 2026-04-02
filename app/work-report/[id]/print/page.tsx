@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 
 interface WorkerRecord {
   name: string
@@ -61,19 +62,13 @@ export default function WorkReportPrintPage() {
   const params = useParams()
   const reportId = params.id as string
 
+  const { user: currentUser } = useAuth()
   const [report, setReport] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [userName, setUserName] = useState('')
+
+  const userName = currentUser?.name || ''
 
   useEffect(() => {
-    // ユーザー名取得
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (data?.user) setUserName(data.user.name)
-      })
-      .catch(() => {})
-
     // 作業日報データ取得
     fetch(`/api/work-report/${reportId}`)
       .then(res => {

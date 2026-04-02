@@ -4,47 +4,18 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminLayout from '@/components/AdminLayout'
 import Link from 'next/link'
-
-interface User {
-  id: string
-  name: string
-  position?: string
-  role: string
-  defaultReportType: string
-}
+import { useAuth } from '@/hooks/useAuth'
 
 export default function AdminNippoPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user: currentUser, loading } = useAuth({ requiredPermission: 'view_all_reports' })
   const [reportType, setReportType] = useState<'sales' | 'work'>('work')
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          if (!data.user.permissions?.view_all_reports) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-          // デフォルトの日報タイプを設定
-          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
-        }
-        setLoading(false)
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
-  }, [router])
+    if (currentUser?.defaultReportType) {
+      setReportType(currentUser.defaultReportType === 'work' ? 'work' : 'sales')
+    }
+  }, [currentUser])
 
   if (loading) {
     return (
