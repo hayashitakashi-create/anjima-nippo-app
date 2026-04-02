@@ -28,17 +28,8 @@ import {
   LogOut,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useMasterData } from '@/hooks/useMasterData'
 import { adminApi, apiGet, apiPut, apiPatch, apiDelete } from '@/lib/api'
-
-// マスタデータ（APIから取得できなかった場合のフォールバック）
-const DEFAULT_PROJECT_TYPES = [
-  '建築塗装工事',
-  '鋼橋塗装工事',
-  '防水工事',
-  '建築工事',
-  '区画線工事',
-  'とび土工工事',
-]
 
 interface WorkReport {
   id: string
@@ -101,8 +92,8 @@ export default function ProjectDetailPage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // 工事種別マスタから取得したリスト
-  const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
+  // 工事種別マスタ
+  const { projectTypesList } = useMasterData({ materials: false, subcontractors: false, units: false, workers: false })
 
   // 編集フォーム
   const [editForm, setEditForm] = useState({
@@ -122,20 +113,6 @@ export default function ProjectDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
-    // 工事種別マスタを取得
-    adminApi.fetchProjectTypes()
-      .then(data => {
-        if (data?.projectTypes) {
-          const activeTypes = data.projectTypes
-            .filter((pt: any) => pt.isActive)
-            .map((pt: any) => pt.name)
-          if (activeTypes.length > 0) {
-            setProjectTypesList(activeTypes)
-          }
-        }
-      })
-      .catch(err => console.error('工事種別マスタ取得エラー:', err))
-
     fetchProject()
   }, [projectId])
 

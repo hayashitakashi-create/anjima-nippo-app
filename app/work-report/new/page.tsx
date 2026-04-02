@@ -29,8 +29,8 @@ import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
 // Types
 import { WorkerRecord, MaterialRecord, SubcontractorRecord, calculateManHoursFromTime } from './types'
 import { useAuth } from '@/hooks/useAuth'
+import { useMasterData } from '@/hooks/useMasterData'
 import { adminApi, apiPost, apiGet } from '@/lib/api'
-import { WORKER_NAMES, DEFAULT_PROJECT_TYPES, DEFAULT_VOLUME_UNITS, DEFAULT_SUBCONTRACTORS } from './constants'
 
 // Components
 import {
@@ -58,11 +58,7 @@ function WorkReportNewPageContent() {
   const [projectLoaded, setProjectLoaded] = useState(false)
 
   // マスタデータ
-  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number; defaultVolume?: string }[]>([])
-  const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
-  const [subcontractorMasterList, setSubcontractorMasterList] = useState<string[]>(DEFAULT_SUBCONTRACTORS)
-  const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
-  const [workerNamesList, setWorkerNamesList] = useState<string[]>(WORKER_NAMES)
+  const { materialMasterList, projectTypesList, subcontractorMasterList, unitMasterList, workerNamesList } = useMasterData()
 
   // 前日コピー
   const [copyLoading, setCopyLoading] = useState('')
@@ -120,37 +116,8 @@ function WorkReportNewPageContent() {
     setShowDraftBanner(false)
   }
 
-  // 初期化: マスタデータ取得
+  // 初期化
   useEffect(() => {
-    // マスタデータ取得
-    Promise.all([
-      adminApi.fetchMaterials().catch(() => null),
-      adminApi.fetchProjectTypes().catch(() => null),
-      adminApi.fetchSubcontractors().catch(() => null),
-      adminApi.fetchUnits().catch(() => null),
-      adminApi.fetchWorkers().catch(() => null),
-    ]).then(([materialsData, projectTypesData, subcontractorsData, unitsData, workersData]) => {
-      if (materialsData?.materials) {
-        setMaterialMasterList(materialsData.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0, defaultVolume: m.defaultVolume || '' })))
-      }
-      if (projectTypesData?.projectTypes) {
-        const activeTypes = projectTypesData.projectTypes.filter((pt: any) => pt.isActive).map((pt: any) => pt.name)
-        if (activeTypes.length > 0) setProjectTypesList(activeTypes)
-      }
-      if (subcontractorsData?.subcontractors) {
-        const activeNames = subcontractorsData.subcontractors.filter((s: any) => s.isActive).map((s: any) => s.name)
-        if (activeNames.length > 0) setSubcontractorMasterList(activeNames)
-      }
-      if (unitsData?.units) {
-        const activeUnits = unitsData.units.filter((u: any) => u.isActive).map((u: any) => u.name)
-        if (activeUnits.length > 0) setUnitMasterList(activeUnits)
-      }
-      if (workersData?.workers) {
-        const activeWorkers = workersData.workers.filter((w: any) => w.isActive).map((w: any) => w.name)
-        if (activeWorkers.length > 0) setWorkerNamesList(activeWorkers)
-      }
-    }).catch(err => console.error('マスタデータ取得エラー:', err))
-
     // 今日の日付をデフォルトに設定
     const today = new Date()
     const formatted = today.toISOString().split('T')[0]

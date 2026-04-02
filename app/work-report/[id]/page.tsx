@@ -39,6 +39,7 @@ import {
   Printer
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useMasterData } from '@/hooks/useMasterData'
 import { adminApi, apiGet, apiPut, apiDelete } from '@/lib/api'
 
 interface WorkerRecord {
@@ -69,31 +70,6 @@ interface SubcontractorRecord {
   workerCount: number
   workContent: string
 }
-
-// マスタデータ（APIから取得できなかった場合のフォールバック）
-const DEFAULT_PROJECT_TYPES = [
-  '建築塗装工事',
-  '鋼橋塗装工事',
-  '防水工事',
-  '建築工事',
-  '区画線工事',
-]
-
-const WORKER_NAMES = [
-  '古藤　英紀', '矢野　誠', '山内　正和', '大塚　崇', '中原　稔', '三嶋　晶',
-  '伊藤　勝', '古曳　正樹', '松本　太', '佐野　弘和', '満田　純一', '齊藤　慰丈',
-  '井原　晃', '松本　誠', '加藤　光', '堀内　光雄', '梶谷　純', '金藤　恵子',
-  '安島　圭介', '山﨑　伸一', '足立　憲吉', '福田　誠', '安島　隆', '金山　昭徳',
-  '安島　篤志', '松本　倫典', '田邊　沙帆', '古川　一彦', '内田　邦男', '藤原　秀夫',
-  '田中　剛士', '小林　敬博', '福代　司', '池野　大樹', '中谷　凜大', '安部　倫太朗'
-]
-
-const DEFAULT_VOLUME_UNITS = ['ℓ', 'mℓ', 'm', '㎝']
-
-const DEFAULT_SUBCONTRACTORS = [
-  'キョウワビルト工業', '広野組', '又川工業', '景山工業',
-  '森下塗装', '鳥島工業', '岩佐塗装', '恒松塗装'
-]
 
 const WEATHER_OPTIONS = ['晴れ', '曇り', '晴れ後曇り', '曇り後晴れ', '雨', '雪']
 
@@ -146,27 +122,13 @@ export default function WorkReportDetailPage() {
   const reportId = params.id as string
 
   const { user: currentUser, logout: handleLogout } = useAuth()
+  const { materialMasterList, projectTypesList, subcontractorMasterList, unitMasterList, workerNamesList } = useMasterData()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
-
-  // 使用材料マスタから取得したリスト
-  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number; defaultVolume?: string }[]>([])
-
-  // 工事種別マスタから取得したリスト
-  const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
-
-  // 外注先マスタから取得したリスト
-  const [subcontractorMasterList, setSubcontractorMasterList] = useState<string[]>(DEFAULT_SUBCONTRACTORS)
-
-  // 単位マスタから取得したリスト
-  const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
-
-  // 作業者名マスタから取得したリスト
-  const [workerNamesList, setWorkerNamesList] = useState<string[]>(WORKER_NAMES)
 
   // 基本情報
   const [date, setDate] = useState('')
@@ -198,70 +160,8 @@ export default function WorkReportDetailPage() {
   // 連絡事項
   const [contactNotes, setContactNotes] = useState('')
 
-  // 初期データ読み込み: マスタデータ
+  // 初期データ読み込み: 作業日報データ
   useEffect(() => {
-    adminApi.fetchMaterials()
-      .then(data => {
-        if (data?.materials) {
-          setMaterialMasterList(
-            data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0, defaultVolume: m.defaultVolume || '' }))
-          )
-        }
-      })
-      .catch(err => console.error('材料マスタ取得エラー:', err))
-
-    adminApi.fetchProjectTypes()
-      .then(data => {
-        if (data?.projectTypes) {
-          const activeTypes = data.projectTypes
-            .filter((pt: any) => pt.isActive)
-            .map((pt: any) => pt.name)
-          if (activeTypes.length > 0) {
-            setProjectTypesList(activeTypes)
-          }
-        }
-      })
-      .catch(err => console.error('工事種別マスタ取得エラー:', err))
-
-    adminApi.fetchSubcontractors()
-      .then(data => {
-        if (data?.subcontractors) {
-          const activeNames = data.subcontractors
-            .filter((s: any) => s.isActive)
-            .map((s: any) => s.name)
-          if (activeNames.length > 0) {
-            setSubcontractorMasterList(activeNames)
-          }
-        }
-      })
-      .catch(err => console.error('外注先マスタ取得エラー:', err))
-
-    adminApi.fetchUnits()
-      .then(data => {
-        if (data?.units) {
-          const activeUnits = data.units
-            .filter((u: any) => u.isActive)
-            .map((u: any) => u.name)
-          if (activeUnits.length > 0) {
-            setUnitMasterList(activeUnits)
-          }
-        }
-      })
-      .catch(err => console.error('単位マスタ取得エラー:', err))
-
-    adminApi.fetchWorkers()
-      .then(data => {
-        if (data?.workers) {
-          const activeWorkers = data.workers
-            .filter((w: any) => w.isActive)
-            .map((w: any) => w.name)
-          if (activeWorkers.length > 0) {
-            setWorkerNamesList(activeWorkers)
-          }
-        }
-      })
-      .catch(err => console.error('作業者名マスタ取得エラー:', err))
-
     // 作業日報データ取得
     apiGet<any>(`/api/work-report/${reportId}`)
       .then(data => {

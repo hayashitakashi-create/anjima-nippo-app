@@ -34,9 +34,6 @@ import {
   MAX_WORKER_RECORDS,
   MAX_MATERIAL_RECORDS,
   MAX_SUBCONTRACTOR_RECORDS,
-  DEFAULT_PROJECT_TYPES,
-  DEFAULT_VOLUME_UNITS,
-  DEFAULT_SUBCONTRACTORS,
 } from '../new/constants'
 
 // 既存コンポーネントを再利用
@@ -48,6 +45,7 @@ import {
   ContactNotesCard,
 } from '../new/components'
 import { useAuth } from '@/hooks/useAuth'
+import { useMasterData } from '@/hooks/useMasterData'
 import { adminApi, apiGet, apiPost } from '@/lib/api'
 
 interface Project {
@@ -91,12 +89,8 @@ export default function BulkCreatePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterProjectType, setFilterProjectType] = useState('')
   const [statusTab, setStatusTab] = useState<'active' | 'completed' | 'archived'>('active')
-  const [projectTypesList, setProjectTypesList] = useState<string[]>(DEFAULT_PROJECT_TYPES)
-
   // マスタデータ
-  const [materialMasterList, setMaterialMasterList] = useState<{ name: string; unitPrice: number }[]>([])
-  const [unitMasterList, setUnitMasterList] = useState<string[]>(DEFAULT_VOLUME_UNITS)
-  const [subcontractorMasterList, setSubcontractorMasterList] = useState<string[]>(DEFAULT_SUBCONTRACTORS)
+  const { materialMasterList, projectTypesList, subcontractorMasterList, unitMasterList } = useMasterData({ workers: false })
 
   // 作業者記録
   const [workerRecords, setWorkerRecords] = useState<WorkerRecord[]>([{ ...INITIAL_WORKER_RECORD }])
@@ -127,30 +121,6 @@ export default function BulkCreatePage() {
   }, [authLoading])
 
   useEffect(() => {
-    // マスタデータ取得
-    Promise.all([
-      adminApi.fetchProjectTypes().catch(() => null),
-      adminApi.fetchMaterials().catch(() => null),
-      adminApi.fetchSubcontractors().catch(() => null),
-      adminApi.fetchUnits().catch(() => null),
-    ]).then(([ptData, matData, subData, unitData]) => {
-      if (ptData?.projectTypes) {
-        const activeTypes = ptData.projectTypes.filter((pt: any) => pt.isActive).map((pt: any) => pt.name)
-        if (activeTypes.length > 0) setProjectTypesList(activeTypes)
-      }
-      if (matData?.materials) {
-        setMaterialMasterList(matData.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0 })))
-      }
-      if (subData?.subcontractors) {
-        const activeNames = subData.subcontractors.filter((s: any) => s.isActive).map((s: any) => s.name)
-        if (activeNames.length > 0) setSubcontractorMasterList(activeNames)
-      }
-      if (unitData?.units) {
-        const activeUnits = unitData.units.filter((u: any) => u.isActive).map((u: any) => u.name)
-        if (activeUnits.length > 0) setUnitMasterList(activeUnits)
-      }
-    }).catch(err => console.error('マスタデータ取得エラー:', err))
-
     // 物件一覧取得
     fetchProjects('active')
   }, [router])
