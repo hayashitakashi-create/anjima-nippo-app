@@ -30,6 +30,8 @@ import {
   CheckSquare,
   Square,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet, apiPost, apiPut, apiPatch, apiDelete } from '@/lib/api'
 
 interface Approval {
   id: string
@@ -69,12 +71,6 @@ interface DailyReport {
     id: string
     name: string
   } | null
-}
-
-interface CurrentUser {
-  id: string
-  name: string
-  role: string
 }
 
 interface ManagedUser {
@@ -169,7 +165,7 @@ function getStatusIcon(status: string) {
 
 export default function ApprovalsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'approve_reports' })
   const [reports, setReports] = useState<DailyReport[]>([])
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -194,30 +190,13 @@ export default function ApprovalsPage() {
   // チェックボックス
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set())
 
-  // ユーザー情報取得 + 管理者チェック
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          if (!data.user.permissions?.approve_reports) { router.push('/dashboard'); return }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
   // ユーザー一覧取得
   useEffect(() => {
     if (!currentUser) return
-    fetch('/api/admin/users')
-      .then(res => res.json())
+    adminApi.fetchUsers()
       .then(data => {
         if (data.users) {
-          setUsers(data.users.filter((u: ManagedUser) => u.isActive !== false))
+          setUsers((data.users as any[]).filter((u: ManagedUser) => u.isActive !== false))
         }
       })
       .catch(err => console.error('ユーザー一覧取得エラー:', err))
@@ -238,13 +217,10 @@ export default function ApprovalsPage() {
   const fetchReports = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/approvals?status=${filter}&includeSubmissionStatus=true&calendarOffset=${calendarOffset}`)
-      if (res.ok) {
-        const data = await res.json()
-        setReports(data.reports)
-        if (data.submissionStatus) {
-          setSubmissionStatus(data.submissionStatus)
-        }
+      const data = await apiGet<any>(`/api/admin/approvals?status=${filter}&includeSubmissionStatus=true&calendarOffset=${calendarOffset}`)
+      setReports(data.reports)
+      if (data.submissionStatus) {
+        setSubmissionStatus(data.submissionStatus)
       }
     } catch (err) {
       console.error('承認一覧取得エラー:', err)
@@ -253,15 +229,11 @@ export default function ApprovalsPage() {
     }
   }
 
-  // カレンダーデータのみ取得（期間切り替え時）
   const fetchCalendarData = async () => {
     try {
-      const res = await fetch(`/api/admin/approvals?status=all&includeSubmissionStatus=true&calendarOffset=${calendarOffset}`)
-      if (res.ok) {
-        const data = await res.json()
-        if (data.submissionStatus) {
-          setSubmissionStatus(data.submissionStatus)
-        }
+      const data = await apiGet<any>(`/api/admin/approvals?status=all&includeSubmissionStatus=true&calendarOffset=${calendarOffset}`)
+      if (data.submissionStatus) {
+        setSubmissionStatus(data.submissionStatus)
       }
     } catch (err) {
       console.error('カレンダーデータ取得エラー:', err)
@@ -337,24 +309,15 @@ export default function ApprovalsPage() {
     setMessage('')
     setError('')
     try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportIds: Array.from(selectedReportIds),
-          action: 'bulk_approve'
-        }),
+      const data = await apiPut<any>('/api/admin/approvals', {
+        reportIds: Array.from(selectedReportIds),
+        action: 'bulk_approve'
       })
-      const data = await res.json()
-      if (res.ok) {
-        setMessage(data.message)
-        setSelectedReportIds(new Set())
-        fetchReports() // 再取得
-      } else {
-        setError(data.error || '承認に失敗しました')
-      }
-    } catch {
-      setError('承認に失敗しました')
+      setMessage(data.message)
+      setSelectedReportIds(new Set())
+      fetchReports()
+    } catch (err: any) {
+      setError(err.message || '承認に失敗しました')
     } finally {
       setProcessing(null)
     }
@@ -372,24 +335,15 @@ export default function ApprovalsPage() {
     setMessage('')
     setError('')
     try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportIds: Array.from(selectedReportIds),
-          action: 'bulk_reject'
-        }),
+      const data = await apiPut<any>('/api/admin/approvals', {
+        reportIds: Array.from(selectedReportIds),
+        action: 'bulk_reject'
       })
-      const data = await res.json()
-      if (res.ok) {
-        setMessage(data.message)
-        setSelectedReportIds(new Set())
-        fetchReports() // 再取得
-      } else {
-        setError(data.error || '差戻しに失敗しました')
-      }
-    } catch {
-      setError('差戻しに失敗しました')
+      setMessage(data.message)
+      setSelectedReportIds(new Set())
+      fetchReports()
+    } catch (err: any) {
+      setError(err.message || '差戻しに失敗しました')
     } finally {
       setProcessing(null)
     }
@@ -401,26 +355,16 @@ export default function ApprovalsPage() {
     setMessage('')
     setError('')
     try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportId, action: 'approve_all' }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setMessage(data.message)
-        // ローカル更新
-        setReports(prev => prev.map(r => {
-          if (r.id === reportId && data.report) {
-            return { ...r, approvals: data.report.approvals }
-          }
-          return r
-        }))
-      } else {
-        setError(data.error || '承認に失敗しました')
-      }
-    } catch {
-      setError('承認に失敗しました')
+      const data = await apiPut<any>('/api/admin/approvals', { reportId, action: 'approve_all' })
+      setMessage(data.message)
+      setReports(prev => prev.map(r => {
+        if (r.id === reportId && data.report) {
+          return { ...r, approvals: data.report.approvals }
+        }
+        return r
+      }))
+    } catch (err: any) {
+      setError(err.message || '承認に失敗しました')
     } finally {
       setProcessing(null)
     }
@@ -433,25 +377,16 @@ export default function ApprovalsPage() {
     setMessage('')
     setError('')
     try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportId, action: 'reject_all' }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setMessage(data.message)
-        setReports(prev => prev.map(r => {
-          if (r.id === reportId && data.report) {
-            return { ...r, approvals: data.report.approvals }
-          }
-          return r
-        }))
-      } else {
-        setError(data.error || '差戻しに失敗しました')
-      }
-    } catch {
-      setError('差戻しに失敗しました')
+      const data = await apiPut<any>('/api/admin/approvals', { reportId, action: 'reject_all' })
+      setMessage(data.message)
+      setReports(prev => prev.map(r => {
+        if (r.id === reportId && data.report) {
+          return { ...r, approvals: data.report.approvals }
+        }
+        return r
+      }))
+    } catch (err: any) {
+      setError(err.message || '差戻しに失敗しました')
     } finally {
       setProcessing(null)
     }
@@ -463,30 +398,21 @@ export default function ApprovalsPage() {
     setMessage('')
     setError('')
     try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approvalId, action: 'approve' }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setMessage(data.message)
-        setReports(prev => prev.map(r => {
-          if (r.id === reportId) {
-            return {
-              ...r,
-              approvals: r.approvals.map(a =>
-                a.id === approvalId ? data.approval : a
-              ),
-            }
+      const data = await apiPut<any>('/api/admin/approvals', { approvalId, action: 'approve' })
+      setMessage(data.message)
+      setReports(prev => prev.map(r => {
+        if (r.id === reportId) {
+          return {
+            ...r,
+            approvals: r.approvals.map(a =>
+              a.id === approvalId ? data.approval : a
+            ),
           }
-          return r
-        }))
-      } else {
-        setError(data.error || '承認に失敗しました')
-      }
-    } catch {
-      setError('承認に失敗しました')
+        }
+        return r
+      }))
+    } catch (err: any) {
+      setError(err.message || '承認に失敗しました')
     } finally {
       setProcessing(null)
     }
@@ -498,43 +424,27 @@ export default function ApprovalsPage() {
     setMessage('')
     setError('')
     try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approvalId, action: 'reject' }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setMessage(data.message)
-        setReports(prev => prev.map(r => {
-          if (r.id === reportId) {
-            return {
-              ...r,
-              approvals: r.approvals.map(a =>
-                a.id === approvalId ? data.approval : a
-              ),
-            }
+      const data = await apiPut<any>('/api/admin/approvals', { approvalId, action: 'reject' })
+      setMessage(data.message)
+      setReports(prev => prev.map(r => {
+        if (r.id === reportId) {
+          return {
+            ...r,
+            approvals: r.approvals.map(a =>
+              a.id === approvalId ? data.approval : a
+            ),
           }
-          return r
-        }))
-      } else {
-        setError(data.error || '差戻しに失敗しました')
-      }
-    } catch {
-      setError('差戻しに失敗しました')
+        }
+        return r
+      }))
+    } catch (err: any) {
+      setError(err.message || '差戻しに失敗しました')
     } finally {
       setProcessing(null)
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
+
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr)

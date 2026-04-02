@@ -18,12 +18,8 @@ import {
   Check,
   GripVertical,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, ApiError } from '@/lib/api'
 
 interface WorkerName {
   id: string
@@ -36,7 +32,7 @@ interface WorkerName {
 
 export default function WorkersPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'manage_masters' })
   const [workers, setWorkers] = useState<WorkerName[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -66,27 +62,6 @@ export default function WorkersPage() {
   ]
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.manage_masters) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
-  useEffect(() => {
     if (!currentUser) return
     fetchWorkers()
   }, [currentUser])
@@ -100,14 +75,8 @@ export default function WorkersPage() {
 
   const loadDefaultsAutomatically = async () => {
     try {
-      const res = await fetch('/api/admin/workers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workers: defaultWorkers }),
-      })
-      if (res.ok) {
-        await fetchWorkers()
-      }
+      await adminApi.createWorker({ workers: defaultWorkers })
+      await fetchWorkers()
     } catch (err) {
       console.error('デフォルト作業者名自動登録エラー:', err)
     }
@@ -115,15 +84,14 @@ export default function WorkersPage() {
 
   const fetchWorkers = async () => {
     try {
-      const res = await fetch('/api/admin/workers')
-      if (res.ok) {
-        const data = await res.json()
-        setWorkers(data.workers)
-      } else if (res.status === 403) {
-        router.push('/dashboard')
-      }
+      const data = await adminApi.fetchWorkers()
+      setWorkers(data.workers)
     } catch (err) {
-      console.error('作業者名一覧取得エラー:', err)
+      if (err instanceof ApiError && err.status === 403) {
+        router.push('/dashboard')
+      } else {
+        console.error('作業者名一覧取得エラー:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -138,21 +106,11 @@ export default function WorkersPage() {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/workers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newWorker }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setWorkers(prev => [...prev, data.worker])
-        setNewWorker('')
-        setAddingNew(false)
-        setMessage('作業者名を追加しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '追加に失敗しました')
-      }
+      const data = await adminApi.createWorker({ name: newWorker }) as any
+      setWorkers(prev => [...prev, data.worker])
+      setNewWorker('')
+      setAddingNew(false)
+      setMessage('作業者名を追加しました')
     } catch {
       setError('追加に失敗しました')
     } finally {
@@ -165,16 +123,9 @@ export default function WorkersPage() {
 
     setError('')
     try {
-      const res = await fetch(`/api/admin/workers?id=${id}`, {
-        method: 'DELETE',
-      })
-      if (res.ok) {
-        setWorkers(prev => prev.filter(w => w.id !== id))
-        setMessage('作業者名を削除しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-      }
+      await adminApi.deleteWorker({ id })
+      setWorkers(prev => prev.filter(w => w.id !== id))
+      setMessage('作業者名を削除しました')
     } catch {
       setError('削除に失敗しました')
     }
@@ -183,20 +134,11 @@ export default function WorkersPage() {
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     setError('')
     try {
-      const res = await fetch('/api/admin/workers', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, isActive: !currentActive }),
-      })
-      if (res.ok) {
-        setWorkers(prev =>
-          prev.map(w => (w.id === id ? { ...w, isActive: !currentActive } : w))
-        )
-        setMessage(currentActive ? '作業者名を無効化しました' : '作業者名を有効化しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateWorker({ id, isActive: !currentActive })
+      setWorkers(prev =>
+        prev.map(w => (w.id === id ? { ...w, isActive: !currentActive } : w))
+      )
+      setMessage(currentActive ? '作業者名を無効化しました' : '作業者名を有効化しました')
     } catch {
       setError('更新に失敗しました')
     }
@@ -209,22 +151,13 @@ export default function WorkersPage() {
     }
     setError('')
     try {
-      const res = await fetch('/api/admin/workers', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name: editingName }),
-      })
-      if (res.ok) {
-        setWorkers(prev =>
-          prev.map(w => (w.id === id ? { ...w, name: editingName.trim() } : w))
-        )
-        setEditingId(null)
-        setEditingName('')
-        setMessage('作業者名を更新しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateWorker({ id, name: editingName })
+      setWorkers(prev =>
+        prev.map(w => (w.id === id ? { ...w, name: editingName.trim() } : w))
+      )
+      setEditingId(null)
+      setEditingName('')
+      setMessage('作業者名を更新しました')
     } catch {
       setError('更新に失敗しました')
     }
@@ -256,11 +189,7 @@ export default function WorkersPage() {
     setDragOverIndex(null)
 
     try {
-      await fetch('/api/admin/workers', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reorder }),
-      })
+      await adminApi.updateWorker({ reorder })
     } catch {
       setWorkers(workers)
       setError('並び替えに失敗しました')
@@ -272,16 +201,7 @@ export default function WorkersPage() {
     setDragOverIndex(null)
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
-
-  if (loading || !currentUser) {
+  if (authLoading || loading || !currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">読み込み中...</p>

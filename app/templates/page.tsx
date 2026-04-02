@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
+import { apiGet, apiDelete, ApiError } from '@/lib/api'
 
 interface Template {
   id: string
@@ -59,18 +60,15 @@ export default function TemplatesPage() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await fetch('/api/templates', { credentials: 'include' })
-      if (res.status === 401) {
-        router.push('/login')
-        return
-      }
-      if (res.ok) {
-        const data = await res.json()
-        setTemplates(data.templates)
-      }
+      const data = await apiGet<any>('/api/templates')
+      setTemplates(data.templates)
     } catch (err) {
-      console.error('テンプレート取得エラー:', err)
-      setError('テンプレートの取得に失敗しました')
+      if (err instanceof ApiError && err.status === 401) {
+        router.push('/login')
+      } else {
+        console.error('テンプレート取得エラー:', err)
+        setError('テンプレートの取得に失敗しました')
+      }
     } finally {
       setLoading(false)
     }
@@ -80,18 +78,10 @@ export default function TemplatesPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/templates?id=${deleteTarget.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      if (res.ok) {
-        setTemplates(prev => prev.filter(t => t.id !== deleteTarget.id))
-        setMessage('テンプレートを削除しました')
-        setDeleteTarget(null)
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-      }
+      await apiDelete(`/api/templates?id=${deleteTarget.id}`)
+      setTemplates(prev => prev.filter(t => t.id !== deleteTarget.id))
+      setMessage('テンプレートを削除しました')
+      setDeleteTarget(null)
     } catch {
       setError('削除に失敗しました')
     } finally {

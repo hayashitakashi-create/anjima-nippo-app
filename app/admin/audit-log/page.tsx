@@ -26,6 +26,8 @@ import {
   Trash2,
   Edit,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { apiGet, ApiError } from '@/lib/api'
 
 interface AuditLog {
   id: string
@@ -37,12 +39,6 @@ interface AuditLog {
   details: string | null
   ipAddress: string | null
   createdAt: string
-}
-
-interface User {
-  id: string
-  name: string
-  role: string
 }
 
 // 相対時間を日本語で表示
@@ -142,7 +138,7 @@ function getTargetTypeName(targetType: string): string {
 
 export default function AuditLogPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'view_audit_log' })
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -157,21 +153,6 @@ export default function AuditLogPage() {
   const [limit] = useState(20)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.view_audit_log) { router.push('/dashboard'); return }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
 
   useEffect(() => {
     if (!currentUser) return
@@ -189,28 +170,20 @@ export default function AuditLogPage() {
       if (filterDateFrom) params.append('dateFrom', filterDateFrom)
       if (filterDateTo) params.append('dateTo', filterDateTo)
 
-      const res = await fetch(`/api/admin/audit-log?${params}`)
-      if (res.ok) {
-        const data = await res.json()
-        setLogs(data.logs)
-        setTotal(data.pagination.total)
-        setTotalPages(data.pagination.totalPages)
-      } else if (res.status === 403) {
+      const data = await apiGet<any>(`/api/admin/audit-log?${params}`)
+      setLogs(data.logs)
+      setTotal(data.pagination.total)
+      setTotalPages(data.pagination.totalPages)
+    } catch (err: any) {
+      if (err.status === 403) {
         router.push('/dashboard')
       } else {
+        console.error('操作ログ取得エラー:', err)
         setError('操作ログの取得に失敗しました')
       }
-    } catch (err) {
-      console.error('操作ログ取得エラー:', err)
-      setError('操作ログの取得に失敗しました')
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleLogout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login') }
-    catch (err) { console.error('ログアウトエラー:', err) }
   }
 
   const handleFilterReset = () => {

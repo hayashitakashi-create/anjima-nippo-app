@@ -27,6 +27,8 @@ import {
   Shield,
   LogOut,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet, apiPut, apiPatch, apiDelete } from '@/lib/api'
 
 // マスタデータ（APIから取得できなかった場合のフォールバック）
 const DEFAULT_PROJECT_TYPES = [
@@ -88,19 +90,12 @@ interface Project {
   }
 }
 
-interface CurrentUser {
-  id: string
-  name: string
-  role: string
-  permissions?: Record<string, boolean>
-}
-
 export default function ProjectDetailPage() {
   const router = useRouter()
   const params = useParams()
   const projectId = params.id as string
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const { user: currentUser, loading: authLoading, logout } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -127,22 +122,8 @@ export default function ProjectDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) setCurrentUser(data.user)
-      })
-      .catch(() => router.push('/login'))
-
     // 工事種別マスタを取得
-    fetch('/api/admin/project-types')
-      .then(res => {
-        if (res.ok) return res.json()
-        return null
-      })
+    adminApi.fetchProjectTypes()
       .then(data => {
         if (data?.projectTypes) {
           const activeTypes = data.projectTypes
@@ -156,19 +137,11 @@ export default function ProjectDetailPage() {
       .catch(err => console.error('工事種別マスタ取得エラー:', err))
 
     fetchProject()
-  }, [projectId, router])
+  }, [projectId])
 
   const fetchProject = async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}`)
-      if (!res.ok) {
-        if (res.status === 404) {
-          alert('物件が見つかりません')
-          router.push('/work-report/projects')
-        }
-        return
-      }
-      const data = await res.json()
+      const data = await apiGet<any>(`/api/projects/${projectId}`)
       setProject(data)
 
       // 編集フォーム初期化
@@ -197,22 +170,17 @@ export default function ProjectDetailPage() {
     }
     setSaving(true)
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editForm.name,
-          projectType: editForm.projectType || null,
-          projectCode: editForm.projectCode || null,
-          client: editForm.client || null,
-          location: editForm.location || null,
-          progress: editForm.progress,
-          startDate: editForm.startDate || null,
-          endDate: editForm.endDate || null,
-          notes: editForm.notes || null,
-        }),
+      await apiPut(`/api/projects/${projectId}`, {
+        name: editForm.name,
+        projectType: editForm.projectType || null,
+        projectCode: editForm.projectCode || null,
+        client: editForm.client || null,
+        location: editForm.location || null,
+        progress: editForm.progress,
+        startDate: editForm.startDate || null,
+        endDate: editForm.endDate || null,
+        notes: editForm.notes || null,
       })
-      if (!res.ok) throw new Error('更新失敗')
       await fetchProject()
       setEditing(false)
     } catch (error) {
@@ -226,12 +194,7 @@ export default function ProjectDetailPage() {
   const handleArchive = async () => {
     try {
       const newStatus = project?.status === 'archived' ? 'active' : 'archived'
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      })
-      if (!res.ok) throw new Error('更新失敗')
+      await apiPut(`/api/projects/${projectId}`, { status: newStatus })
       await fetchProject()
       setShowArchiveConfirm(false)
     } catch (error) {
@@ -243,15 +206,10 @@ export default function ProjectDetailPage() {
   const handleComplete = async () => {
     try {
       const newStatus = project?.status === 'completed' ? 'active' : 'completed'
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: newStatus,
-          progress: newStatus === 'completed' ? 100 : project?.progress,
-        }),
+      await apiPut(`/api/projects/${projectId}`, {
+        status: newStatus,
+        progress: newStatus === 'completed' ? 100 : project?.progress,
       })
-      if (!res.ok) throw new Error('更新失敗')
       await fetchProject()
     } catch (error) {
       console.error('完了エラー:', error)
@@ -261,40 +219,21 @@ export default function ProjectDetailPage() {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) {
-        alert(data.error || '削除に失敗しました')
-        setShowDeleteConfirm(false)
-        return
-      }
+      await apiDelete(`/api/projects/${projectId}`)
       router.push('/work-report/projects')
-    } catch (error) {
+    } catch (error: any) {
       console.error('削除エラー:', error)
-      alert('削除に失敗しました')
+      alert(error.message || '削除に失敗しました')
+      setShowDeleteConfirm(false)
     }
   }
 
   const handleProgressChange = async (newProgress: number) => {
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ progress: newProgress }),
-      })
-      if (!res.ok) throw new Error('更新失敗')
+      await apiPut(`/api/projects/${projectId}`, { progress: newProgress })
       await fetchProject()
     } catch (error) {
       console.error('進捗更新エラー:', error)
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
     }
   }
 
@@ -335,7 +274,7 @@ export default function ProjectDetailPage() {
     return 'bg-gray-400'
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">読み込み中...</div>
@@ -450,7 +389,7 @@ export default function ProjectDetailPage() {
               <Link href="/settings" className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="設定">
                 <Settings className="h-5 w-5" />
               </Link>
-              <button onClick={handleLogout} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="ログアウト">
+              <button onClick={logout} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="ログアウト">
                 <LogOut className="h-5 w-5" />
               </button>
             </div>

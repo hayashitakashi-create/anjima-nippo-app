@@ -20,6 +20,8 @@ import {
   Filter,
   Calendar,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { apiGet } from '@/lib/api'
 
 interface Approval {
   id: string
@@ -86,20 +88,12 @@ interface WorkReport {
   }>
 }
 
-interface User {
-  id: string
-  name: string
-  role: string
-  defaultReportType: string
-  permissions?: Record<string, boolean>
-}
-
 // 曜日名
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 export default function NippoListPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth()
   const [salesReports, setSalesReports] = useState<DailyReport[]>([])
   const [workReports, setWorkReports] = useState<WorkReport[]>([])
   const [loading, setLoading] = useState(true)
@@ -128,29 +122,10 @@ export default function NippoListPage() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
   useEffect(() => {
-    // ユーザー情報取得
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-          setReportType(data.user.defaultReportType === 'work' ? 'work' : data.user.defaultReportType === 'both' ? 'work' : 'sales')
-        }
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
-
-    // 営業日報取得はユーザー情報確定後に行う
+    if (!currentUser) return
+    setReportType(currentUser.defaultReportType === 'work' ? 'work' : currentUser.defaultReportType === 'both' ? 'work' : 'sales')
     setLoading(false)
-  }, [router])
+  }, [currentUser])
 
   // 日報取得（ユーザーIDが必要）
   useEffect(() => {
@@ -158,10 +133,9 @@ export default function NippoListPage() {
 
     // 営業日報取得（salesユーザーのみ）
     if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
-      fetch('/api/nippo/list')
-        .then(res => res.json())
+      apiGet<any>('/api/nippo/list')
         .then(data => {
-          if (data && data.reports) {
+          if (data?.reports) {
             setSalesReports(data.reports)
           }
         })
@@ -171,8 +145,7 @@ export default function NippoListPage() {
     }
 
     // 作業日報取得
-    fetch(`/api/work-report?userId=${currentUser.id}&limit=100`)
-      .then(res => res.json())
+    apiGet<any>(`/api/work-report?userId=${currentUser.id}&limit=100`)
       .then(data => {
         if (data && data.reports) {
           setWorkReports(data.reports)
@@ -185,14 +158,7 @@ export default function NippoListPage() {
       })
   }, [currentUser])
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
-    }
-  }
+
 
   // 検索実行
   const handleSearch = async () => {
@@ -208,14 +174,12 @@ export default function NippoListPage() {
       let salesData: any = { reports: [] }
       // 営業日報検索（salesユーザーのみ）
       if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
-        const salesRes = await fetch(`/api/nippo/list?${params.toString()}`)
-        salesData = await salesRes.json()
+        salesData = await apiGet<any>(`/api/nippo/list?${params.toString()}`)
       }
 
       // 作業日報検索
       params.set('userId', currentUser.id)
-      const workRes = await fetch(`/api/work-report?${params.toString()}`)
-      const workData = await workRes.json()
+      const workData = await apiGet<any>(`/api/work-report?${params.toString()}`)
 
       setSearchResults({
         sales: salesData?.reports || [],

@@ -25,6 +25,8 @@ import {
   TrendingUp,
   Info,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet, apiPost } from '@/lib/api'
 
 interface Project {
   id: string
@@ -39,14 +41,6 @@ interface Project {
   lastReportDate?: string
 }
 
-interface CurrentUser {
-  id: string
-  name: string
-  position?: string
-  role: string
-  permissions?: Record<string, boolean>
-}
-
 // マスタデータ（APIから取得できなかった場合のフォールバック）
 const DEFAULT_PROJECT_TYPES = [
   '建築塗装工事',
@@ -59,7 +53,7 @@ const DEFAULT_PROJECT_TYPES = [
 
 export default function ProjectListPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const { user: currentUser, loading: authLoading, logout } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -79,28 +73,8 @@ export default function ProjectListPage() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    // ユーザー情報取得
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-
     // 工事種別マスタを取得
-    fetch('/api/admin/project-types')
-      .then(res => {
-        if (res.ok) return res.json()
-        return null
-      })
+    adminApi.fetchProjectTypes()
       .then(data => {
         if (data?.projectTypes) {
           const activeTypes = data.projectTypes
@@ -115,7 +89,7 @@ export default function ProjectListPage() {
 
     // 物件一覧取得
     fetchProjects('active')
-  }, [router])
+  }, [])
 
   // タブ切り替え時
   useEffect(() => {
@@ -124,8 +98,7 @@ export default function ProjectListPage() {
 
   const fetchProjects = (status: string) => {
     setLoading(true)
-    fetch(`/api/projects?status=${status}`)
-      .then(res => res.json())
+    apiGet<any>(`/api/projects?status=${status}`)
       .then(data => {
         if (Array.isArray(data)) {
           setProjects(data)
@@ -150,15 +123,7 @@ export default function ProjectListPage() {
 
     setSaving(true)
     try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newProject)
-      })
-
-      if (!res.ok) throw new Error('登録失敗')
-
-      const created = await res.json()
+      const created = await apiPost<any>('/api/projects', newProject)
       setShowNewProjectModal(false)
       setNewProject({ name: '', projectType: '', projectCode: '' })
 
@@ -169,15 +134,6 @@ export default function ProjectListPage() {
       alert('物件の登録に失敗しました')
     } finally {
       setSaving(false)
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
     }
   }
 
@@ -198,7 +154,7 @@ export default function ProjectListPage() {
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-gray-600 text-lg">読み込み中...</div>
@@ -333,7 +289,7 @@ export default function ProjectListPage() {
                 <Settings className="h-5 w-5" />
               </Link>
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 title="ログアウト"
               >

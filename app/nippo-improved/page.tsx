@@ -35,20 +35,12 @@ import {
 import VisitRecordCard, { VisitRecordData } from '@/components/VisitRecordCard'
 import { useVisitRecordValidation } from '@/hooks/useVisitRecordValidation'
 import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
-
-interface User {
-  id: string
-  name: string
-  position?: string
-  role: string
-  defaultReportType: string
-  permissions?: Record<string, boolean>
-}
-
+import { useAuth } from '@/hooks/useAuth'
+import { apiPost } from '@/lib/api'
 
 export default function ImprovedNippoPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, logout: handleLogout } = useAuth()
   const [loading, setLoading] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
 
@@ -118,34 +110,19 @@ export default function ImprovedNippoPage() {
     setShowDraftBanner(false)
   }
 
-  // 初期化
+  // ユーザー情報でフォーム初期化
   useEffect(() => {
-    // ユーザー情報取得
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-          setUserName(data.user.name)
-        }
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
+    if (currentUser) {
+      setUserName(currentUser.name)
+    }
+  }, [currentUser])
 
-    // 今日の日付をデフォルトに設定
+  // 今日の日付をデフォルトに設定
+  useEffect(() => {
     const today = new Date()
     const formatted = today.toISOString().split('T')[0]
     setDate(formatted)
-
-  }, [router])
+  }, [])
 
   // 訪問記録の変更
   const handleVisitRecordChange = (id: string, data: Partial<VisitRecordData>) => {
@@ -213,30 +190,20 @@ export default function ImprovedNippoPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/nippo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          date: new Date(date),
-          userId: currentUser?.id,
-          specialNotes,
-          visitRecords: visitRecords.map((record, index) => ({
-            destination: record.destination,
-            contactPerson: record.contactPerson,
-            startTime: record.startTime,
-            endTime: record.endTime,
-            content: record.content,
-            expense: record.expense,
-            order: index
-          }))
-        }),
+      await apiPost('/api/nippo', {
+        date: new Date(date),
+        userId: currentUser?.id,
+        specialNotes,
+        visitRecords: visitRecords.map((record, index) => ({
+          destination: record.destination,
+          contactPerson: record.contactPerson,
+          startTime: record.startTime,
+          endTime: record.endTime,
+          content: record.content,
+          expense: record.expense,
+          order: index
+        }))
       })
-
-      if (!response.ok) {
-        throw new Error('日報の作成に失敗しました')
-      }
 
       // 下書きをクリア
       clearDraft()
@@ -248,17 +215,6 @@ export default function ImprovedNippoPage() {
       alert('日報の作成に失敗しました')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-      })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
     }
   }
 

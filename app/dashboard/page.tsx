@@ -26,15 +26,8 @@ import {
   Palmtree,
   BookOpen
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  position?: string
-  role: string
-  defaultReportType: string
-  permissions?: Record<string, boolean>
-}
+import { useAuth } from '@/hooks/useAuth'
+import { apiGet } from '@/lib/api'
 
 interface RecentReport {
   id: string
@@ -58,7 +51,7 @@ interface UnsubmittedData {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth()
   const [loading, setLoading] = useState(true)
   const [reportType, setReportType] = useState<'sales' | 'work' | 'leave'>('work')
   const [salesReports, setSalesReports] = useState<RecentReport[]>([])
@@ -80,37 +73,14 @@ export default function DashboardPage() {
   const [unsubmitted, setUnsubmitted] = useState<UnsubmittedData | null>(null)
 
   useEffect(() => {
-    // ユーザー情報取得
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-          setReportType(data.user.defaultReportType === 'sales' ? 'sales' : 'work')
-        }
-        setLoading(false)
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
+    if (!currentUser) return
+    setReportType(currentUser.defaultReportType === 'sales' ? 'sales' : 'work')
+    setLoading(false)
 
-    // 営業日報取得（salesユーザーのみ）— ユーザー情報確定後に別useEffectで取得
-
-    // 通知の未読数取得
-    fetch('/api/notifications?limit=1')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) setUnreadCount(data.unreadCount || 0)
-      })
+    apiGet<any>('/api/notifications?limit=1')
+      .then(data => setUnreadCount(data.unreadCount || 0))
       .catch((err) => console.error('通知取得エラー:', err))
-  }, [router])
+  }, [currentUser])
 
   // 日報取得 + 管理者向け未提出者情報取得（ユーザー情報取得後）
   useEffect(() => {
@@ -118,21 +88,14 @@ export default function DashboardPage() {
 
     // 閲覧権限があれば未提出者情報を取得
     if (currentUser.permissions?.view_all_reports) {
-      fetch('/api/notifications/unsubmitted')
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data) setUnsubmitted(data)
-        })
+      apiGet<UnsubmittedData>('/api/notifications/unsubmitted')
+        .then(data => setUnsubmitted(data))
         .catch((err) => console.error('未提出者情報取得エラー:', err))
     }
 
     // 営業日報取得（salesユーザーのみ）
     if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
-      fetch('/api/nippo/list')
-        .then(res => {
-          if (!res.ok) return null
-          return res.json()
-        })
+      apiGet<any>('/api/nippo/list')
         .then(data => {
           if (data && data.reports) {
             const recent = data.reports.slice(0, 5).map((report: any) => ({
@@ -174,9 +137,7 @@ export default function DashboardPage() {
         })
     }
 
-    // 休暇届取得
-    fetch('/api/leave-requests')
-      .then(res => res.ok ? res.json() : null)
+    apiGet<any>('/api/leave-requests')
       .then(data => {
         if (data?.leaveRequests) {
           setLeaveRequests(data.leaveRequests.slice(0, 10).map((r: any) => ({
@@ -191,11 +152,7 @@ export default function DashboardPage() {
       .catch(err => console.error('休暇届取得エラー:', err))
 
     // 作業日報取得
-    fetch(`/api/work-report?userId=${currentUser.id}`)
-      .then(res => {
-        if (!res.ok) return null
-        return res.json()
-      })
+    apiGet<any>(`/api/work-report?userId=${currentUser.id}`)
       .then(data => {
         const reports = data?.reports ?? (Array.isArray(data) ? data : [])
         if (reports.length > 0) {
@@ -229,18 +186,7 @@ export default function DashboardPage() {
       })
   }, [currentUser])
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-      })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
-    }
-  }
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-50 flex items-center justify-center">
         <motion.div

@@ -23,6 +23,7 @@ import {
   XCircle,
   Printer,
 } from 'lucide-react'
+import { adminApi, apiGet, apiPost, apiDelete, ApiError } from '@/lib/api'
 
 interface LeaveRequest {
   id: string
@@ -107,8 +108,7 @@ export default function LeaveRequestsPage() {
   }, [currentMonth])
 
   useEffect(() => {
-    fetch('/api/admin/workers', { credentials: 'include' })
-      .then(res => res.ok ? res.json() : null)
+    adminApi.fetchWorkers()
       .then(data => {
         if (data?.workers) {
           setWorkerNames(data.workers.filter((w: any) => w.isActive).map((w: any) => w.name))
@@ -119,18 +119,15 @@ export default function LeaveRequestsPage() {
 
   const fetchLeaveRequests = async () => {
     try {
-      const res = await fetch(`/api/leave-requests?month=${currentMonth}`, { credentials: 'include' })
-      if (res.status === 401) {
-        router.push('/login')
-        return
-      }
-      if (res.ok) {
-        const data = await res.json()
-        setLeaveRequests(data.leaveRequests)
-      }
+      const data = await apiGet<any>(`/api/leave-requests?month=${currentMonth}`)
+      setLeaveRequests(data.leaveRequests)
     } catch (err) {
-      console.error('休暇届取得エラー:', err)
-      setError('休暇届の取得に失敗しました')
+      if (err instanceof ApiError && err.status === 401) {
+        router.push('/login')
+      } else {
+        console.error('休暇届取得エラー:', err)
+        setError('休暇届の取得に失敗しました')
+      }
     } finally {
       setLoading(false)
     }
@@ -171,48 +168,35 @@ export default function LeaveRequestsPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/api/leave-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          applicantName: formApplicantName || undefined,
-          date: formDate,
-          leaveType: formLeaveType,
-          leaveUnit: formLeaveUnit,
-          startTime: formLeaveUnit === 'hourly' ? formStartTime : undefined,
-          endTime: formLeaveUnit === 'hourly' ? formEndTime : undefined,
-          reason: formReason || undefined,
-          attachmentData: formAttachment?.data,
-          attachmentName: formAttachment?.name,
-          attachmentType: formAttachment?.type,
-        }),
+      await apiPost('/api/leave-requests', {
+        applicantName: formApplicantName || undefined,
+        date: formDate,
+        leaveType: formLeaveType,
+        leaveUnit: formLeaveUnit,
+        startTime: formLeaveUnit === 'hourly' ? formStartTime : undefined,
+        endTime: formLeaveUnit === 'hourly' ? formEndTime : undefined,
+        reason: formReason || undefined,
+        attachmentData: formAttachment?.data,
+        attachmentName: formAttachment?.name,
+        attachmentType: formAttachment?.type,
       })
 
-      if (res.status === 401) {
+      setMessage('休暇届を申請しました（承認待ち）')
+      setFormReason('')
+      setFormLeaveUnit('full')
+      setFormStartTime('')
+      setFormEndTime('')
+      setFormAttachment(null)
+      const submittedDate = new Date(formDate)
+      if (formatYearMonth(submittedDate) === currentMonth) {
+        fetchLeaveRequests()
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
         router.push('/login')
-        return
-      }
-
-      const data = await res.json()
-
-      if (res.ok) {
-        setMessage('休暇届を申請しました（承認待ち）')
-        setFormReason('')
-        setFormLeaveUnit('full')
-        setFormStartTime('')
-        setFormEndTime('')
-        setFormAttachment(null)
-        // Refetch if submitted date is in current calendar month
-        const submittedDate = new Date(formDate)
-        if (formatYearMonth(submittedDate) === currentMonth) {
-          fetchLeaveRequests()
-        }
       } else {
-        setError(data.error || '登録に失敗しました')
+        setError(err instanceof Error ? err.message : '登録に失敗しました')
       }
-    } catch {
-      setError('登録に失敗しました')
     } finally {
       setSubmitting(false)
     }
@@ -222,18 +206,10 @@ export default function LeaveRequestsPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/leave-requests/${deleteTarget.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      if (res.ok) {
-        setLeaveRequests(prev => prev.filter(r => r.id !== deleteTarget.id))
-        setMessage('休暇届を削除しました')
-        setDeleteTarget(null)
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-      }
+      await apiDelete(`/api/leave-requests/${deleteTarget.id}`)
+      setLeaveRequests(prev => prev.filter(r => r.id !== deleteTarget.id))
+      setMessage('休暇届を削除しました')
+      setDeleteTarget(null)
     } catch {
       setError('削除に失敗しました')
     } finally {

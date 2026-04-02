@@ -28,12 +28,8 @@ import {
   Lock,
   ShieldCheck,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet, apiPut, apiPost, apiDelete } from '@/lib/api'
 
 interface ApprovalRouteItem {
   id: string
@@ -65,7 +61,7 @@ interface SystemSettings {
 
 export default function SystemSettingsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'system_settings' })
   const [loading, setLoading] = useState(true)
   const [settings, setSettings] = useState<SystemSettings | null>(null)
 
@@ -151,27 +147,6 @@ export default function SystemSettingsPage() {
   })
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.system_settings) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
-  useEffect(() => {
     if (!currentUser) return
     fetchSettings()
     fetchApprovalRoutes()
@@ -179,66 +154,65 @@ export default function SystemSettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/admin/system-settings')
-      if (res.ok) {
-        const data = await res.json()
-        setSettings(data.settings)
+      const data = await apiGet<any>('/api/admin/system-settings')
+      setSettings(data.settings)
 
-        // フォームに初期値を設定
-        setCompanyForm({
-          company_name: data.settings.company_name || '',
-          company_address: data.settings.company_address || '',
-          company_phone: data.settings.company_phone || '',
-          company_fax: data.settings.company_fax || '',
-        })
+      // フォームに初期値を設定
+      setCompanyForm({
+        company_name: data.settings.company_name || '',
+        company_address: data.settings.company_address || '',
+        company_phone: data.settings.company_phone || '',
+        company_fax: data.settings.company_fax || '',
+      })
 
-        setApprovalForm({
-          approval_roles: data.settings.approval_roles || [],
-          auto_approve_days: data.settings.auto_approve_days || 0,
-        })
+      setApprovalForm({
+        approval_roles: data.settings.approval_roles || [],
+        auto_approve_days: data.settings.auto_approve_days || 0,
+      })
 
-        setSalesReportForm({
-          report_reminder_enabled: data.settings.sales_report_reminder_enabled !== false,
-          report_reminder_time: data.settings.sales_report_reminder_time || '17:00',
-          default_work_hours_start: data.settings.sales_default_work_hours_start || '08:00',
-          default_work_hours_end: data.settings.sales_default_work_hours_end || '17:00',
-        })
+      setSalesReportForm({
+        report_reminder_enabled: data.settings.sales_report_reminder_enabled !== false,
+        report_reminder_time: data.settings.sales_report_reminder_time || '17:00',
+        default_work_hours_start: data.settings.sales_default_work_hours_start || '08:00',
+        default_work_hours_end: data.settings.sales_default_work_hours_end || '17:00',
+      })
 
-        setWorkReportForm({
-          report_reminder_enabled: data.settings.work_report_reminder_enabled !== false,
-          report_reminder_time: data.settings.work_report_reminder_time || '17:00',
-          default_work_hours_start: data.settings.work_default_work_hours_start || '08:00',
-          default_work_hours_end: data.settings.work_default_work_hours_end || '17:00',
-        })
+      setWorkReportForm({
+        report_reminder_enabled: data.settings.work_report_reminder_enabled !== false,
+        report_reminder_time: data.settings.work_report_reminder_time || '17:00',
+        default_work_hours_start: data.settings.work_default_work_hours_start || '08:00',
+        default_work_hours_end: data.settings.work_default_work_hours_end || '17:00',
+      })
 
-        setSystemForm({
-          data_retention_days: data.settings.data_retention_days || 365,
-          session_timeout_hours: data.settings.session_timeout_hours || 720,
-        })
+      setSystemForm({
+        data_retention_days: data.settings.data_retention_days || 365,
+        session_timeout_hours: data.settings.session_timeout_hours || 720,
+      })
 
-        // 権限設定の読み込み
-        if (data.settings.role_permissions) {
-          const rp = data.settings.role_permissions
-          setPermissionsForm(prev => {
-            const merged: Record<string, Record<string, boolean>> = {}
-            for (const role of ['admin', 'user']) {
-              merged[role] = { ...prev[role] }
-              if (rp[role]) {
-                for (const def of PERMISSION_DEFINITIONS) {
-                  if (typeof rp[role][def.key] === 'boolean') {
-                    merged[role][def.key] = rp[role][def.key]
-                  }
+      // 権限設定の読み込み
+      if (data.settings.role_permissions) {
+        const rp = data.settings.role_permissions
+        setPermissionsForm(prev => {
+          const merged: Record<string, Record<string, boolean>> = {}
+          for (const role of ['admin', 'user']) {
+            merged[role] = { ...prev[role] }
+            if (rp[role]) {
+              for (const def of PERMISSION_DEFINITIONS) {
+                if (typeof rp[role][def.key] === 'boolean') {
+                  merged[role][def.key] = rp[role][def.key]
                 }
               }
             }
-            return merged
-          })
-        }
-      } else if (res.status === 403) {
-        router.push('/dashboard')
+          }
+          return merged
+        })
       }
-    } catch (err) {
-      console.error('設定取得エラー:', err)
+    } catch (err: any) {
+      if (err.status === 403) {
+        router.push('/dashboard')
+      } else {
+        console.error('設定取得エラー:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -260,18 +234,7 @@ export default function SystemSettingsPage() {
   }
 
   const saveSetting = async (key: string, value: any) => {
-    const res = await fetch('/api/admin/system-settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value }),
-    })
-
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error || '保存に失敗しました')
-    }
-
-    return res.json()
+    return adminApi.saveSystemSetting(key, value)
   }
 
   // 会社情報の保存
@@ -414,11 +377,8 @@ export default function SystemSettingsPage() {
   // === 承認ルート管理 ===
   const fetchApprovalRoutes = async () => {
     try {
-      const res = await fetch('/api/admin/approval-routes')
-      if (res.ok) {
-        const data = await res.json()
-        setApprovalRoutes(data.routes || [])
-      }
+      const data = await adminApi.fetchApprovalRoutes() as any
+      setApprovalRoutes(data.routes || [])
     } catch (err) {
       console.error('承認ルート取得エラー:', err)
     }
@@ -468,28 +428,16 @@ export default function SystemSettingsPage() {
 
     setRouteLoading(true)
     try {
-      const url = '/api/admin/approval-routes'
-      const method = editingRoute ? 'PUT' : 'POST'
-      const body = editingRoute
-        ? { id: editingRoute.id, ...routeForm }
-        : routeForm
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-
-      const data = await res.json()
-      if (res.ok) {
-        setShowRouteModal(false)
-        await fetchApprovalRoutes()
-        setSectionMessage('approvalRoutes', 'success', '承認ルートを保存しました')
+      if (editingRoute) {
+        await adminApi.updateApprovalRoute({ id: editingRoute.id, ...routeForm })
       } else {
-        setSectionMessage('approvalRoutes', 'error', data.error || '保存に失敗しました')
+        await adminApi.createApprovalRoute(routeForm)
       }
-    } catch {
-      setSectionMessage('approvalRoutes', 'error', '保存に失敗しました')
+      setShowRouteModal(false)
+      await fetchApprovalRoutes()
+      setSectionMessage('approvalRoutes', 'success', '承認ルートを保存しました')
+    } catch (err: any) {
+      setSectionMessage('approvalRoutes', 'error', err.message || '保存に失敗しました')
     } finally {
       setRouteLoading(false)
     }
@@ -497,15 +445,9 @@ export default function SystemSettingsPage() {
 
   const handleToggleRouteActive = async (route: ApprovalRouteItem) => {
     try {
-      const res = await fetch('/api/admin/approval-routes', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: route.id, isActive: !route.isActive }),
-      })
-      if (res.ok) {
-        setSectionMessage('approvalRoutes', 'success', route.isActive ? '無効化しました' : '有効化しました')
-        fetchApprovalRoutes()
-      }
+      await adminApi.updateApprovalRoute({ id: route.id, isActive: !route.isActive })
+      setSectionMessage('approvalRoutes', 'success', route.isActive ? '無効化しました' : '有効化しました')
+      fetchApprovalRoutes()
     } catch {
       setSectionMessage('approvalRoutes', 'error', '更新に失敗しました')
     }
@@ -513,15 +455,9 @@ export default function SystemSettingsPage() {
 
   const handleSetDefaultRoute = async (route: ApprovalRouteItem) => {
     try {
-      const res = await fetch('/api/admin/approval-routes', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: route.id, isDefault: true }),
-      })
-      if (res.ok) {
-        setSectionMessage('approvalRoutes', 'success', `「${route.name}」をデフォルトに設定しました`)
-        fetchApprovalRoutes()
-      }
+      await adminApi.updateApprovalRoute({ id: route.id, isDefault: true })
+      setSectionMessage('approvalRoutes', 'success', `「${route.name}」をデフォルトに設定しました`)
+      fetchApprovalRoutes()
     } catch {
       setSectionMessage('approvalRoutes', 'error', '更新に失敗しました')
     }
@@ -530,29 +466,15 @@ export default function SystemSettingsPage() {
   const handleDeleteRoute = async (route: ApprovalRouteItem) => {
     if (!confirm(`「${route.name}」を削除しますか？`)) return
     try {
-      const res = await fetch(`/api/admin/approval-routes?id=${route.id}`, {
-        method: 'DELETE',
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setSectionMessage('approvalRoutes', 'success', data.message)
-        fetchApprovalRoutes()
-      } else {
-        setSectionMessage('approvalRoutes', 'error', data.error || '削除に失敗しました')
-      }
-    } catch {
-      setSectionMessage('approvalRoutes', 'error', '削除に失敗しました')
+      const data = await adminApi.deleteApprovalRoute(route.id) as any
+      setSectionMessage('approvalRoutes', 'success', data.message)
+      fetchApprovalRoutes()
+    } catch (err: any) {
+      setSectionMessage('approvalRoutes', 'error', err.message || '削除に失敗しました')
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
+
 
   if (loading || !currentUser) {
     return (

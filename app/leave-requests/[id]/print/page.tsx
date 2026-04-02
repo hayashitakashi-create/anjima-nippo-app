@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { apiGet, ApiError } from '@/lib/api'
 
 interface LeaveDetail {
   id: string
@@ -47,17 +48,7 @@ export default function LeaveRequestPrintPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/leave-requests/${params.id}/detail`, { credentials: 'include' })
-        if (res.status === 401) {
-          router.push('/login')
-          return
-        }
-        if (!res.ok) {
-          const d = await res.json()
-          setError(d.error || '取得に失敗しました')
-          return
-        }
-        const d = await res.json()
+        const d = await apiGet<any>(`/api/leave-requests/${params.id}/detail`)
         setData(d.leaveRequest)
       } catch {
         setError('取得に失敗しました')

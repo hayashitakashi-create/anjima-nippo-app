@@ -19,13 +19,8 @@ import {
   LogOut,
   Download,
 } from 'lucide-react'
-
-interface CurrentUser {
-  id: string
-  name: string
-  role: string
-  permissions?: Record<string, boolean>
-}
+import { useAuth } from '@/hooks/useAuth'
+import { apiGet } from '@/lib/api'
 
 interface TotalSummary {
   totalReports: number
@@ -90,7 +85,7 @@ type TabType = 'monthly' | 'materials' | 'subcontractors'
 
 export default function ReportsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth()
   const [activeTab, setActiveTab] = useState<TabType>('monthly')
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -109,24 +104,6 @@ export default function ReportsPage() {
   const [subcontractorSummary, setSubcontractorSummary] = useState<SubcontractorSummary | null>(null)
   const [subcontractorData, setSubcontractorData] = useState<SubcontractorData[]>([])
 
-  // ユーザー認証
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
   // データ取得
   useEffect(() => {
     if (!currentUser) return
@@ -135,33 +112,18 @@ export default function ReportsPage() {
       setLoading(true)
       try {
         if (activeTab === 'monthly') {
-          const res = await fetch(`/api/reports/monthly?year=${year}&month=${month}`, {
-            credentials: 'include',
-          })
-          if (res.ok) {
-            const data = await res.json()
-            setMonthlySummary(data.totalSummary)
-            setProjectData(data.projectData)
-            setWorkerData(data.workerData)
-          }
+          const data = await apiGet<any>(`/api/reports/monthly?year=${year}&month=${month}`)
+          setMonthlySummary(data.totalSummary)
+          setProjectData(data.projectData)
+          setWorkerData(data.workerData)
         } else if (activeTab === 'materials') {
-          const res = await fetch(`/api/reports/materials?year=${year}&month=${month}`, {
-            credentials: 'include',
-          })
-          if (res.ok) {
-            const data = await res.json()
-            setMaterialSummary(data.totalSummary)
-            setMaterialData(data.materialData)
-          }
+          const data = await apiGet<any>(`/api/reports/materials?year=${year}&month=${month}`)
+          setMaterialSummary(data.totalSummary)
+          setMaterialData(data.materialData)
         } else if (activeTab === 'subcontractors') {
-          const res = await fetch(`/api/reports/subcontractors?year=${year}&month=${month}`, {
-            credentials: 'include',
-          })
-          if (res.ok) {
-            const data = await res.json()
-            setSubcontractorSummary(data.totalSummary)
-            setSubcontractorData(data.subcontractorData)
-          }
+          const data = await apiGet<any>(`/api/reports/subcontractors?year=${year}&month=${month}`)
+          setSubcontractorSummary(data.totalSummary)
+          setSubcontractorData(data.subcontractorData)
         }
       } catch (error) {
         console.error('データ取得エラー:', error)
@@ -189,11 +151,6 @@ export default function ReportsPage() {
     } else {
       setMonth(month + 1)
     }
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/login')
   }
 
   // CSV出力

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { VisitRecordInput } from '@/lib/types'
 import { Home, Settings, LogOut, Building2, Shield } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { apiPost } from '@/lib/api'
 
 // CSSアニメーション定義用のスタイル
 const styles = `
@@ -31,18 +33,9 @@ const styles = `
   }
 `
 
-interface User {
-  id: string
-  name: string
-  position?: string
-  role: string
-  defaultReportType: string
-  permissions?: Record<string, boolean>
-}
-
 export default function NewNippoPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, logout: handleLogout } = useAuth()
   const [loading, setLoading] = useState(false)
   const [reportType, setReportType] = useState<'sales' | 'work'>('work')
   const [showCharacter, setShowCharacter] = useState(false)
@@ -71,34 +64,18 @@ export default function NewNippoPage() {
 
   const timeOptions = generateTimeOptions()
 
-  // ログインユーザーと最新日報の日付を取得
   useEffect(() => {
-    // ユーザー情報取得
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-          setFormData(prev => ({ ...prev, userId: data.user.id }))
-          setReportType(data.user.defaultReportType === 'work' ? 'work' : 'sales')
-        }
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
+    if (!currentUser) return
+    setFormData(prev => ({ ...prev, userId: currentUser.id }))
+    setReportType(currentUser.defaultReportType === 'work' ? 'work' : 'sales')
+  }, [currentUser])
 
+  useEffect(() => {
     // 今日の日付をデフォルトに設定
     const today = new Date()
     const formatted = today.toISOString().split('T')[0]
     setFormData(prev => ({ ...prev, date: formatted }))
-  }, [router])
+  }, [])
 
   // 訪問記録を追加
   const addVisitRecord = () => {
@@ -142,20 +119,10 @@ export default function NewNippoPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/nippo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          visitRecords: visitRecords.filter(record => record.destination.trim() !== ''),
-        }),
+      await apiPost('/api/nippo', {
+        ...formData,
+        visitRecords: visitRecords.filter(record => record.destination.trim() !== ''),
       })
-
-      if (!response.ok) {
-        throw new Error('日報の作成に失敗しました')
-      }
 
       // キャラクター表示
       setShowCharacter(true)
@@ -179,17 +146,6 @@ export default function NewNippoPage() {
       router.push('/admin/nippo')
     } else {
       router.push('/dashboard')
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-      })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
     }
   }
 

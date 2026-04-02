@@ -15,12 +15,8 @@ import {
   X,
   ArrowLeft,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, ApiError } from '@/lib/api'
 
 interface Unit {
   id: string
@@ -33,7 +29,7 @@ interface Unit {
 
 export default function UnitsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'manage_masters' })
   const [units, setUnits] = useState<Unit[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -43,27 +39,6 @@ export default function UnitsPage() {
   // 新規単位追加フォーム
   const [newUnit, setNewUnit] = useState('')
   const [addingNew, setAddingNew] = useState(false)
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.manage_masters) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
 
   useEffect(() => {
     if (!currentUser) return
@@ -79,12 +54,8 @@ export default function UnitsPage() {
 
   const loadDefaultsAutomatically = async () => {
     try {
-      const res = await fetch('/api/admin/units/load-defaults', {
-        method: 'POST',
-      })
-      if (res.ok) {
-        await fetchUnits()
-      }
+      await adminApi.loadDefaultUnits()
+      await fetchUnits()
     } catch (err) {
       console.error('デフォルト単位自動登録エラー:', err)
     }
@@ -92,15 +63,14 @@ export default function UnitsPage() {
 
   const fetchUnits = async () => {
     try {
-      const res = await fetch('/api/admin/units')
-      if (res.ok) {
-        const data = await res.json()
-        setUnits(data.units)
-      } else if (res.status === 403) {
-        router.push('/dashboard')
-      }
+      const data = await adminApi.fetchUnits()
+      setUnits(data.units)
     } catch (err) {
-      console.error('単位一覧取得エラー:', err)
+      if (err instanceof ApiError && err.status === 403) {
+        router.push('/dashboard')
+      } else {
+        console.error('単位一覧取得エラー:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -115,21 +85,11 @@ export default function UnitsPage() {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/units', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newUnit }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setUnits(prev => [...prev, data.unit])
-        setNewUnit('')
-        setAddingNew(false)
-        setMessage('単位を追加しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '追加に失敗しました')
-      }
+      const data = await adminApi.createUnit({ name: newUnit }) as any
+      setUnits(prev => [...prev, data.unit])
+      setNewUnit('')
+      setAddingNew(false)
+      setMessage('単位を追加しました')
     } catch {
       setError('追加に失敗しました')
     } finally {
@@ -142,16 +102,9 @@ export default function UnitsPage() {
 
     setError('')
     try {
-      const res = await fetch(`/api/admin/units?id=${id}`, {
-        method: 'DELETE',
-      })
-      if (res.ok) {
-        setUnits(prev => prev.filter(u => u.id !== id))
-        setMessage('単位を削除しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-      }
+      await adminApi.deleteUnit({ id })
+      setUnits(prev => prev.filter(u => u.id !== id))
+      setMessage('単位を削除しました')
     } catch {
       setError('削除に失敗しました')
     }
@@ -160,35 +113,17 @@ export default function UnitsPage() {
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     setError('')
     try {
-      const res = await fetch('/api/admin/units', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, isActive: !currentActive }),
-      })
-      if (res.ok) {
-        setUnits(prev =>
-          prev.map(u => (u.id === id ? { ...u, isActive: !currentActive } : u))
-        )
-        setMessage(currentActive ? '単位を無効化しました' : '単位を有効化しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateUnit({ id, isActive: !currentActive })
+      setUnits(prev =>
+        prev.map(u => (u.id === id ? { ...u, isActive: !currentActive } : u))
+      )
+      setMessage(currentActive ? '単位を無効化しました' : '単位を有効化しました')
     } catch {
       setError('更新に失敗しました')
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
-
-  if (loading || !currentUser) {
+  if (authLoading || loading || !currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">読み込み中...</p>

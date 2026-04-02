@@ -25,6 +25,7 @@ import {
   Filter,
   X,
 } from 'lucide-react'
+import { apiGet, apiPost, ApiError } from '@/lib/api'
 
 // ========== 型定義 ==========
 
@@ -107,15 +108,11 @@ export default function ByProjectAggregationPage() {
     setError('')
     try {
       const params = new URLSearchParams({ offset: offset.toString() })
-      const res = await fetch(`/api/aggregation/by-project?${params}`)
-      if (!res.ok) {
-        if (res.status === 401) { router.push('/login'); return }
-        if (res.status === 403) { router.push('/dashboard'); return }
-        throw new Error('取得失敗')
-      }
-      const json = await res.json()
+      const json = await apiGet<any>(`/api/aggregation/by-project?${params}`)
       setData(json)
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) { router.push('/login'); return }
+      if (err instanceof ApiError && err.status === 403) { router.push('/dashboard'); return }
       setError('現場別集計データの取得に失敗しました')
     } finally {
       setLoading(false)
@@ -128,7 +125,7 @@ export default function ByProjectAggregationPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      await apiPost('/api/auth/logout')
       router.push('/login')
     } catch (err) {
       console.error('ログアウトエラー:', err)

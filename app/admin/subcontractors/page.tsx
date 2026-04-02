@@ -18,12 +18,8 @@ import {
   Check,
   GripVertical,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, ApiError } from '@/lib/api'
 
 interface Subcontractor {
   id: string
@@ -36,7 +32,7 @@ interface Subcontractor {
 
 export default function SubcontractorsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'manage_masters' })
   const [subcontractors, setSubcontractors] = useState<Subcontractor[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -70,27 +66,6 @@ export default function SubcontractorsPage() {
   ]
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.manage_masters) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
-  useEffect(() => {
     if (!currentUser) return
     fetchSubcontractors()
   }, [currentUser])
@@ -104,14 +79,8 @@ export default function SubcontractorsPage() {
 
   const loadDefaultsAutomatically = async () => {
     try {
-      const res = await fetch('/api/admin/subcontractors/load-defaults', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subcontractors: defaultSubcontractors }),
-      })
-      if (res.ok) {
-        await fetchSubcontractors()
-      }
+      await adminApi.loadDefaultSubcontractors()
+      await fetchSubcontractors()
     } catch (err) {
       console.error('デフォルト外注先自動登録エラー:', err)
     }
@@ -119,15 +88,14 @@ export default function SubcontractorsPage() {
 
   const fetchSubcontractors = async () => {
     try {
-      const res = await fetch('/api/admin/subcontractors')
-      if (res.ok) {
-        const data = await res.json()
-        setSubcontractors(data.subcontractors)
-      } else if (res.status === 403) {
-        router.push('/dashboard')
-      }
+      const data = await adminApi.fetchSubcontractors()
+      setSubcontractors(data.subcontractors)
     } catch (err) {
-      console.error('外注先一覧取得エラー:', err)
+      if (err instanceof ApiError && err.status === 403) {
+        router.push('/dashboard')
+      } else {
+        console.error('外注先一覧取得エラー:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -142,21 +110,11 @@ export default function SubcontractorsPage() {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/subcontractors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSubcontractor }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setSubcontractors(prev => [...prev, data.subcontractor])
-        setNewSubcontractor('')
-        setAddingNew(false)
-        setMessage('外注先を追加しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '追加に失敗しました')
-      }
+      const data = await adminApi.createSubcontractor({ name: newSubcontractor }) as any
+      setSubcontractors(prev => [...prev, data.subcontractor])
+      setNewSubcontractor('')
+      setAddingNew(false)
+      setMessage('外注先を追加しました')
     } catch {
       setError('追加に失敗しました')
     } finally {
@@ -169,16 +127,9 @@ export default function SubcontractorsPage() {
 
     setError('')
     try {
-      const res = await fetch(`/api/admin/subcontractors?id=${id}`, {
-        method: 'DELETE',
-      })
-      if (res.ok) {
-        setSubcontractors(prev => prev.filter(s => s.id !== id))
-        setMessage('外注先を削除しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-      }
+      await adminApi.deleteSubcontractor({ id })
+      setSubcontractors(prev => prev.filter(s => s.id !== id))
+      setMessage('外注先を削除しました')
     } catch {
       setError('削除に失敗しました')
     }
@@ -187,20 +138,11 @@ export default function SubcontractorsPage() {
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     setError('')
     try {
-      const res = await fetch('/api/admin/subcontractors', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, isActive: !currentActive }),
-      })
-      if (res.ok) {
-        setSubcontractors(prev =>
-          prev.map(s => (s.id === id ? { ...s, isActive: !currentActive } : s))
-        )
-        setMessage(currentActive ? '外注先を無効化しました' : '外注先を有効化しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateSubcontractor({ id, isActive: !currentActive })
+      setSubcontractors(prev =>
+        prev.map(s => (s.id === id ? { ...s, isActive: !currentActive } : s))
+      )
+      setMessage(currentActive ? '外注先を無効化しました' : '外注先を有効化しました')
     } catch {
       setError('更新に失敗しました')
     }
@@ -213,22 +155,13 @@ export default function SubcontractorsPage() {
     }
     setError('')
     try {
-      const res = await fetch('/api/admin/subcontractors', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name: editingName }),
-      })
-      if (res.ok) {
-        setSubcontractors(prev =>
-          prev.map(s => (s.id === id ? { ...s, name: editingName.trim() } : s))
-        )
-        setEditingId(null)
-        setEditingName('')
-        setMessage('外注先名を更新しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateSubcontractor({ id, name: editingName })
+      setSubcontractors(prev =>
+        prev.map(s => (s.id === id ? { ...s, name: editingName.trim() } : s))
+      )
+      setEditingId(null)
+      setEditingName('')
+      setMessage('外注先名を更新しました')
     } catch {
       setError('更新に失敗しました')
     }
@@ -245,13 +178,8 @@ export default function SubcontractorsPage() {
     setSubcontractors(newList)
 
     try {
-      await fetch('/api/admin/subcontractors', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reorder }),
-      })
+      await adminApi.updateSubcontractor({ reorder })
     } catch {
-      // ロールバック
       setSubcontractors(subcontractors)
       setError('並び替えに失敗しました')
     }
@@ -283,11 +211,7 @@ export default function SubcontractorsPage() {
     setDragOverIndex(null)
 
     try {
-      await fetch('/api/admin/subcontractors', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reorder }),
-      })
+      await adminApi.updateSubcontractor({ reorder })
     } catch {
       setSubcontractors(subcontractors)
       setError('並び替えに失敗しました')
@@ -299,16 +223,7 @@ export default function SubcontractorsPage() {
     setDragOverIndex(null)
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
-
-  if (loading || !currentUser) {
+  if (authLoading || loading || !currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">読み込み中...</p>

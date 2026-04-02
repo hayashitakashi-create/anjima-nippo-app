@@ -17,12 +17,8 @@ import {
   Pencil,
   Check,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, ApiError } from '@/lib/api'
 
 interface Material {
   id: string
@@ -34,7 +30,7 @@ interface Material {
 
 export default function MaterialsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'manage_masters' })
   const [materials, setMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -61,21 +57,6 @@ export default function MaterialsPage() {
   ]
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.manage_masters) { router.push('/dashboard'); return }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
-  useEffect(() => {
     if (!currentUser) return
     fetchMaterials()
   }, [currentUser])
@@ -88,12 +69,8 @@ export default function MaterialsPage() {
 
   const loadDefaultsAutomatically = async () => {
     try {
-      const res = await fetch('/api/admin/materials/load-defaults', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ materials: defaultMaterials }),
-      })
-      if (res.ok) await fetchMaterials()
+      await adminApi.loadDefaultMaterials()
+      await fetchMaterials()
     } catch (err) {
       console.error('デフォルト材料自動登録エラー:', err)
     }
@@ -101,15 +78,14 @@ export default function MaterialsPage() {
 
   const fetchMaterials = async () => {
     try {
-      const res = await fetch('/api/admin/materials')
-      if (res.ok) {
-        const data = await res.json()
-        setMaterials(data.materials)
-      } else if (res.status === 403) {
-        router.push('/dashboard')
-      }
+      const data = await adminApi.fetchMaterials()
+      setMaterials(data.materials)
     } catch (err) {
-      console.error('材料一覧取得エラー:', err)
+      if (err instanceof ApiError && err.status === 403) {
+        router.push('/dashboard')
+      } else {
+        console.error('材料一覧取得エラー:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -120,22 +96,12 @@ export default function MaterialsPage() {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/materials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, defaultVolume: newVolume || null }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setMaterials(prev => [...prev, data.material])
-        setNewName('')
-        setNewVolume('')
-        setAddingNew(false)
-        setMessage('材料を追加しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '追加に失敗しました')
-      }
+      const data = await adminApi.createMaterial({ name: newName, defaultVolume: newVolume || null }) as any
+      setMaterials(prev => [...prev, data.material])
+      setNewName('')
+      setNewVolume('')
+      setAddingNew(false)
+      setMessage('材料を追加しました')
     } catch { setError('追加に失敗しました') }
     finally { setSaving(false) }
   }
@@ -144,19 +110,10 @@ export default function MaterialsPage() {
     if (!editingName.trim()) { setError('材料名を入力してください'); return }
     setError('')
     try {
-      const res = await fetch('/api/admin/materials', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name: editingName, defaultVolume: editingVolume || null }),
-      })
-      if (res.ok) {
-        setMaterials(prev => prev.map(m => m.id === id ? { ...m, name: editingName.trim(), defaultVolume: editingVolume.trim() || null } : m))
-        setEditingId(null)
-        setMessage('材料を更新しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateMaterial({ id, name: editingName, defaultVolume: editingVolume || null })
+      setMaterials(prev => prev.map(m => m.id === id ? { ...m, name: editingName.trim(), defaultVolume: editingVolume.trim() || null } : m))
+      setEditingId(null)
+      setMessage('材料を更新しました')
     } catch { setError('更新に失敗しました') }
   }
 
@@ -164,41 +121,22 @@ export default function MaterialsPage() {
     if (!confirm('この材料を削除しますか？')) return
     setError('')
     try {
-      const res = await fetch(`/api/admin/materials?id=${id}`, { method: 'DELETE' })
-      if (res.ok) {
-        setMaterials(prev => prev.filter(m => m.id !== id))
-        setMessage('材料を削除しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-      }
+      await adminApi.deleteMaterial({ id })
+      setMaterials(prev => prev.filter(m => m.id !== id))
+      setMessage('材料を削除しました')
     } catch { setError('削除に失敗しました') }
   }
 
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     setError('')
     try {
-      const res = await fetch('/api/admin/materials', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, isActive: !currentActive }),
-      })
-      if (res.ok) {
-        setMaterials(prev => prev.map(m => m.id === id ? { ...m, isActive: !currentActive } : m))
-        setMessage(currentActive ? '材料を無効化しました' : '材料を有効化しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateMaterial({ id, isActive: !currentActive })
+      setMaterials(prev => prev.map(m => m.id === id ? { ...m, isActive: !currentActive } : m))
+      setMessage(currentActive ? '材料を無効化しました' : '材料を有効化しました')
     } catch { setError('更新に失敗しました') }
   }
 
-  const handleLogout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login') }
-    catch (err) { console.error('ログアウトエラー:', err) }
-  }
-
-  if (loading || !currentUser) {
+  if (authLoading || loading || !currentUser) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-600">読み込み中...</p></div>
   }
 

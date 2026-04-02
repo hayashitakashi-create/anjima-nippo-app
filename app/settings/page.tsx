@@ -4,21 +4,14 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Home, LogOut, Building2, Shield, Eye, EyeOff } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  username: string
-  position?: string
-  role: string
-  permissions?: Record<string, boolean>
-}
+import { useAuth } from '@/hooks/useAuth'
+import { apiPut } from '@/lib/api'
 
 export default function SettingsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const mustChangePassword = searchParams.get('change_password') === '1'
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout } = useAuth()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -40,27 +33,11 @@ export default function SettingsPage() {
     confirm: false,
   })
 
-  // ログインユーザーを取得
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-          setUsernameForm({ username: data.user.username })
-        }
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
-  }, [router])
+    if (currentUser?.username) {
+      setUsernameForm({ username: currentUser.username })
+    }
+  }, [currentUser])
 
   // ユーザー名変更
   const handleUsernameUpdate = async (e: React.FormEvent) => {
@@ -70,22 +47,8 @@ export default function SettingsPage() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/user/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(usernameForm),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'ユーザー名の更新に失敗しました')
-      }
-
+      await apiPut('/api/user/update', usernameForm)
       setMessage('ユーザー名を更新しました')
-      setCurrentUser(data.user)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -107,20 +70,7 @@ export default function SettingsPage() {
     }
 
     try {
-      const response = await fetch('/api/user/change-password', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(passwordForm),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'パスワードの変更に失敗しました')
-      }
-
+      await apiPut('/api/user/change-password', passwordForm)
       setMessage('パスワードを変更しました')
       setPasswordForm({
         currentPassword: '',
@@ -170,14 +120,7 @@ export default function SettingsPage() {
                 </Link>
               )}
               <button
-                onClick={async () => {
-                  try {
-                    await fetch('/api/auth/logout', { method: 'POST' })
-                    router.push('/login')
-                  } catch (error) {
-                    console.error('ログアウトエラー:', error)
-                  }
-                }}
+                onClick={logout}
                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 title="ログアウト"
               >

@@ -17,6 +17,7 @@ import {
   Trash2,
   Palmtree,
 } from 'lucide-react'
+import { apiGet, apiPut, ApiError } from '@/lib/api'
 
 interface Notification {
   id: string
@@ -40,15 +41,7 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       const unreadOnly = filter === 'unread' ? '&unreadOnly=true' : ''
-      const res = await fetch(`/api/notifications?limit=100${unreadOnly}`)
-      if (!res.ok) {
-        if (res.status === 401) {
-          router.push('/login')
-          return
-        }
-        throw new Error('取得失敗')
-      }
-      const data = await res.json()
+      const data = await apiGet<any>(`/api/notifications?limit=100${unreadOnly}`)
       let items = data.notifications || []
       if (filter === 'read') {
         items = items.filter((n: Notification) => n.isRead)
@@ -56,7 +49,11 @@ export default function NotificationsPage() {
       setNotifications(items)
       setUnreadCount(data.unreadCount || 0)
     } catch (error) {
-      console.error('通知取得エラー:', error)
+      if (error instanceof ApiError && error.status === 401) {
+        router.push('/login')
+      } else {
+        console.error('通知取得エラー:', error)
+      }
     } finally {
       setLoading(false)
     }
@@ -68,11 +65,7 @@ export default function NotificationsPage() {
 
   const markAsRead = async (notificationId: string) => {
     try {
-      await fetch('/api/notifications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId }),
-      })
+      await apiPut('/api/notifications', { notificationId })
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       )
@@ -84,11 +77,7 @@ export default function NotificationsPage() {
 
   const markAllRead = async () => {
     try {
-      await fetch('/api/notifications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAllRead: true }),
-      })
+      await apiPut('/api/notifications', { markAllRead: true })
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
       setUnreadCount(0)
     } catch (error) {

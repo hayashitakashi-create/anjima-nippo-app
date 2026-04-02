@@ -27,7 +27,9 @@ import {
 import { useDraftSave, formatDraftTime } from '@/lib/useDraftSave'
 
 // Types
-import { User, WorkerRecord, MaterialRecord, SubcontractorRecord, calculateManHoursFromTime } from './types'
+import { WorkerRecord, MaterialRecord, SubcontractorRecord, calculateManHoursFromTime } from './types'
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiPost, apiGet } from '@/lib/api'
 import { WORKER_NAMES, DEFAULT_PROJECT_TYPES, DEFAULT_VOLUME_UNITS, DEFAULT_SUBCONTRACTORS } from './constants'
 
 // Components
@@ -50,7 +52,7 @@ function WorkReportNewPageContent() {
   const searchParams = useSearchParams()
   const projectRefId = searchParams.get('projectId')
 
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, logout: handleLogout } = useAuth()
   const [loading, setLoading] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [projectLoaded, setProjectLoaded] = useState(false)
@@ -118,68 +120,34 @@ function WorkReportNewPageContent() {
     setShowDraftBanner(false)
   }
 
-  // 初期化
+  // 初期化: マスタデータ取得
   useEffect(() => {
-    // ユーザー情報取得
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
-
     // マスタデータ取得
     Promise.all([
-      fetch('/api/admin/materials', { credentials: 'include' }),
-      fetch('/api/admin/project-types', { credentials: 'include' }),
-      fetch('/api/admin/subcontractors', { credentials: 'include' }),
-      fetch('/api/admin/units', { credentials: 'include' }),
-      fetch('/api/admin/workers', { credentials: 'include' }),
-    ]).then(async ([materialsRes, projectTypesRes, subcontractorsRes, unitsRes, workersRes]) => {
-      if (materialsRes.ok) {
-        const data = await materialsRes.json()
-        if (data?.materials) {
-          setMaterialMasterList(data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0, defaultVolume: m.defaultVolume || '' })))
-        }
+      adminApi.fetchMaterials().catch(() => null),
+      adminApi.fetchProjectTypes().catch(() => null),
+      adminApi.fetchSubcontractors().catch(() => null),
+      adminApi.fetchUnits().catch(() => null),
+      adminApi.fetchWorkers().catch(() => null),
+    ]).then(([materialsData, projectTypesData, subcontractorsData, unitsData, workersData]) => {
+      if (materialsData?.materials) {
+        setMaterialMasterList(materialsData.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0, defaultVolume: m.defaultVolume || '' })))
       }
-      if (projectTypesRes.ok) {
-        const data = await projectTypesRes.json()
-        if (data?.projectTypes) {
-          const activeTypes = data.projectTypes.filter((pt: any) => pt.isActive).map((pt: any) => pt.name)
-          if (activeTypes.length > 0) setProjectTypesList(activeTypes)
-        }
+      if (projectTypesData?.projectTypes) {
+        const activeTypes = projectTypesData.projectTypes.filter((pt: any) => pt.isActive).map((pt: any) => pt.name)
+        if (activeTypes.length > 0) setProjectTypesList(activeTypes)
       }
-      if (subcontractorsRes.ok) {
-        const data = await subcontractorsRes.json()
-        if (data?.subcontractors) {
-          const activeNames = data.subcontractors.filter((s: any) => s.isActive).map((s: any) => s.name)
-          if (activeNames.length > 0) setSubcontractorMasterList(activeNames)
-        }
+      if (subcontractorsData?.subcontractors) {
+        const activeNames = subcontractorsData.subcontractors.filter((s: any) => s.isActive).map((s: any) => s.name)
+        if (activeNames.length > 0) setSubcontractorMasterList(activeNames)
       }
-      if (unitsRes.ok) {
-        const data = await unitsRes.json()
-        if (data?.units) {
-          const activeUnits = data.units.filter((u: any) => u.isActive).map((u: any) => u.name)
-          if (activeUnits.length > 0) setUnitMasterList(activeUnits)
-        }
+      if (unitsData?.units) {
+        const activeUnits = unitsData.units.filter((u: any) => u.isActive).map((u: any) => u.name)
+        if (activeUnits.length > 0) setUnitMasterList(activeUnits)
       }
-      if (workersRes.ok) {
-        const data = await workersRes.json()
-        if (data?.workers) {
-          const activeWorkers = data.workers.filter((w: any) => w.isActive).map((w: any) => w.name)
-          if (activeWorkers.length > 0) setWorkerNamesList(activeWorkers)
-        }
+      if (workersData?.workers) {
+        const activeWorkers = workersData.workers.filter((w: any) => w.isActive).map((w: any) => w.name)
+        if (activeWorkers.length > 0) setWorkerNamesList(activeWorkers)
       }
     }).catch(err => console.error('マスタデータ取得エラー:', err))
 
@@ -190,8 +158,7 @@ function WorkReportNewPageContent() {
 
     // 物件IDがURLパラメータにある場合、物件情報を取得
     if (projectRefId) {
-      fetch(`/api/projects/${projectRefId}`)
-        .then(res => res.ok ? res.json() : null)
+      apiGet<any>(`/api/projects/${projectRefId}`)
         .then(project => {
           if (project) {
             form.setProjectName(project.name || '')
@@ -213,9 +180,7 @@ function WorkReportNewPageContent() {
         date: form.date,
       })
       if (projectRefId) params.set('projectRefId', projectRefId)
-      const res = await fetch(`/api/work-report/previous?${params}`)
-      if (!res.ok) return null
-      return await res.json()
+      return await apiGet<any>(`/api/work-report/previous?${params}`)
     } catch (error) {
       console.error('前日日報取得エラー:', error)
       return null
@@ -315,60 +280,52 @@ function WorkReportNewPageContent() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/work-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: new Date(form.date),
-          userId: currentUser?.id,
-          projectRefId: projectRefId || undefined,
-          projectName: form.projectName,
-          projectType: form.projectType,
-          projectId: form.projectId,
-          weather: form.weather,
-          contactNotes: form.contactNotes,
-          remoteDepartureTime: form.remoteDepartureTime,
-          remoteArrivalTime: form.remoteArrivalTime,
-          remoteDepartureTime2: form.remoteDepartureTime2,
-          remoteArrivalTime2: form.remoteArrivalTime2,
-          trafficGuardCount: form.trafficGuardCount,
-          trafficGuardStart: form.trafficGuardStart,
-          trafficGuardEnd: form.trafficGuardEnd,
-          workerRecords: form.workerRecords.map((record, index) => ({
+      await apiPost('/api/work-report', {
+        date: new Date(form.date),
+        userId: currentUser?.id,
+        projectRefId: projectRefId || undefined,
+        projectName: form.projectName,
+        projectType: form.projectType,
+        projectId: form.projectId,
+        weather: form.weather,
+        contactNotes: form.contactNotes,
+        remoteDepartureTime: form.remoteDepartureTime,
+        remoteArrivalTime: form.remoteArrivalTime,
+        remoteDepartureTime2: form.remoteDepartureTime2,
+        remoteArrivalTime2: form.remoteArrivalTime2,
+        trafficGuardCount: form.trafficGuardCount,
+        trafficGuardStart: form.trafficGuardStart,
+        trafficGuardEnd: form.trafficGuardEnd,
+        workerRecords: form.workerRecords.map((record, index) => ({
+          name: record.name,
+          startTime: record.startTime,
+          endTime: record.endTime,
+          workHours: record.manHours || calculateManHoursFromTime(record.startTime, record.endTime),
+          workType: record.workType,
+          details: record.details,
+          dailyHours: record.dailyHours,
+          totalHours: record.totalHours,
+          order: index
+        })),
+        materialRecords: form.materialRecords.map((record, index) => ({
+          name: record.name,
+          volume: record.volume,
+          volumeUnit: record.volumeUnit,
+          quantity: record.quantity,
+          unitPrice: record.unitPrice,
+          amount: record.quantity * record.unitPrice,
+          subcontractor: record.subcontractor,
+          order: index
+        })),
+        subcontractorRecords: form.subcontractorRecords
+          .filter(record => record.name.trim() !== '')
+          .map((record, index) => ({
             name: record.name,
-            startTime: record.startTime,
-            endTime: record.endTime,
-            workHours: record.manHours || calculateManHoursFromTime(record.startTime, record.endTime),
-            workType: record.workType,
-            details: record.details,
-            dailyHours: record.dailyHours,
-            totalHours: record.totalHours,
+            workerCount: record.workerCount,
+            workContent: record.workContent,
             order: index
-          })),
-          materialRecords: form.materialRecords.map((record, index) => ({
-            name: record.name,
-            volume: record.volume,
-            volumeUnit: record.volumeUnit,
-            quantity: record.quantity,
-            unitPrice: record.unitPrice,
-            amount: record.quantity * record.unitPrice,
-            subcontractor: record.subcontractor,
-            order: index
-          })),
-          subcontractorRecords: form.subcontractorRecords
-            .filter(record => record.name.trim() !== '')
-            .map((record, index) => ({
-              name: record.name,
-              workerCount: record.workerCount,
-              workContent: record.workContent,
-              order: index
-            }))
-        }),
+          }))
       })
-
-      if (!response.ok) {
-        throw new Error('作業日報の作成に失敗しました')
-      }
 
       clearDraft()
       setShowSuccessDialog(true)
@@ -377,15 +334,6 @@ function WorkReportNewPageContent() {
       alert('作業日報の作成に失敗しました')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
     }
   }
 

@@ -34,27 +34,19 @@ import {
   Clock,
   CalendarOff,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, ApiError } from '@/lib/api'
+import type { ClientUser } from '@/lib/types'
 
-interface User {
-  id: string
-  name: string
+interface ManagedUser extends ClientUser {
   username: string
-  position?: string
-  role: string
-  isApprover?: boolean
-  isActive?: boolean
-  defaultReportType: string
-  permissions?: Record<string, boolean>
-}
-
-interface ManagedUser extends User {
   createdAt: string
   updatedAt: string
 }
 
 export default function AdminPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth()
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
@@ -98,20 +90,12 @@ export default function AdminPage() {
   ])
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          const perms = data.user.permissions || {}
-          if (!perms.manage_users && !perms.approve_reports && !perms.manage_masters && !perms.system_settings && !perms.view_audit_log && !perms.bulk_print && !perms.view_aggregation) { router.push('/dashboard'); return }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
+    if (!currentUser) return
+    const perms = currentUser.permissions || {}
+    if (!perms.manage_users && !perms.approve_reports && !perms.manage_masters && !perms.system_settings && !perms.view_audit_log && !perms.bulk_print && !perms.view_aggregation) {
+      router.push('/dashboard')
+    }
+  }, [currentUser, router])
 
   useEffect(() => {
     if (!currentUser) return
@@ -126,12 +110,9 @@ export default function AdminPage() {
 
   const fetchPositionOptions = async () => {
     try {
-      const res = await fetch('/api/admin/system-settings?key=approval_roles')
-      if (res.ok) {
-        const data = await res.json()
-        if (data.settings?.approval_roles && Array.isArray(data.settings.approval_roles)) {
-          setPositionOptions(data.settings.approval_roles)
-        }
+      const data = await adminApi.fetchSystemSetting('approval_roles') as any
+      if (data.settings?.approval_roles && Array.isArray(data.settings.approval_roles)) {
+        setPositionOptions(data.settings.approval_roles)
       }
     } catch (err) {
       console.error('役職リスト取得エラー:', err)
@@ -140,15 +121,14 @@ export default function AdminPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/admin/users')
-      if (res.ok) {
-        const data = await res.json()
-        setUsers(data.users)
-      } else if (res.status === 403) {
-        router.push('/dashboard')
-      }
+      const data = await adminApi.fetchUsers()
+      setUsers(data.users as any)
     } catch (err) {
-      console.error('ユーザー一覧取得エラー:', err)
+      if (err instanceof ApiError && err.status === 403) {
+        router.push('/dashboard')
+      } else {
+        console.error('ユーザー一覧取得エラー:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -158,7 +138,7 @@ export default function AdminPage() {
     setEditingUser(user.id)
     setEditForm({
       role: user.role,
-      defaultReportType: user.defaultReportType,
+      defaultReportType: user.defaultReportType || 'work',
       position: user.position || '',
     })
     setMessage('')
@@ -170,27 +150,17 @@ export default function AdminPage() {
     setMessage('')
     setError('')
     try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          role: editForm.role,
-          defaultReportType: editForm.defaultReportType,
-          position: editForm.position || null,
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setUsers(prev => prev.map(u => (u.id === userId ? { ...u, ...data.user } : u)))
-        setEditingUser(null)
-        setMessage('ユーザー情報を更新しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
-    } catch {
-      setError('更新に失敗しました')
+      const data = await adminApi.updateUser({
+        userId,
+        role: editForm.role,
+        defaultReportType: editForm.defaultReportType,
+        position: editForm.position || null,
+      }) as any
+      setUsers(prev => prev.map(u => (u.id === userId ? { ...u, ...data.user } : u)))
+      setEditingUser(null)
+      setMessage('ユーザー情報を更新しました')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新に失敗しました')
     } finally {
       setSaving(null)
     }
@@ -217,23 +187,13 @@ export default function AdminPage() {
     setCreating(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createForm),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setUsers(prev => [...prev, data.user])
-        setShowCreateModal(false)
-        setCreateForm({ name: '', username: '', password: '', position: '', role: 'user', defaultReportType: 'work' })
-        setMessage('ユーザーを作成しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '作成に失敗しました')
-      }
-    } catch {
-      setError('作成に失敗しました')
+      const data = await adminApi.createUser(createForm) as any
+      setUsers(prev => [...prev, data.user])
+      setShowCreateModal(false)
+      setCreateForm({ name: '', username: '', password: '', position: '', role: 'user', defaultReportType: 'work' })
+      setMessage('ユーザーを作成しました')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '作成に失敗しました')
     } finally {
       setCreating(false)
     }
@@ -245,18 +205,12 @@ export default function AdminPage() {
     setDeleting(true)
     setError('')
     try {
-      const res = await fetch(`/api/admin/users?userId=${deleteTarget.id}`, { method: 'DELETE' })
-      if (res.ok) {
-        setUsers(prev => prev.filter(u => u.id !== deleteTarget.id))
-        setDeleteTarget(null)
-        setMessage('ユーザーを削除しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-        setDeleteTarget(null)
-      }
-    } catch {
-      setError('削除に失敗しました')
+      await adminApi.deleteUser({ id: deleteTarget.id })
+      setUsers(prev => prev.filter(u => u.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      setMessage('ユーザーを削除しました')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '削除に失敗しました')
       setDeleteTarget(null)
     } finally {
       setDeleting(false)
@@ -268,21 +222,12 @@ export default function AdminPage() {
     const newIsActive = !(user.isActive !== false)
     setError('')
     try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, isActive: newIsActive }),
-      })
-      if (res.ok) {
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: newIsActive } : u))
-        setDeactivateTarget(null)
-        setMessage(newIsActive ? 'アカウントを有効化しました' : 'アカウントを無効化しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
-    } catch {
-      setError('更新に失敗しました')
+      await adminApi.updateUser({ userId: user.id, isActive: newIsActive })
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: newIsActive } : u))
+      setDeactivateTarget(null)
+      setMessage(newIsActive ? 'アカウントを有効化しました' : 'アカウントを無効化しました')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新に失敗しました')
     }
   }
 
@@ -301,21 +246,12 @@ export default function AdminPage() {
     setMessage('')
     setTogglingApprover(user.id)
     try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, isApprover: newIsApprover }),
-      })
-      if (res.ok) {
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isApprover: newIsApprover } : u))
-        setMessage(newIsApprover ? `${user.name}を承認者に設定しました` : `${user.name}の承認者設定を解除しました`)
-      } else {
-        const data = await res.json()
-        setError(data.error || '承認者の更新に失敗しました')
-      }
+      await adminApi.updateUser({ userId: user.id, isApprover: newIsApprover })
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isApprover: newIsApprover } : u))
+      setMessage(newIsApprover ? `${user.name}を承認者に設定しました` : `${user.name}の承認者設定を解除しました`)
     } catch (err) {
       console.error('承認者トグルエラー:', err)
-      setError('承認者の更新に失敗しました')
+      setError(err instanceof Error ? err.message : '承認者の更新に失敗しました')
     } finally {
       setTogglingApprover(null)
     }
@@ -341,11 +277,6 @@ export default function AdminPage() {
     if (a.role !== b.role) return a.role === 'admin' ? -1 : 1
     return a.name.localeCompare(b.name, 'ja')
   })
-
-  const handleLogout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login') }
-    catch (err) { console.error('ログアウトエラー:', err) }
-  }
 
   const adminCount = users.filter(u => u.role === 'admin').length
   const userCount = users.filter(u => u.role === 'user').length

@@ -24,6 +24,8 @@ import {
   Hash,
   ArrowLeft,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api'
 
 interface Project {
   id: string
@@ -43,11 +45,6 @@ interface Project {
   updatedAt: string
 }
 
-interface CurrentUser {
-  id: string
-  name: string
-  role: string
-}
 
 type FilterTab = 'all' | 'active' | 'completed' | 'archived'
 
@@ -81,7 +78,7 @@ function formatDate(dateStr: string | null | undefined) {
 
 export default function AdminProjectsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'manage_masters' })
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterTab>('active')
@@ -122,22 +119,6 @@ export default function AdminProjectsPage() {
   })
   const [updating, setUpdating] = useState(false)
 
-  // Auth check
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          if (!data.user.permissions?.manage_masters) { router.push('/dashboard'); return }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
   // Fetch projects
   useEffect(() => {
     if (!currentUser) return
@@ -148,13 +129,8 @@ export default function AdminProjectsPage() {
     setLoading(true)
     try {
       const statusParam = filter === 'all' ? 'all' : filter
-      const res = await fetch(`/api/projects?status=${statusParam}`)
-      if (res.ok) {
-        const data = await res.json()
-        setProjects(data)
-      } else {
-        setError('案件の取得に失敗しました')
-      }
+      const data = await apiGet<any>(`/api/projects?status=${statusParam}`)
+      setProjects(data)
     } catch (err) {
       console.error('案件取得エラー:', err)
       setError('案件の取得に失敗しました')
@@ -171,38 +147,28 @@ export default function AdminProjectsPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...createForm,
-          startDate: createForm.startDate || null,
-          endDate: createForm.endDate || null,
-          progress: Number(createForm.progress),
-        }),
+      await apiPost('/api/projects', {
+        ...createForm,
+        startDate: createForm.startDate || null,
+        endDate: createForm.endDate || null,
+        progress: Number(createForm.progress),
       })
 
-      const data = await res.json()
-
-      if (res.ok) {
-        setMessage('案件を作成しました')
-        setShowCreateModal(false)
-        setCreateForm({
-          name: '',
-          projectType: '',
-          projectCode: '',
-          client: '',
-          location: '',
-          status: 'active',
-          progress: 0,
-          startDate: '',
-          endDate: '',
-          notes: '',
-        })
-        fetchProjects()
-      } else {
-        setError(data.error || '案件の作成に失敗しました')
-      }
+      setMessage('案件を作成しました')
+      setShowCreateModal(false)
+      setCreateForm({
+        name: '',
+        projectType: '',
+        projectCode: '',
+        client: '',
+        location: '',
+        status: 'active',
+        progress: 0,
+        startDate: '',
+        endDate: '',
+        notes: '',
+      })
+      fetchProjects()
     } catch (err) {
       console.error('案件作成エラー:', err)
       setError('案件の作成に失敗しました')
@@ -238,27 +204,17 @@ export default function AdminProjectsPage() {
     setError('')
 
     try {
-      const res = await fetch(`/api/projects/${editingProject.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editForm,
-          startDate: editForm.startDate || null,
-          endDate: editForm.endDate || null,
-          progress: Number(editForm.progress),
-        }),
+      await apiPut(`/api/projects/${editingProject.id}`, {
+        ...editForm,
+        startDate: editForm.startDate || null,
+        endDate: editForm.endDate || null,
+        progress: Number(editForm.progress),
       })
 
-      const data = await res.json()
-
-      if (res.ok) {
-        setMessage('案件を更新しました')
-        setShowEditModal(false)
-        setEditingProject(null)
-        fetchProjects()
-      } else {
-        setError(data.error || '案件の更新に失敗しました')
-      }
+      setMessage('案件を更新しました')
+      setShowEditModal(false)
+      setEditingProject(null)
+      fetchProjects()
     } catch (err) {
       console.error('案件更新エラー:', err)
       setError('案件の更新に失敗しました')
@@ -275,20 +231,9 @@ export default function AdminProjectsPage() {
     setError('')
 
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      const data = await res.json()
-
-      if (res.ok) {
-        setMessage(`ステータスを更新しました`)
-        fetchProjects()
-      } else {
-        setError(data.error || 'ステータスの更新に失敗しました')
-      }
+      await apiPut(`/api/projects/${projectId}`, { status: newStatus })
+      setMessage(`ステータスを更新しました`)
+      fetchProjects()
     } catch (err) {
       console.error('ステータス更新エラー:', err)
       setError('ステータスの更新に失敗しました')
@@ -308,32 +253,16 @@ export default function AdminProjectsPage() {
     setError('')
 
     try {
-      const res = await fetch(`/api/projects/${project.id}`, {
-        method: 'DELETE',
-      })
-
-      const data = await res.json()
-
-      if (res.ok) {
-        setMessage('案件を削除しました')
-        fetchProjects()
-      } else {
-        setError(data.error || '案件の削除に失敗しました')
-      }
+      await apiDelete(`/api/projects/${project.id}`)
+      setMessage('案件を削除しました')
+      fetchProjects()
     } catch (err) {
       console.error('案件削除エラー:', err)
       setError('案件の削除に失敗しました')
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
+
 
   // Filter and search
   const filteredProjects = useMemo(() => {

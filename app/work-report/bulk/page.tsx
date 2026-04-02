@@ -47,6 +47,8 @@ import {
   RemoteTrafficCard,
   ContactNotesCard,
 } from '../new/components'
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet, apiPost } from '@/lib/api'
 
 interface Project {
   id: string
@@ -69,6 +71,7 @@ interface ExistingReport {
 
 export default function BulkCreatePage() {
   const router = useRouter()
+  const { loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set())
@@ -120,48 +123,31 @@ export default function BulkCreatePage() {
   const totalAmount = materialRecords.reduce((sum, r) => sum + (r.quantity * r.unitPrice), 0)
 
   useEffect(() => {
-    // 認証チェック
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => { if (data) setLoading(false) })
-      .catch(() => router.push('/login'))
+    if (!authLoading) setLoading(false)
+  }, [authLoading])
 
+  useEffect(() => {
     // マスタデータ取得
     Promise.all([
-      fetch('/api/admin/project-types', { credentials: 'include' }),
-      fetch('/api/admin/materials', { credentials: 'include' }),
-      fetch('/api/admin/subcontractors', { credentials: 'include' }),
-      fetch('/api/admin/units', { credentials: 'include' }),
-    ]).then(async ([ptRes, matRes, subRes, unitRes]) => {
-      if (ptRes.ok) {
-        const data = await ptRes.json()
-        if (data?.projectTypes) {
-          const activeTypes = data.projectTypes.filter((pt: any) => pt.isActive).map((pt: any) => pt.name)
-          if (activeTypes.length > 0) setProjectTypesList(activeTypes)
-        }
+      adminApi.fetchProjectTypes().catch(() => null),
+      adminApi.fetchMaterials().catch(() => null),
+      adminApi.fetchSubcontractors().catch(() => null),
+      adminApi.fetchUnits().catch(() => null),
+    ]).then(([ptData, matData, subData, unitData]) => {
+      if (ptData?.projectTypes) {
+        const activeTypes = ptData.projectTypes.filter((pt: any) => pt.isActive).map((pt: any) => pt.name)
+        if (activeTypes.length > 0) setProjectTypesList(activeTypes)
       }
-      if (matRes.ok) {
-        const data = await matRes.json()
-        if (data?.materials) {
-          setMaterialMasterList(data.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0 })))
-        }
+      if (matData?.materials) {
+        setMaterialMasterList(matData.materials.filter((m: any) => m.isActive).map((m: any) => ({ name: m.name, unitPrice: m.defaultUnitPrice || 0 })))
       }
-      if (subRes.ok) {
-        const data = await subRes.json()
-        if (data?.subcontractors) {
-          const activeNames = data.subcontractors.filter((s: any) => s.isActive).map((s: any) => s.name)
-          if (activeNames.length > 0) setSubcontractorMasterList(activeNames)
-        }
+      if (subData?.subcontractors) {
+        const activeNames = subData.subcontractors.filter((s: any) => s.isActive).map((s: any) => s.name)
+        if (activeNames.length > 0) setSubcontractorMasterList(activeNames)
       }
-      if (unitRes.ok) {
-        const data = await unitRes.json()
-        if (data?.units) {
-          const activeUnits = data.units.filter((u: any) => u.isActive).map((u: any) => u.name)
-          if (activeUnits.length > 0) setUnitMasterList(activeUnits)
-        }
+      if (unitData?.units) {
+        const activeUnits = unitData.units.filter((u: any) => u.isActive).map((u: any) => u.name)
+        if (activeUnits.length > 0) setUnitMasterList(activeUnits)
       }
     }).catch(err => console.error('マスタデータ取得エラー:', err))
 
@@ -173,8 +159,7 @@ export default function BulkCreatePage() {
   useEffect(() => { fetchExistingReports() }, [currentMonth])
 
   const fetchProjects = (status: string) => {
-    fetch(`/api/projects?status=${status}`)
-      .then(res => res.json())
+    apiGet<any>(`/api/projects?status=${status}`)
       .then(data => setProjects(Array.isArray(data) ? data : []))
       .catch(() => setProjects([]))
   }
@@ -185,13 +170,10 @@ export default function BulkCreatePage() {
     const startDate = new Date(year, month, 1).toISOString().split('T')[0]
     const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
     try {
-      const res = await fetch(`/api/work-reports/bulk?startDate=${startDate}&endDate=${endDate}`, { credentials: 'include' })
-      if (res.ok) {
-        const data = await res.json()
-        const map = new Map<string, ExistingReport>()
-        data.reports.forEach((r: ExistingReport) => map.set(r.date, r))
-        setExistingReports(map)
-      }
+      const data = await apiGet<any>(`/api/work-reports/bulk?startDate=${startDate}&endDate=${endDate}`)
+      const map = new Map<string, ExistingReport>()
+      data.reports.forEach((r: ExistingReport) => map.set(r.date, r))
+      setExistingReports(map)
     } catch (err) { console.error('既存日報確認エラー:', err) }
   }
 
@@ -297,25 +279,14 @@ export default function BulkCreatePage() {
           })),
       }
 
-      const res = await fetch('/api/work-reports/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          dates: Array.from(selectedDates).sort(),
-          template: templateData,
-        }),
+      const data = await apiPost<any>('/api/work-reports/bulk', {
+        dates: Array.from(selectedDates).sort(),
+        template: templateData,
       })
 
-      const data = await res.json()
-
-      if (res.ok) {
-        setResult({ success: true, createdCount: data.createdCount, skippedCount: data.skippedCount, skippedDates: data.skippedDates })
-        setSelectedDates(new Set())
-        fetchExistingReports()
-      } else {
-        setError(data.error || '作成に失敗しました')
-      }
+      setResult({ success: true, createdCount: data.createdCount, skippedCount: data.skippedCount, skippedDates: data.skippedDates })
+      setSelectedDates(new Set())
+      fetchExistingReports()
     } catch (err) {
       setError('作成に失敗しました')
     } finally {

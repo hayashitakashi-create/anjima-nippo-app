@@ -38,14 +38,8 @@ import {
   ArrowLeft,
   Printer
 } from 'lucide-react'
-
-interface CurrentUser {
-  id: string
-  name: string
-  position?: string
-  role: string
-  permissions?: Record<string, boolean>
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet, apiPut, apiDelete } from '@/lib/api'
 
 interface WorkerRecord {
   id: string
@@ -151,7 +145,7 @@ export default function WorkReportDetailPage() {
   const params = useParams()
   const reportId = params.id as string
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const { user: currentUser, logout: handleLogout } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -204,30 +198,9 @@ export default function WorkReportDetailPage() {
   // 連絡事項
   const [contactNotes, setContactNotes] = useState('')
 
-  // 初期データ読み込み
+  // 初期データ読み込み: マスタデータ
   useEffect(() => {
-    // ユーザー情報取得
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data && data.user) {
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(error => {
-        console.error('ユーザー取得エラー:', error)
-        router.push('/login')
-      })
-
-    // 使用材料マスタ取得
-    fetch('/api/admin/materials', { credentials: 'include' })
-      .then(res => { if (res.ok) return res.json(); return null })
+    adminApi.fetchMaterials()
       .then(data => {
         if (data?.materials) {
           setMaterialMasterList(
@@ -237,9 +210,7 @@ export default function WorkReportDetailPage() {
       })
       .catch(err => console.error('材料マスタ取得エラー:', err))
 
-    // 工事種別マスタを取得
-    fetch('/api/admin/project-types', { credentials: 'include' })
-      .then(res => { if (res.ok) return res.json(); return null })
+    adminApi.fetchProjectTypes()
       .then(data => {
         if (data?.projectTypes) {
           const activeTypes = data.projectTypes
@@ -252,12 +223,7 @@ export default function WorkReportDetailPage() {
       })
       .catch(err => console.error('工事種別マスタ取得エラー:', err))
 
-    // 外注先マスタを取得
-    fetch('/api/admin/subcontractors', { credentials: 'include' })
-      .then(res => {
-        if (res.ok) return res.json()
-        return null
-      })
+    adminApi.fetchSubcontractors()
       .then(data => {
         if (data?.subcontractors) {
           const activeNames = data.subcontractors
@@ -270,12 +236,7 @@ export default function WorkReportDetailPage() {
       })
       .catch(err => console.error('外注先マスタ取得エラー:', err))
 
-    // 単位マスタを取得
-    fetch('/api/admin/units', { credentials: 'include' })
-      .then(res => {
-        if (res.ok) return res.json()
-        return null
-      })
+    adminApi.fetchUnits()
       .then(data => {
         if (data?.units) {
           const activeUnits = data.units
@@ -288,12 +249,7 @@ export default function WorkReportDetailPage() {
       })
       .catch(err => console.error('単位マスタ取得エラー:', err))
 
-    // 作業者名マスタを取得
-    fetch('/api/admin/workers', { credentials: 'include' })
-      .then(res => {
-        if (res.ok) return res.json()
-        return null
-      })
+    adminApi.fetchWorkers()
       .then(data => {
         if (data?.workers) {
           const activeWorkers = data.workers
@@ -307,13 +263,7 @@ export default function WorkReportDetailPage() {
       .catch(err => console.error('作業者名マスタ取得エラー:', err))
 
     // 作業日報データ取得
-    fetch(`/api/work-report/${reportId}`)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('作業日報の取得に失敗しました')
-        }
-        return res.json()
-      })
+    apiGet<any>(`/api/work-report/${reportId}`)
       .then(data => {
         const dateObj = new Date(data.date)
         setDate(dateObj.toISOString().split('T')[0])
@@ -474,62 +424,52 @@ export default function WorkReportDetailPage() {
     setSaving(true)
 
     try {
-      const response = await fetch(`/api/work-report/${reportId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          date: new Date(date),
-          userId: currentUser?.id,
-          projectRefId: projectRefId || undefined,
-          projectName,
-          projectType,
-          projectId,
-          weather,
-          contactNotes,
-          remoteDepartureTime,
-          remoteArrivalTime,
-          remoteDepartureTime2,
-          remoteArrivalTime2,
-          trafficGuardCount,
-          trafficGuardStart,
-          trafficGuardEnd,
-          workerRecords: workerRecords.map((record, index) => ({
+      await apiPut(`/api/work-report/${reportId}`, {
+        date: new Date(date),
+        userId: currentUser?.id,
+        projectRefId: projectRefId || undefined,
+        projectName,
+        projectType,
+        projectId,
+        weather,
+        contactNotes,
+        remoteDepartureTime,
+        remoteArrivalTime,
+        remoteDepartureTime2,
+        remoteArrivalTime2,
+        trafficGuardCount,
+        trafficGuardStart,
+        trafficGuardEnd,
+        workerRecords: workerRecords.map((record, index) => ({
+          name: record.name,
+          startTime: record.startTime,
+          endTime: record.endTime,
+          workHours: record.manHours,
+          workType: record.workType,
+          details: record.details,
+          dailyHours: record.dailyHours,
+          totalHours: record.totalHours,
+          order: index,
+        })),
+        materialRecords: materialRecords.map((record, index) => ({
+          name: record.name,
+          volume: record.volume,
+          volumeUnit: record.volumeUnit,
+          quantity: record.quantity,
+          unitPrice: record.unitPrice,
+          amount: record.quantity * record.unitPrice,
+          subcontractor: record.subcontractor,
+          order: index,
+        })),
+        subcontractorRecords: subcontractorRecords
+          .filter(record => record.name.trim() !== '')
+          .map((record, index) => ({
             name: record.name,
-            startTime: record.startTime,
-            endTime: record.endTime,
-            workHours: record.manHours,
-            workType: record.workType,
-            details: record.details,
-            dailyHours: record.dailyHours,
-            totalHours: record.totalHours,
+            workerCount: record.workerCount,
+            workContent: record.workContent,
             order: index,
           })),
-          materialRecords: materialRecords.map((record, index) => ({
-            name: record.name,
-            volume: record.volume,
-            volumeUnit: record.volumeUnit,
-            quantity: record.quantity,
-            unitPrice: record.unitPrice,
-            amount: record.quantity * record.unitPrice,
-            subcontractor: record.subcontractor,
-            order: index,
-          })),
-          subcontractorRecords: subcontractorRecords
-            .filter(record => record.name.trim() !== '')
-            .map((record, index) => ({
-              name: record.name,
-              workerCount: record.workerCount,
-              workContent: record.workContent,
-              order: index,
-            })),
-        }),
       })
-
-      if (!response.ok) {
-        throw new Error('作業日報の更新に失敗しました')
-      }
 
       setShowSuccessDialog(true)
     } catch (error) {
@@ -540,25 +480,12 @@ export default function WorkReportDetailPage() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (error) {
-      console.error('ログアウトエラー:', error)
-    }
-  }
+
 
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      const response = await fetch(`/api/work-report/${reportId}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || '削除に失敗しました')
-      }
+      await apiDelete(`/api/work-report/${reportId}`)
       router.push('/dashboard')
     } catch (error: any) {
       console.error('削除エラー:', error)

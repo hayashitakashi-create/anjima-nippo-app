@@ -22,13 +22,8 @@ import {
   CheckCircle2,
   Printer,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-  permissions?: Record<string, boolean>
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet, apiPut, apiDelete } from '@/lib/api'
 
 interface LeaveRequest {
   id: string
@@ -97,7 +92,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function AdminLeaveRequestsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'view_all_reports' })
   const [loading, setLoading] = useState(true)
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
   const [month, setMonth] = useState(() => {
@@ -117,30 +112,15 @@ export default function AdminLeaveRequestsPage() {
   const [processing, setProcessing] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.view_all_reports) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-          fetch('/api/admin/users')
-            .then(r => r.ok ? r.json() : null)
-            .then(d => {
-              if (d?.users) {
-                setAllUsers(d.users.filter((u: any) => u.isActive !== false).map((u: any) => ({ id: u.id, name: u.name })).sort((a: any, b: any) => a.name.localeCompare(b.name, 'ja')))
-              }
-            })
-            .catch(() => {})
+    if (!currentUser) return
+    adminApi.fetchUsers()
+      .then(d => {
+        if (d?.users) {
+          setAllUsers((d.users as any[]).filter((u: any) => u.isActive !== false).map((u: any) => ({ id: u.id, name: u.name })).sort((a: any, b: any) => a.name.localeCompare(b.name, 'ja')))
         }
       })
-      .catch(() => router.push('/login'))
-  }, [router])
+      .catch(() => {})
+  }, [currentUser])
 
   useEffect(() => {
     if (!currentUser) return
@@ -150,11 +130,8 @@ export default function AdminLeaveRequestsPage() {
   const fetchLeaveRequests = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/leave-requests?all=true&month=${month}`)
-      if (res.ok) {
-        const data = await res.json()
-        setLeaveRequests(data.leaveRequests)
-      }
+      const data = await apiGet<any>(`/api/leave-requests?all=true&month=${month}`)
+      setLeaveRequests(data.leaveRequests)
     } catch (err) {
       console.error('休暇届取得エラー:', err)
     } finally {
@@ -173,16 +150,10 @@ export default function AdminLeaveRequestsPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/leave-requests/${deleteTarget.id}`, { method: 'DELETE' })
-      if (res.ok) {
-        setLeaveRequests(prev => prev.filter(l => l.id !== deleteTarget.id))
-        setDeleteTarget(null)
-        setMessage('休暇届を削除しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-        setDeleteTarget(null)
-      }
+      await apiDelete(`/api/leave-requests/${deleteTarget.id}`)
+      setLeaveRequests(prev => prev.filter(l => l.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      setMessage('休暇届を削除しました')
     } catch {
       setError('削除に失敗しました')
       setDeleteTarget(null)
@@ -196,22 +167,13 @@ export default function AdminLeaveRequestsPage() {
     setProcessing(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/leave-approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaveRequestId, action }),
-      })
-      if (res.ok) {
-        const newStatus = action === 'approve' ? 'approved' : 'rejected'
-        setLeaveRequests(prev => prev.map(l => l.id === leaveRequestId ? { ...l, status: newStatus } : l))
-        setSelectedIds(prev => { const next = new Set(prev); next.delete(leaveRequestId); return next })
-        setMessage(action === 'approve' ? '承認しました' : '差し戻しました')
-        if (selectedRequest?.id === leaveRequestId) {
-          setSelectedRequest(prev => prev ? { ...prev, status: newStatus } : null)
-        }
-      } else {
-        const data = await res.json()
-        setError(data.error || '処理に失敗しました')
+      await apiPut('/api/admin/leave-approvals', { leaveRequestId, action })
+      const newStatus = action === 'approve' ? 'approved' : 'rejected'
+      setLeaveRequests(prev => prev.map(l => l.id === leaveRequestId ? { ...l, status: newStatus } : l))
+      setSelectedIds(prev => { const next = new Set(prev); next.delete(leaveRequestId); return next })
+      setMessage(action === 'approve' ? '承認しました' : '差し戻しました')
+      if (selectedRequest?.id === leaveRequestId) {
+        setSelectedRequest(prev => prev ? { ...prev, status: newStatus } : null)
       }
     } catch {
       setError('処理に失敗しました')
@@ -226,20 +188,12 @@ export default function AdminLeaveRequestsPage() {
     setProcessing(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/leave-approvals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaveRequestIds: Array.from(selectedIds), action }),
-      })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await apiPut<any>('/api/admin/leave-approvals', { leaveRequestIds: Array.from(selectedIds), action })
+      {
         const newStatus = action === 'bulk_approve' ? 'approved' : 'rejected'
         setLeaveRequests(prev => prev.map(l => selectedIds.has(l.id) ? { ...l, status: newStatus } : l))
         setSelectedIds(new Set())
         setMessage(action === 'bulk_approve' ? `${data.count}件を承認しました` : `${data.count}件を差し戻しました`)
-      } else {
-        const data = await res.json()
-        setError(data.error || '処理に失敗しました')
       }
     } catch {
       setError('処理に失敗しました')
@@ -296,11 +250,6 @@ export default function AdminLeaveRequestsPage() {
   leaveRequests.forEach(l => {
     typeCounts[l.leaveType] = (typeCounts[l.leaveType] || 0) + 1
   })
-
-  const handleLogout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login') }
-    catch (err) { console.error('ログアウトエラー:', err) }
-  }
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr)

@@ -15,12 +15,8 @@ import {
   X,
   ArrowLeft,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, ApiError } from '@/lib/api'
 
 interface ProjectType {
   id: string
@@ -33,7 +29,7 @@ interface ProjectType {
 
 export default function ProjectTypesPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'manage_masters' })
   const [projectTypes, setProjectTypes] = useState<ProjectType[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -45,42 +41,20 @@ export default function ProjectTypesPage() {
   const [addingNew, setAddingNew] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) {
-          router.push('/login')
-          return null
-        }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.manage_masters) {
-            router.push('/dashboard')
-            return
-          }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
-  useEffect(() => {
     if (!currentUser) return
     fetchProjectTypes()
   }, [currentUser])
 
   const fetchProjectTypes = async () => {
     try {
-      const res = await fetch('/api/admin/project-types')
-      if (res.ok) {
-        const data = await res.json()
-        setProjectTypes(data.projectTypes)
-      } else if (res.status === 403) {
-        router.push('/dashboard')
-      }
+      const data = await adminApi.fetchProjectTypes()
+      setProjectTypes(data.projectTypes)
     } catch (err) {
-      console.error('工事種別一覧取得エラー:', err)
+      if (err instanceof ApiError && err.status === 403) {
+        router.push('/dashboard')
+      } else {
+        console.error('工事種別一覧取得エラー:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -95,21 +69,11 @@ export default function ProjectTypesPage() {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/project-types', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newProjectType }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setProjectTypes(prev => [...prev, data.projectType])
-        setNewProjectType('')
-        setAddingNew(false)
-        setMessage('工事種別を追加しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '追加に失敗しました')
-      }
+      const data = await adminApi.createProjectType({ name: newProjectType }) as any
+      setProjectTypes(prev => [...prev, data.projectType])
+      setNewProjectType('')
+      setAddingNew(false)
+      setMessage('工事種別を追加しました')
     } catch {
       setError('追加に失敗しました')
     } finally {
@@ -122,16 +86,9 @@ export default function ProjectTypesPage() {
 
     setError('')
     try {
-      const res = await fetch(`/api/admin/project-types?id=${id}`, {
-        method: 'DELETE',
-      })
-      if (res.ok) {
-        setProjectTypes(prev => prev.filter(p => p.id !== id))
-        setMessage('工事種別を削除しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '削除に失敗しました')
-      }
+      await adminApi.deleteProjectType({ id })
+      setProjectTypes(prev => prev.filter(p => p.id !== id))
+      setMessage('工事種別を削除しました')
     } catch {
       setError('削除に失敗しました')
     }
@@ -140,35 +97,17 @@ export default function ProjectTypesPage() {
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     setError('')
     try {
-      const res = await fetch('/api/admin/project-types', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, isActive: !currentActive }),
-      })
-      if (res.ok) {
-        setProjectTypes(prev =>
-          prev.map(p => (p.id === id ? { ...p, isActive: !currentActive } : p))
-        )
-        setMessage(currentActive ? '工事種別を無効化しました' : '工事種別を有効化しました')
-      } else {
-        const data = await res.json()
-        setError(data.error || '更新に失敗しました')
-      }
+      await adminApi.updateProjectType({ id, isActive: !currentActive })
+      setProjectTypes(prev =>
+        prev.map(p => (p.id === id ? { ...p, isActive: !currentActive } : p))
+      )
+      setMessage(currentActive ? '工事種別を無効化しました' : '工事種別を有効化しました')
     } catch {
       setError('更新に失敗しました')
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
-
-  if (loading || !currentUser) {
+  if (authLoading || loading || !currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">読み込み中...</p>

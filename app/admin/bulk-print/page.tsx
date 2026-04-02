@@ -22,12 +22,8 @@ import {
   Wrench,
   FolderKanban,
 } from 'lucide-react'
-
-interface User {
-  id: string
-  name: string
-  role: string
-}
+import { useAuth } from '@/hooks/useAuth'
+import { adminApi, apiGet } from '@/lib/api'
 
 interface ManagedUser {
   id: string
@@ -132,7 +128,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function BulkPrintPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'bulk_print' })
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
@@ -155,32 +151,14 @@ export default function BulkPrintPage() {
   const [isPrintMode, setIsPrintMode] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (!res.ok) { router.push('/login'); return null }
-        return res.json()
-      })
-      .then(data => {
-        if (data?.user) {
-          if (!data.user.permissions?.bulk_print) { router.push('/dashboard'); return }
-          setCurrentUser(data.user)
-        }
-      })
-      .catch(() => router.push('/login'))
-  }, [router])
-
-  useEffect(() => {
     if (!currentUser) return
     fetchUsers()
   }, [currentUser])
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/admin/users')
-      if (res.ok) {
-        const data = await res.json()
-        setUsers(data.users.filter((u: ManagedUser) => u.isActive !== false))
-      }
+      const data = await adminApi.fetchUsers()
+      setUsers((data.users as any[]).filter((u: ManagedUser) => u.isActive !== false))
     } catch (err) {
       console.error('ユーザー一覧取得エラー:', err)
     } finally {
@@ -206,13 +184,8 @@ export default function BulkPrintPage() {
       params.append('reportType', reportTypeFilter)
       if (projectNameFilter) params.append('projectName', projectNameFilter)
 
-      const res = await fetch(`/api/admin/bulk-reports?${params.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
-        setReports(data.reports)
-      } else {
-        setReports([])
-      }
+      const data = await apiGet<any>(`/api/admin/bulk-reports?${params.toString()}`)
+      setReports(data.reports)
     } catch (err) {
       console.error('日報検索エラー:', err)
       setReports([])
@@ -250,14 +223,7 @@ export default function BulkPrintPage() {
     setTimeout(() => { window.print() }, 100)
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
+
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr)

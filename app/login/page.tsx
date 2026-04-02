@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { motion } from 'motion/react'
 import Image from 'next/image'
+import { apiPost } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,19 +23,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'ログインに失敗しました')
-      }
+      const data = await apiPost<any>('/api/auth/login', formData)
 
       // 初回ログイン時はパスワード変更を強制
       if (data.user?.mustChangePassword) {
