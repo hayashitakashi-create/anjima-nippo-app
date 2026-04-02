@@ -19,26 +19,11 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  Route,
-  GripVertical,
-  Edit3,
-  ToggleLeft,
-  ToggleRight,
-  Star,
-  Lock,
-  ShieldCheck,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { adminApi, apiGet, apiPut, apiPost, apiDelete } from '@/lib/api'
-
-interface ApprovalRouteItem {
-  id: string
-  name: string
-  roles: string[]
-  isDefault: boolean
-  isActive: boolean
-  order: number
-}
+import { adminApi, apiGet } from '@/lib/api'
+import { ApprovalRoutesSection } from './ApprovalRoutesSection'
+import { PermissionsSection } from './PermissionsSection'
 
 interface SystemSettings {
   // 会社情報
@@ -69,11 +54,9 @@ export default function SystemSettingsPage() {
   const [expandedSections, setExpandedSections] = useState({
     company: true,
     approval: true,
-    approvalRoutes: true,
     salesReport: true,
     workReport: true,
     system: true,
-    permissions: true,
   })
 
   // 各セクションの保存状態
@@ -115,41 +98,20 @@ export default function SystemSettingsPage() {
   // 新しい役職追加用
   const [newRole, setNewRole] = useState('')
 
-  // 承認ルート管理
-  const [approvalRoutes, setApprovalRoutes] = useState<ApprovalRouteItem[]>([])
-  const [showRouteModal, setShowRouteModal] = useState(false)
-  const [editingRoute, setEditingRoute] = useState<ApprovalRouteItem | null>(null)
-  const [routeForm, setRouteForm] = useState({
-    name: '',
-    roles: [] as string[],
-    isDefault: false,
-  })
-  const [newRouteRole, setNewRouteRole] = useState('')
-  const [routeLoading, setRouteLoading] = useState(false)
-
-  // 権限設定
-  const PERMISSION_DEFINITIONS = [
-    { key: 'view_all_reports', label: '全員の日報閲覧', description: '他ユーザーの日報を閲覧可能' },
-    { key: 'edit_all_reports', label: '全員の日報編集', description: '他ユーザーの日報を編集可能' },
-    { key: 'approve_reports', label: '日報の承認', description: '日報を承認・差し戻し可能' },
-    { key: 'manage_users', label: 'ユーザー管理', description: 'ユーザーの追加・編集・削除' },
-    { key: 'manage_masters', label: 'マスタ管理', description: '案件・材料・外注先等の管理' },
-    { key: 'system_settings', label: 'システム設定', description: 'システム全体の設定変更' },
-    { key: 'view_audit_log', label: '操作ログ閲覧', description: '操作ログの閲覧' },
-    { key: 'bulk_print', label: '一括印刷', description: '日報の一括印刷' },
-    { key: 'view_aggregation', label: '集計閲覧', description: '労働時間・現場別集計の閲覧' },
-    { key: 'view_all_analytics', label: '全社分析', description: '全社員の分析データ閲覧' },
-  ] as const
-  const ADMIN_LOCKED_KEYS = ['system_settings', 'manage_users']
+  // 権限設定の初期値
+  const PERMISSION_KEYS = [
+    'view_all_reports', 'edit_all_reports', 'approve_reports', 'manage_users',
+    'manage_masters', 'system_settings', 'view_audit_log', 'bulk_print',
+    'view_aggregation', 'view_all_analytics',
+  ]
   const [permissionsForm, setPermissionsForm] = useState<Record<string, Record<string, boolean>>>({
-    admin: Object.fromEntries(PERMISSION_DEFINITIONS.map(d => [d.key, true])),
-    user: Object.fromEntries(PERMISSION_DEFINITIONS.map(d => [d.key, false])),
+    admin: Object.fromEntries(PERMISSION_KEYS.map(k => [k, true])),
+    user: Object.fromEntries(PERMISSION_KEYS.map(k => [k, false])),
   })
 
   useEffect(() => {
     if (!currentUser) return
     fetchSettings()
-    fetchApprovalRoutes()
   }, [currentUser])
 
   const fetchSettings = async () => {
@@ -197,9 +159,9 @@ export default function SystemSettingsPage() {
           for (const role of ['admin', 'user']) {
             merged[role] = { ...prev[role] }
             if (rp[role]) {
-              for (const def of PERMISSION_DEFINITIONS) {
-                if (typeof rp[role][def.key] === 'boolean') {
-                  merged[role][def.key] = rp[role][def.key]
+              for (const key of PERMISSION_KEYS) {
+                if (typeof rp[role][key] === 'boolean') {
+                  merged[role][key] = rp[role][key]
                 }
               }
             }
@@ -328,32 +290,6 @@ export default function SystemSettingsPage() {
     }
   }
 
-  // 権限設定の保存
-  const handleSavePermissions = async () => {
-    setSavingSection('permissions')
-    try {
-      await saveSetting('role_permissions', permissionsForm)
-      setSectionMessage('permissions', 'success', '権限設定を保存しました')
-      await fetchSettings()
-    } catch (error: any) {
-      setSectionMessage('permissions', 'error', error.message || '保存に失敗しました')
-    } finally {
-      setSavingSection(null)
-    }
-  }
-
-  // 権限トグル
-  const handleTogglePermission = (role: string, key: string) => {
-    // 管理者のロック権限はトグル不可
-    if (role === 'admin' && ADMIN_LOCKED_KEYS.includes(key)) return
-    setPermissionsForm(prev => ({
-      ...prev,
-      [role]: {
-        ...prev[role],
-        [key]: !prev[role][key],
-      },
-    }))
-  }
 
   // 役職の追加
   const handleAddRole = () => {
@@ -374,105 +310,6 @@ export default function SystemSettingsPage() {
     }))
   }
 
-  // === 承認ルート管理 ===
-  const fetchApprovalRoutes = async () => {
-    try {
-      const data = await adminApi.fetchApprovalRoutes() as any
-      setApprovalRoutes(data.routes || [])
-    } catch (err) {
-      console.error('承認ルート取得エラー:', err)
-    }
-  }
-
-  const openNewRouteModal = () => {
-    setEditingRoute(null)
-    setRouteForm({ name: '', roles: [], isDefault: false })
-    setNewRouteRole('')
-    setShowRouteModal(true)
-  }
-
-  const openEditRouteModal = (route: ApprovalRouteItem) => {
-    setEditingRoute(route)
-    setRouteForm({ name: route.name, roles: [...route.roles], isDefault: route.isDefault })
-    setNewRouteRole('')
-    setShowRouteModal(true)
-  }
-
-  const handleAddRouteRole = () => {
-    const roleToAdd = newRouteRole.trim()
-    if (roleToAdd && !routeForm.roles.includes(roleToAdd)) {
-      setRouteForm(prev => ({
-        ...prev,
-        roles: [...prev.roles, roleToAdd],
-      }))
-      setNewRouteRole('')
-    }
-  }
-
-  const handleRemoveRouteRole = (index: number) => {
-    setRouteForm(prev => ({
-      ...prev,
-      roles: prev.roles.filter((_, i) => i !== index),
-    }))
-  }
-
-  const handleSaveRoute = async () => {
-    if (!routeForm.name.trim()) {
-      setSectionMessage('approvalRoutes', 'error', 'ルート名を入力してください')
-      return
-    }
-    if (routeForm.roles.length === 0) {
-      setSectionMessage('approvalRoutes', 'error', '承認者役職を1つ以上追加してください')
-      return
-    }
-
-    setRouteLoading(true)
-    try {
-      if (editingRoute) {
-        await adminApi.updateApprovalRoute({ id: editingRoute.id, ...routeForm })
-      } else {
-        await adminApi.createApprovalRoute(routeForm)
-      }
-      setShowRouteModal(false)
-      await fetchApprovalRoutes()
-      setSectionMessage('approvalRoutes', 'success', '承認ルートを保存しました')
-    } catch (err: any) {
-      setSectionMessage('approvalRoutes', 'error', err.message || '保存に失敗しました')
-    } finally {
-      setRouteLoading(false)
-    }
-  }
-
-  const handleToggleRouteActive = async (route: ApprovalRouteItem) => {
-    try {
-      await adminApi.updateApprovalRoute({ id: route.id, isActive: !route.isActive })
-      setSectionMessage('approvalRoutes', 'success', route.isActive ? '無効化しました' : '有効化しました')
-      fetchApprovalRoutes()
-    } catch {
-      setSectionMessage('approvalRoutes', 'error', '更新に失敗しました')
-    }
-  }
-
-  const handleSetDefaultRoute = async (route: ApprovalRouteItem) => {
-    try {
-      await adminApi.updateApprovalRoute({ id: route.id, isDefault: true })
-      setSectionMessage('approvalRoutes', 'success', `「${route.name}」をデフォルトに設定しました`)
-      fetchApprovalRoutes()
-    } catch {
-      setSectionMessage('approvalRoutes', 'error', '更新に失敗しました')
-    }
-  }
-
-  const handleDeleteRoute = async (route: ApprovalRouteItem) => {
-    if (!confirm(`「${route.name}」を削除しますか？`)) return
-    try {
-      const data = await adminApi.deleteApprovalRoute(route.id) as any
-      setSectionMessage('approvalRoutes', 'success', data.message)
-      fetchApprovalRoutes()
-    } catch (err: any) {
-      setSectionMessage('approvalRoutes', 'error', err.message || '削除に失敗しました')
-    }
-  }
 
 
 
@@ -737,290 +574,7 @@ export default function SystemSettingsPage() {
             )}
           </div>
 
-          {/* 承認ルート管理 */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <button
-              onClick={() => toggleSection('approvalRoutes')}
-              className="w-full px-4 sm:px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                  <Route className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div className="text-left">
-                  <h2 className="text-lg font-bold text-gray-900">承認ルート管理</h2>
-                  <p className="text-xs text-gray-500">複数の承認フローを設定</p>
-                </div>
-              </div>
-              {expandedSections.approvalRoutes ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-
-            {expandedSections.approvalRoutes && (
-              <div className="px-4 sm:px-6 pb-6 border-t border-slate-200">
-                {sectionMessages.approvalRoutes && (
-                  <div className={`mt-4 p-3 rounded-lg flex items-start space-x-2 ${
-                    sectionMessages.approvalRoutes.type === 'success'
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
-                  }`}>
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{sectionMessages.approvalRoutes.text}</span>
-                  </div>
-                )}
-
-                <div className="mt-4">
-                  {/* 新規追加ボタン */}
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-gray-600">
-                      日報提出時に選択できる承認ルートを管理します
-                    </p>
-                    <button
-                      onClick={openNewRouteModal}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      新規ルート
-                    </button>
-                  </div>
-
-                  {/* ルート一覧 */}
-                  {approvalRoutes.length === 0 ? (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <Route className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">承認ルートがまだ登録されていません</p>
-                      <p className="text-gray-400 text-xs mt-1">「新規ルート」から追加してください</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {approvalRoutes.map(route => (
-                        <div
-                          key={route.id}
-                          className={`border rounded-lg p-4 transition-all ${
-                            route.isActive
-                              ? 'border-gray-200 bg-white'
-                              : 'border-gray-100 bg-gray-50 opacity-60'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm font-bold text-gray-900">{route.name}</span>
-                                {route.isDefault && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-                                    <Star className="w-3 h-3" />
-                                    デフォルト
-                                  </span>
-                                )}
-                                {!route.isActive && (
-                                  <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">
-                                    無効
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {route.roles.map((role, i) => (
-                                  <span
-                                    key={i}
-                                    className="inline-flex items-center px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded"
-                                  >
-                                    {role}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* 操作ボタン */}
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {!route.isDefault && route.isActive && (
-                                <button
-                                  onClick={() => handleSetDefaultRoute(route)}
-                                  className="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                                  title="デフォルトに設定"
-                                >
-                                  <Star className="w-4 h-4" />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => openEditRouteModal(route)}
-                                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                title="編集"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleToggleRouteActive(route)}
-                                className={`p-1.5 rounded transition-colors ${
-                                  route.isActive
-                                    ? 'text-emerald-600 hover:bg-emerald-50'
-                                    : 'text-gray-400 hover:bg-gray-100'
-                                }`}
-                                title={route.isActive ? '無効化' : '有効化'}
-                              >
-                                {route.isActive ? (
-                                  <ToggleRight className="w-4 h-4" />
-                                ) : (
-                                  <ToggleLeft className="w-4 h-4" />
-                                )}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteRoute(route)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="削除"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 承認ルート作成/編集モーダル */}
-          {showRouteModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-              <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4">
-                <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 rounded-t-2xl">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      <Route className="w-5 h-5" />
-                      {editingRoute ? '承認ルート編集' : '新規承認ルート'}
-                    </h3>
-                    <button
-                      onClick={() => setShowRouteModal(false)}
-                      className="text-white/80 hover:text-white"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-4">
-                  {/* ルート名 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ルート名 <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={routeForm.name}
-                      onChange={e => setRouteForm({ ...routeForm, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      placeholder="例: 社長決裁、部長決裁"
-                    />
-                  </div>
-
-                  {/* 承認者役職リスト */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      承認者役職 <span className="text-red-500">*</span>
-                    </label>
-
-                    {routeForm.roles.length > 0 && (
-                      <div className="space-y-1.5 mb-3">
-                        {routeForm.roles.map((role, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <div className="flex-1 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded text-sm text-indigo-700">
-                              {role}
-                            </div>
-                            <button
-                              onClick={() => handleRemoveRouteRole(index)}
-                              className="p-1 text-red-500 hover:bg-red-50 rounded"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* 役職選択 (既存の承認者役職リストから選択 + 手入力) */}
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={newRouteRole}
-                        onChange={e => {
-                          const selected = e.target.value
-                          setNewRouteRole(selected)
-                          if (selected && !routeForm.roles.includes(selected)) {
-                            setRouteForm(prev => ({
-                              ...prev,
-                              roles: [...prev.roles, selected],
-                            }))
-                            setNewRouteRole('')
-                          }
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
-                      >
-                        <option value="">役職を選択...</option>
-                        {(settings?.approval_roles || [])
-                          .filter(r => !routeForm.roles.includes(r))
-                          .map(role => (
-                            <option key={role} value={role}>{role}</option>
-                          ))
-                        }
-                      </select>
-                      <button
-                        onClick={handleAddRouteRole}
-                        disabled={!newRouteRole}
-                        className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 disabled:opacity-40 transition-colors"
-                      >
-                        <Plus className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      システム設定の「承認者役職リスト」から選択できます
-                    </p>
-                  </div>
-
-                  {/* デフォルト設定 */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">デフォルトルート</p>
-                      <p className="text-xs text-gray-500">日報作成時に自動選択されます</p>
-                    </div>
-                    <button
-                      onClick={() => setRouteForm({ ...routeForm, isDefault: !routeForm.isDefault })}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        routeForm.isDefault ? 'bg-indigo-600' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          routeForm.isDefault ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* ボタン */}
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      onClick={handleSaveRoute}
-                      disabled={routeLoading}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-medium transition-colors"
-                    >
-                      <Save className="w-4 h-4" />
-                      {routeLoading ? '保存中...' : '保存'}
-                    </button>
-                    <button
-                      onClick={() => setShowRouteModal(false)}
-                      className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors"
-                    >
-                      キャンセル
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <ApprovalRoutesSection approvalRoles={settings?.approval_roles || []} />
 
           {/* 営業日報設定 */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -1324,134 +878,7 @@ export default function SystemSettingsPage() {
             )}
           </div>
 
-          {/* 権限設定 */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <button
-              onClick={() => toggleSection('permissions')}
-              className="w-full px-4 sm:px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-rose-600" />
-                </div>
-                <div className="text-left">
-                  <h2 className="text-lg font-bold text-gray-900">権限設定</h2>
-                  <p className="text-xs text-gray-500">ロールごとの機能アクセス権限を管理</p>
-                </div>
-              </div>
-              {expandedSections.permissions ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-
-            {expandedSections.permissions && (
-              <div className="px-4 sm:px-6 pb-6 border-t border-slate-200">
-                {sectionMessages.permissions && (
-                  <div className={`mt-4 p-3 rounded-lg flex items-start space-x-2 ${
-                    sectionMessages.permissions.type === 'success'
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
-                  }`}>
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{sectionMessages.permissions.text}</span>
-                  </div>
-                )}
-
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 mb-4">
-                    各ロールがどの機能にアクセスできるかをトグルで設定します。
-                  </p>
-
-                  {/* テーブル */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-2 font-medium text-gray-700">機能</th>
-                          <th className="text-center py-3 px-2 font-medium text-gray-700 w-24">管理者</th>
-                          <th className="text-center py-3 px-2 font-medium text-gray-700 w-24">一般</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {PERMISSION_DEFINITIONS.map((perm) => {
-                          const isAdminLocked = ADMIN_LOCKED_KEYS.includes(perm.key)
-                          return (
-                            <tr key={perm.key} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-3 px-2">
-                                <div className="font-medium text-gray-900">{perm.label}</div>
-                                <div className="text-xs text-gray-500">{perm.description}</div>
-                              </td>
-                              <td className="py-3 px-2 text-center">
-                                <div className="flex items-center justify-center">
-                                  {isAdminLocked ? (
-                                    <div className="flex items-center gap-1 text-gray-400" title="管理者は常にON">
-                                      <Lock className="w-3.5 h-3.5" />
-                                      <span className="text-xs">常時ON</span>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleTogglePermission('admin', perm.key)}
-                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                        permissionsForm.admin?.[perm.key] ? 'bg-purple-600' : 'bg-gray-300'
-                                      }`}
-                                    >
-                                      <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                          permissionsForm.admin?.[perm.key] ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
-                                      />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 text-center">
-                                <div className="flex items-center justify-center">
-                                  <button
-                                    onClick={() => handleTogglePermission('user', perm.key)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                      permissionsForm.user?.[perm.key] ? 'bg-purple-600' : 'bg-gray-300'
-                                    }`}
-                                  >
-                                    <span
-                                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                        permissionsForm.user?.[perm.key] ? 'translate-x-6' : 'translate-x-1'
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-start space-x-2">
-                      <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-amber-700">
-                        管理者の「システム設定」と「ユーザー管理」は常にONです（ロックアウト防止のため変更できません）。
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-4">
-                    <button
-                      onClick={handleSavePermissions}
-                      disabled={savingSection === 'permissions'}
-                      className="inline-flex items-center px-4 py-2 text-sm font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {savingSection === 'permissions' ? '保存中...' : '保存'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <PermissionsSection initialPermissions={permissionsForm} onSaved={fetchSettings} />
         </div>
       </main>
     </div>
