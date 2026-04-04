@@ -1,12 +1,6 @@
 // 作業日報の型定義
 
-export interface User {
-  id: string
-  name: string
-  position?: string
-  role: string
-  permissions?: Record<string, boolean>
-}
+export type { ClientUser as User } from '@/lib/types'
 
 export interface WorkerRecord {
   id: string

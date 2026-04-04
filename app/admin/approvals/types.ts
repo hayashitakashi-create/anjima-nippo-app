@@ -38,13 +38,10 @@ export interface DailyReport {
   } | null
 }
 
-export interface ManagedUser {
-  id: string
-  name: string
+import type { ClientUser } from '@/lib/types'
+
+export interface ManagedUser extends ClientUser {
   username: string
-  position?: string
-  role: string
-  isActive?: boolean
 }
 
 export interface SubmissionStatus {

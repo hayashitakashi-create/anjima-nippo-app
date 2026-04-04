@@ -1,3 +1,15 @@
+export interface ClientUser {
+  id: string
+  name: string
+  username?: string
+  position?: string
+  role: string
+  isApprover?: boolean
+  isActive?: boolean
+  defaultReportType?: string
+  permissions?: Record<string, boolean>
+}
+
 export interface VisitRecordInput {
   destination: string
   contactPerson?: string

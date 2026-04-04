@@ -24,15 +24,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { adminApi, apiGet } from '@/lib/api'
-
-interface ManagedUser {
-  id: string
-  name: string
-  username: string
-  position?: string
-  role: string
-  isActive?: boolean
-}
+import type { ManagedUser } from '@/app/admin/approvals/types'
 
 // 作業日報の型
 interface WorkerRecord {
