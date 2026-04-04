@@ -822,32 +822,34 @@ export default function WorkReportDetailPage() {
                           <div className="col-span-1 lg:col-span-2">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 当日</label>
                             <input
-                              type="text"
-                              inputMode="decimal"
+                              type="number"
+                              step="0.001"
+                              min="0"
                               value={record.dailyHours || ''}
                               onChange={(e) => {
                                 const newRecords = [...workerRecords]
-                                const val = e.target.value.replace(/[^\d.]/g, '')
+                                const val = e.target.value
                                 newRecords[index].dailyHours = val === '' ? 0 : parseFloat(val) || 0
                                 setWorkerRecords(newRecords)
                               }}
-                              className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
+                              className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               placeholder="0"
                             />
                           </div>
                           <div className="col-span-1 lg:col-span-2">
                             <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">工数 累計</label>
                             <input
-                              type="text"
-                              inputMode="decimal"
+                              type="number"
+                              step="0.001"
+                              min="0"
                               value={record.totalHours || ''}
                               onChange={(e) => {
                                 const newRecords = [...workerRecords]
-                                const val = e.target.value.replace(/[^\d.]/g, '')
+                                const val = e.target.value
                                 newRecords[index].totalHours = val === '' ? 0 : parseFloat(val) || 0
                                 setWorkerRecords(newRecords)
                               }}
-                              className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091]"
+                              className="w-full h-[38px] px-2 sm:px-3 py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               placeholder="0"
                             />
                           </div>
