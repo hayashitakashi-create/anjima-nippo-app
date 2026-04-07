@@ -82,16 +82,19 @@ export function SubcontractorCard({
               {/* 外注先名 */}
               <div>
                 <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">外注先名</label>
-                <select
+                <input
+                  type="text"
+                  list={`subcontractor-list-${record.id}`}
                   value={record.name}
                   onChange={(e) => updateRecord(index, 'name', e.target.value)}
                   className="w-full h-[38px] px-2 sm:px-3 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091]"
-                >
-                  <option value="">選択してください</option>
+                  placeholder="選択または直接入力"
+                />
+                <datalist id={`subcontractor-list-${record.id}`}>
                   {subcontractorMasterList.map(sub => (
-                    <option key={sub} value={sub}>{sub}</option>
+                    <option key={sub} value={sub} />
                   ))}
-                </select>
+                </datalist>
               </div>
 
               {/* 人数 */}
