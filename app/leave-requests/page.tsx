@@ -24,6 +24,7 @@ import {
   Printer,
 } from 'lucide-react'
 import { adminApi, apiGet, apiPost, apiDelete, ApiError } from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
 
 interface LeaveRequest {
   id: string
@@ -52,7 +53,7 @@ function leaveUnitLabel(unit: string): string {
   return LEAVE_UNITS.find(u => u.value === unit)?.label || '全日'
 }
 
-const LEAVE_TYPES = ['有給', '振替', '代休', '看護', '介護', '特別休暇', 'その他']
+const LEAVE_TYPES = ['有給', '振替', '代休', '看護', '介護', '特別休暇', '慶弔', 'その他']
 
 const LEAVE_TYPE_COLORS: Record<string, string> = {
   '有給': 'bg-blue-100 text-blue-800',
@@ -61,7 +62,15 @@ const LEAVE_TYPE_COLORS: Record<string, string> = {
   '看護': 'bg-pink-100 text-pink-800',
   '介護': 'bg-orange-100 text-orange-800',
   '特別休暇': 'bg-amber-100 text-amber-800',
+  '慶弔': 'bg-rose-100 text-rose-800',
   'その他': 'bg-gray-100 text-gray-800',
+}
+
+const TIME_OPTIONS: string[] = []
+for (let h = 0; h < 24; h++) {
+  for (const m of [0, 30]) {
+    TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+  }
 }
 
 function formatYearMonth(date: Date): string {
@@ -77,6 +86,7 @@ function toDateString(date: Date): string {
 
 export default function LeaveRequestsPage() {
   const router = useRouter()
+  const { user } = useAuth({ required: true })
   const [loading, setLoading] = useState(true)
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -111,11 +121,16 @@ export default function LeaveRequestsPage() {
     adminApi.fetchWorkers()
       .then(data => {
         if (data?.workers) {
-          setWorkerNames(data.workers.filter((w: any) => w.isActive).map((w: any) => w.name))
+          const names = data.workers.filter((w: any) => w.isActive).map((w: any) => w.name)
+          setWorkerNames(names)
+          // ログインユーザー名がworkerリストにあれば自動セット
+          if (user?.name && names.includes(user.name)) {
+            setFormApplicantName(user.name)
+          }
         }
       })
       .catch(() => {})
-  }, [])
+  }, [user])
 
   const fetchLeaveRequests = async () => {
     try {
@@ -182,10 +197,13 @@ export default function LeaveRequestsPage() {
       })
 
       setMessage('休暇届を申請しました（承認待ち）')
-      setFormReason('')
+      setFormApplicantName(user?.name && workerNames.includes(user.name) ? user.name : '')
+      setFormDate(toDateString(new Date()))
+      setFormLeaveType('有給')
       setFormLeaveUnit('full')
       setFormStartTime('')
       setFormEndTime('')
+      setFormReason('')
       setFormAttachment(null)
       const submittedDate = new Date(formDate)
       if (formatYearMonth(submittedDate) === currentMonth) {
@@ -452,25 +470,29 @@ export default function LeaveRequestsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     開始時刻 <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="time"
+                  <select
                     value={formStartTime}
                     onChange={(e) => setFormStartTime(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900"
-                  />
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
+                  >
+                    <option value="">選択</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     終了時刻 <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="time"
+                  <select
                     value={formEndTime}
                     onChange={(e) => setFormEndTime(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900"
-                  />
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
+                  >
+                    <option value="">選択</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
               </div>
             )}
