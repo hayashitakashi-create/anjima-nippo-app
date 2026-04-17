@@ -333,6 +333,12 @@ model LeaveRequest {
   leaveUnit      String   @default("full") // full(全日), am(午前半休), pm(午後半休), hourly(時間休)
   startTime      String?  // 時間休の開始時刻 (HH:MM)
   endTime        String?  // 時間休の終了時刻 (HH:MM)
+  familyName         String? // 看護/介護: 対象家族の氏名
+  familyBirthdate    String? // 看護/介護: 対象家族の生年月日
+  familyRelationship String? // 看護/介護: 本人との続柄
+  adoptionDate       String? // 看護: 養子縁組成立の年月日
+  specialAdoptionDate String? // 看護: 特別養子縁組監護中・里親委託の手続完了年月日
+  careReason         String? // 介護: 介護を必要とする理由
   reason         String?  // 理由
   attachmentData String?  // 添付ファイル (base64)
   attachmentName String?  // 添付ファイル名

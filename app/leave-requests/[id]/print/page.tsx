@@ -15,6 +15,12 @@ interface LeaveDetail {
   leaveUnit: string
   startTime: string | null
   endTime: string | null
+  familyName: string | null
+  familyBirthdate: string | null
+  familyRelationship: string | null
+  adoptionDate: string | null
+  specialAdoptionDate: string | null
+  careReason: string | null
   reason: string | null
   status: string
   createdAt: string
@@ -205,6 +211,32 @@ export default function LeaveRequestPrintPage() {
                 )}
               </td>
             </tr>
+            {(data.leaveType === '看護' || data.leaveType === '介護') && (
+              <tr>
+                <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium align-top">
+                  対象家族
+                </th>
+                <td className="border border-gray-400 px-4 py-3 text-sm">
+                  <div className="space-y-1">
+                    {data.familyName && <div>氏名：{data.familyName}</div>}
+                    {data.familyBirthdate && <div>生年月日：{data.familyBirthdate}</div>}
+                    {data.familyRelationship && <div>続柄：{data.familyRelationship}</div>}
+                    {data.leaveType === '看護' && data.adoptionDate && (
+                      <div>縁組成立年月日：{data.adoptionDate}</div>
+                    )}
+                    {data.leaveType === '看護' && data.specialAdoptionDate && (
+                      <div>手続完了年月日：{data.specialAdoptionDate}</div>
+                    )}
+                    {data.leaveType === '介護' && data.careReason && (
+                      <div>介護を必要とする理由：{data.careReason}</div>
+                    )}
+                    {!data.familyName && !data.familyBirthdate && !data.familyRelationship && !data.adoptionDate && !data.specialAdoptionDate && !data.careReason && (
+                      <span className="text-gray-400">（未記入）</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )}
             <tr>
               <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium align-top">
                 理由

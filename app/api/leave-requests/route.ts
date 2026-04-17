@@ -57,6 +57,12 @@ export async function GET(request: NextRequest) {
         leaveUnit: true,
         startTime: true,
         endTime: true,
+        familyName: true,
+        familyBirthdate: true,
+        familyRelationship: true,
+        adoptionDate: true,
+        specialAdoptionDate: true,
+        careReason: true,
         reason: true,
         attachmentName: true,
         attachmentType: true,
@@ -99,8 +105,9 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { applicantName, date, leaveType, leaveUnit, startTime, endTime, reason, attachmentData, attachmentName, attachmentType } = validation.data
+    const { applicantName, date, leaveType, leaveUnit, startTime, endTime, familyName, familyBirthdate, familyRelationship, adoptionDate, specialAdoptionDate, careReason, reason, attachmentData, attachmentName, attachmentType } = validation.data
     const unit = leaveUnit
+    const isCareLeave = leaveType === '看護' || leaveType === '介護'
 
     // 時間休の場合は開始・終了時刻が必須
     if (unit === 'hourly' && (!startTime || !endTime)) {
@@ -153,6 +160,12 @@ export async function POST(request: NextRequest) {
         leaveUnit: unit,
         startTime: unit === 'hourly' ? startTime : null,
         endTime: unit === 'hourly' ? endTime : null,
+        familyName: isCareLeave ? (familyName || null) : null,
+        familyBirthdate: isCareLeave ? (familyBirthdate || null) : null,
+        familyRelationship: isCareLeave ? (familyRelationship || null) : null,
+        adoptionDate: isCareLeave ? (adoptionDate || null) : null,
+        specialAdoptionDate: isCareLeave ? (specialAdoptionDate || null) : null,
+        careReason: isCareLeave ? (careReason || null) : null,
         reason: reason || null,
         attachmentData: attachmentData || null,
         attachmentName: attachmentName || null,
