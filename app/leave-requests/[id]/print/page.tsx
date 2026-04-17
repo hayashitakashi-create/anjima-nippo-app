@@ -111,25 +111,33 @@ export default function LeaveRequestPrintPage() {
   return (
     <>
       <style jsx global>{`
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
         @media print {
-          body { margin: 0; padding: 0; }
+          html, body { margin: 0; padding: 0; background: white; }
           .no-print { display: none !important; }
           .print-page {
             width: 210mm;
-            min-height: 297mm;
-            padding: 15mm 20mm;
+            height: 297mm;
+            padding: 12mm 15mm;
             margin: 0;
             box-shadow: none !important;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+            overflow: hidden;
           }
         }
         @media screen {
           .print-page {
             width: 210mm;
-            min-height: 297mm;
-            padding: 15mm 20mm;
+            height: 297mm;
+            padding: 12mm 15mm;
             margin: 20px auto;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             background: white;
+            overflow: hidden;
           }
         }
       `}</style>
@@ -150,61 +158,59 @@ export default function LeaveRequestPrintPage() {
         </button>
       </div>
 
-      {/* 印刷用ページ */}
-      <div className="print-page font-sans text-gray-900">
+      {/* 印刷用ページ (A4縦1枚固定) */}
+      <div className="print-page font-sans text-gray-900 flex flex-col">
         {/* タイトル */}
-        <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold tracking-widest border-b-2 border-gray-900 inline-block pb-2 px-8">
+        <div className="text-center mb-4">
+          <h1 className="text-xl font-bold tracking-widest border-b-2 border-gray-900 inline-block pb-1 px-6">
             休 暇 届
           </h1>
         </div>
 
         {/* 申請日 */}
-        <div className="text-right mb-8 text-sm">
-          <p>申請日: {formatCreatedDate(data.createdAt)}</p>
+        <div className="text-right mb-3 text-xs">
+          申請日: {formatCreatedDate(data.createdAt)}
         </div>
 
-        {/* 宛先 */}
-        <div className="mb-8">
-          <p className="text-base">安島工業株式会社 御中</p>
-        </div>
-
-        {/* 申請者情報 */}
-        <div className="text-right mb-10">
-          <p className="text-sm text-gray-700">申請者</p>
-          <p className="text-lg font-bold">{data.applicantName || data.userName}</p>
-          {data.applicantName && data.applicantName !== data.userName && (
-            <p className="text-sm text-gray-700">（入力者: {data.userName}）</p>
-          )}
-          {data.userPosition && (
-            <p className="text-sm text-gray-700">{data.userPosition}</p>
-          )}
+        {/* 宛先・申請者（横並び） */}
+        <div className="flex justify-between items-start mb-4">
+          <p className="text-sm">安島工業株式会社 御中</p>
+          <div className="text-right">
+            <p className="text-[11px] text-gray-700">申請者</p>
+            <p className="text-base font-bold leading-tight">{data.applicantName || data.userName}</p>
+            {data.applicantName && data.applicantName !== data.userName && (
+              <p className="text-[10px] text-gray-700">（入力者: {data.userName}）</p>
+            )}
+            {data.userPosition && (
+              <p className="text-[10px] text-gray-700">{data.userPosition}</p>
+            )}
+          </div>
         </div>
 
         {/* 休暇内容テーブル */}
-        <table className="w-full border-collapse mb-8">
+        <table className="w-full border-collapse text-xs mb-3">
           <tbody>
             <tr>
-              <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium w-1/4">
+              <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium w-1/4">
                 休暇日
               </th>
-              <td className="border border-gray-400 px-4 py-3 text-sm">
+              <td className="border border-gray-400 px-3 py-1.5">
                 {formatDateWithDay(data.date)}
               </td>
             </tr>
             <tr>
-              <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium">
+              <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium">
                 休暇種別
               </th>
-              <td className="border border-gray-400 px-4 py-3 text-sm">
+              <td className="border border-gray-400 px-3 py-1.5">
                 {data.leaveType}
               </td>
             </tr>
             <tr>
-              <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium">
+              <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium">
                 休暇単位
               </th>
-              <td className="border border-gray-400 px-4 py-3 text-sm">
+              <td className="border border-gray-400 px-3 py-1.5">
                 {leaveUnitLabel(data.leaveUnit)}
                 {data.leaveUnit === 'hourly' && data.startTime && data.endTime && (
                   <span className="ml-2">（{data.startTime} 〜 {data.endTime}）</span>
@@ -213,10 +219,10 @@ export default function LeaveRequestPrintPage() {
             </tr>
             {(data.leaveType === '看護' || data.leaveType === '介護') && (
               <tr>
-                <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium align-top">
+                <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top">
                   対象家族
                 </th>
-                <td className="border border-gray-400 px-4 py-3 text-sm">
+                <td className="border border-gray-400 px-3 py-1.5">
                   <div className="space-y-1">
                     {data.familyName && <div>氏名：{data.familyName}</div>}
                     {data.familyBirthdate && <div>生年月日：{data.familyBirthdate}</div>}
@@ -237,46 +243,55 @@ export default function LeaveRequestPrintPage() {
                 </td>
               </tr>
             )}
+            {!(data.leaveType === '看護' || data.leaveType === '介護') && (
+              <tr>
+                <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top">
+                  理由
+                </th>
+                <td className="border border-gray-400 px-3 py-1.5 h-20 whitespace-pre-wrap align-top">
+                  {data.reason || ''}
+                </td>
+              </tr>
+            )}
             <tr>
-              <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium align-top">
-                理由
-              </th>
-              <td className="border border-gray-400 px-4 py-3 text-sm min-h-[80px] whitespace-pre-wrap">
-                {data.reason || ''}
-              </td>
-            </tr>
-            <tr>
-              <th className="border border-gray-400 bg-gray-100 px-4 py-3 text-left text-sm font-medium">
+              <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium">
                 承認状況
               </th>
-              <td className="border border-gray-400 px-4 py-3 text-sm">
+              <td className="border border-gray-400 px-3 py-1.5">
                 {statusLabel(data.status)}
               </td>
             </tr>
           </tbody>
         </table>
 
-        {/* 承認欄 */}
-        <div className="mt-16">
+        {/* 看護・介護の場合の注意書き */}
+        {(data.leaveType === '看護' || data.leaveType === '介護') && (
+          <div className="text-[10px] text-gray-700 leading-relaxed space-y-1 mb-3">
+            <p>（注１）当日、電話などで申し出た場合は、出勤後すみやかに提出してください。3については、複数の日を一括して申し出る場合には、申し出る日をすべて記入してください。</p>
+            <p>（注２）子の看護等休暇の場合、取得できる日数は、小学校第３学年修了までの子が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
+            <p className="pl-[3.5em] -indent-[3.5em]">介護休暇の場合、取得できる日数は、対象となる家族が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
+          </div>
+        )}
+
+        {/* 承認欄 (ページ下部に配置) */}
+        <div className="mt-auto">
           <table className="ml-auto border-collapse">
             <thead>
               <tr>
-                <th className="border border-gray-400 bg-gray-100 px-8 py-2 text-xs font-medium">承認者</th>
-                <th className="border border-gray-400 bg-gray-100 px-8 py-2 text-xs font-medium">申請者</th>
+                <th className="border border-gray-400 bg-gray-100 px-6 py-1.5 text-[10px] font-medium">承認者</th>
+                <th className="border border-gray-400 bg-gray-100 px-6 py-1.5 text-[10px] font-medium">申請者</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td className="border border-gray-400 w-28 h-20"></td>
-                <td className="border border-gray-400 w-28 h-20"></td>
+                <td className="border border-gray-400 w-24 h-16"></td>
+                <td className="border border-gray-400 w-24 h-16"></td>
               </tr>
             </tbody>
           </table>
-        </div>
-
-        {/* フッター */}
-        <div className="mt-16 text-center text-xs text-gray-700">
-          安島工業株式会社
+          <div className="mt-3 text-center text-[10px] text-gray-700">
+            安島工業株式会社
+          </div>
         </div>
       </div>
     </>
