@@ -202,7 +202,7 @@ export default function LeaveRequestsPage() {
         adoptionDate: isCareLeaveType ? (formAdoptionDate || undefined) : undefined,
         specialAdoptionDate: isCareLeaveType ? (formSpecialAdoptionDate || undefined) : undefined,
         careReason: isCareLeaveType ? (formCareReason || undefined) : undefined,
-        reason: formReason || undefined,
+        reason: !isCareLeaveType ? (formReason || undefined) : undefined,
         attachmentData: formAttachment?.data,
         attachmentName: formAttachment?.name,
         attachmentType: formAttachment?.type,
@@ -591,22 +591,29 @@ export default function LeaveRequestsPage() {
                     </div>
                   )}
                 </div>
+                <div className="text-[11px] text-gray-600 leading-relaxed pt-2 border-t border-amber-200/70 space-y-1.5">
+                  <p>（注１）当日、電話などで申し出た場合は、出勤後すみやかに提出してください。3については、複数の日を一括して申し出る場合には、申し出る日をすべて記入してください。</p>
+                  <p>（注２）子の看護等休暇の場合、取得できる日数は、小学校第３学年修了までの子が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
+                  <p className="pl-[3.5em] -indent-[3.5em]">介護休暇の場合、取得できる日数は、対象となる家族が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
+                </div>
               </div>
             )}
 
-            {/* Reason */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                理由 <span className="text-gray-400 text-xs">(任意)</span>
-              </label>
-              <textarea
-                value={formReason}
-                onChange={(e) => setFormReason(e.target.value)}
-                rows={2}
-                placeholder="休暇の理由を入力（任意）"
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 resize-none"
-              />
-            </div>
+            {/* Reason (看護・介護時は非表示) */}
+            {!isCareLeaveType && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  理由 <span className="text-gray-400 text-xs">(任意)</span>
+                </label>
+                <textarea
+                  value={formReason}
+                  onChange={(e) => setFormReason(e.target.value)}
+                  rows={2}
+                  placeholder="休暇の理由を入力（任意）"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 resize-none"
+                />
+              </div>
+            )}
 
             {/* Attachment */}
             <div>
