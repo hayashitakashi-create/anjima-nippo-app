@@ -446,47 +446,52 @@ export default function DashboardPage() {
                 className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                    <Palmtree className="w-5 h-5 mr-2 text-green-600" />
-                    最近の休暇届
-                  </h3>
+                  <Link href="/leave-requests" className="group flex items-center hover:opacity-80 transition-opacity">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center group-hover:text-green-700 transition-colors">
+                      <Palmtree className="w-5 h-5 mr-2 text-green-600" />
+                      最近の休暇届
+                    </h3>
+                  </Link>
                   <Link href="/leave-requests" className="text-sm font-medium text-green-600 hover:text-green-700">
                     すべて表示 →
                   </Link>
                 </div>
                 <div className="space-y-3">
                   {leaveRequests.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">まだ休暇届が登録されていません</p>
+                    <Link href="/leave-requests" className="block">
+                      <p className="text-gray-500 text-center py-8 hover:text-green-700 transition-colors">まだ休暇届が登録されていません</p>
+                    </Link>
                   ) : (
                     leaveRequests.map((req, index) => (
-                      <motion.div
-                        key={req.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-green-300 transition-all"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
-                            <Palmtree className="w-5 h-5" />
+                      <Link key={req.id} href="/leave-requests" className="block">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-green-300 hover:bg-green-50/30 transition-all cursor-pointer"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
+                              <Palmtree className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {formatDate(req.date)} — {req.leaveType}
+                              </p>
+                              {(req as any).applicantName && (
+                                <p className="text-sm text-gray-500">{(req as any).applicantName}</p>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {formatDate(req.date)} — {req.leaveType}
-                            </p>
-                            {(req as any).applicantName && (
-                              <p className="text-sm text-gray-500">{(req as any).applicantName}</p>
-                            )}
-                          </div>
-                        </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          req.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
-                          req.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {req.status === 'approved' ? '承認済み' : req.status === 'rejected' ? '差戻し' : '承認待ち'}
-                        </span>
-                      </motion.div>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            req.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
+                            req.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {req.status === 'approved' ? '承認済み' : req.status === 'rejected' ? '差戻し' : '承認待ち'}
+                          </span>
+                        </motion.div>
+                      </Link>
                     ))
                   )}
                 </div>
