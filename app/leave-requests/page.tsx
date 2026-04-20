@@ -583,14 +583,16 @@ export default function LeaveRequestsPage() {
                       </div>
                     </>
                   )}
-                  {formLeaveType === '介護' && (
+                  {isCareLeaveType && (
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">(6) 介護を必要とする理由</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        (6) {formLeaveType === '看護' ? '看護' : '介護'}を必要とする理由
+                      </label>
                       <textarea
                         value={formCareReason}
                         onChange={(e) => setFormCareReason(e.target.value)}
                         rows={2}
-                        placeholder="介護を必要とする理由"
+                        placeholder={`${formLeaveType === '看護' ? '看護' : '介護'}を必要とする理由`}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-sm text-gray-900 resize-none"
                       />
                     </div>
@@ -1004,7 +1006,7 @@ export default function LeaveRequestsPage() {
                             {formFamilyRelationship && <div>続柄：{formFamilyRelationship}</div>}
                             {formLeaveType === '看護' && formAdoptionDate && <div>縁組成立年月日：{formAdoptionDate}</div>}
                             {formLeaveType === '看護' && formSpecialAdoptionDate && <div>手続完了年月日：{formSpecialAdoptionDate}</div>}
-                            {formLeaveType === '介護' && formCareReason && <div>介護を必要とする理由：{formCareReason}</div>}
+                            {isCareLeaveType && formCareReason && <div>{formLeaveType === '看護' ? '看護' : '介護'}を必要とする理由：{formCareReason}</div>}
                             {!formFamilyName && !formFamilyBirthdate && !formFamilyRelationship && !formAdoptionDate && !formSpecialAdoptionDate && !formCareReason && (
                               <span className="text-gray-400">（未入力）</span>
                             )}

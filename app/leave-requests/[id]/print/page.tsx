@@ -233,8 +233,8 @@ export default function LeaveRequestPrintPage() {
                     {data.leaveType === '看護' && data.specialAdoptionDate && (
                       <div>手続完了年月日：{data.specialAdoptionDate}</div>
                     )}
-                    {data.leaveType === '介護' && data.careReason && (
-                      <div>介護を必要とする理由：{data.careReason}</div>
+                    {(data.leaveType === '看護' || data.leaveType === '介護') && data.careReason && (
+                      <div>{data.leaveType === '看護' ? '看護' : '介護'}を必要とする理由：{data.careReason}</div>
                     )}
                     {!data.familyName && !data.familyBirthdate && !data.familyRelationship && !data.adoptionDate && !data.specialAdoptionDate && !data.careReason && (
                       <span className="text-gray-400">（未記入）</span>
