@@ -1006,8 +1006,7 @@ export default function LeaveRequestsPage() {
                             {formFamilyRelationship && <div>続柄：{formFamilyRelationship}</div>}
                             {formLeaveType === '看護' && formAdoptionDate && <div>縁組成立年月日：{formAdoptionDate}</div>}
                             {formLeaveType === '看護' && formSpecialAdoptionDate && <div>手続完了年月日：{formSpecialAdoptionDate}</div>}
-                            {isCareLeaveType && formCareReason && <div>{formLeaveType === '看護' ? '看護' : '介護'}を必要とする理由：{formCareReason}</div>}
-                            {!formFamilyName && !formFamilyBirthdate && !formFamilyRelationship && !formAdoptionDate && !formSpecialAdoptionDate && !formCareReason && (
+                            {!formFamilyName && !formFamilyBirthdate && !formFamilyRelationship && !formAdoptionDate && !formSpecialAdoptionDate && (
                               <span className="text-gray-400">（未入力）</span>
                             )}
                           </div>
@@ -1032,6 +1031,16 @@ export default function LeaveRequestsPage() {
                     <p>（注２）子の看護等休暇の場合、取得できる日数は、小学校第３学年修了までの子が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
                     <p className="pl-[3.5em] -indent-[3.5em]">介護休暇の場合、取得できる日数は、対象となる家族が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
                   </div>
+                )}
+                {isCareLeaveType && (
+                  <table className="w-full border-collapse mb-3 text-sm">
+                    <tbody>
+                      <tr>
+                        <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top w-1/4">申出理由</th>
+                        <td className="border border-gray-400 px-3 py-1.5 h-16 whitespace-pre-wrap align-top">{formCareReason}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 )}
                 <div className="mt-6">
                   <table className="ml-auto border-collapse">

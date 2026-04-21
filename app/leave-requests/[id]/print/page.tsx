@@ -233,10 +233,7 @@ export default function LeaveRequestPrintPage() {
                     {data.leaveType === '看護' && data.specialAdoptionDate && (
                       <div>手続完了年月日：{data.specialAdoptionDate}</div>
                     )}
-                    {(data.leaveType === '看護' || data.leaveType === '介護') && data.careReason && (
-                      <div>{data.leaveType === '看護' ? '看護' : '介護'}を必要とする理由：{data.careReason}</div>
-                    )}
-                    {!data.familyName && !data.familyBirthdate && !data.familyRelationship && !data.adoptionDate && !data.specialAdoptionDate && !data.careReason && (
+                    {!data.familyName && !data.familyBirthdate && !data.familyRelationship && !data.adoptionDate && !data.specialAdoptionDate && (
                       <span className="text-gray-400">（未記入）</span>
                     )}
                   </div>
@@ -271,6 +268,22 @@ export default function LeaveRequestPrintPage() {
             <p>（注２）子の看護等休暇の場合、取得できる日数は、小学校第３学年修了までの子が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
             <p className="pl-[3.5em] -indent-[3.5em]">介護休暇の場合、取得できる日数は、対象となる家族が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
           </div>
+        )}
+
+        {/* 申出理由 (看護・介護) */}
+        {(data.leaveType === '看護' || data.leaveType === '介護') && (
+          <table className="w-full border-collapse mb-4 text-[11px]">
+            <tbody>
+              <tr>
+                <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top w-[120px]">
+                  申出理由
+                </th>
+                <td className="border border-gray-400 px-3 py-1.5 h-16 whitespace-pre-wrap align-top">
+                  {data.careReason || ''}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         )}
 
         {/* 承認欄 (ページ下部に配置) */}
