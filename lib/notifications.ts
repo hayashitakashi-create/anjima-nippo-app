@@ -161,9 +161,10 @@ export async function getUnsubmittedUsers(): Promise<{
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    // アクティブな一般ユーザーのみ取得（承認者=adminは日報提出不要のため除外）
+    // 提出状況カレンダー表示対象（showInCalendar=true）と同じリストを使用
+    // 田邊さんの「40名リスト」基準。承認権限があっても日報を書く人（部長・課長など）は含まれる
     const allUsers = await prisma.user.findMany({
-      where: { isActive: true, role: 'user' },
+      where: { isActive: true, showInCalendar: true },
       select: { id: true, name: true, defaultReportType: true },
     })
 

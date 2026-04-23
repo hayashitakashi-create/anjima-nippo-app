@@ -1013,6 +1013,12 @@ export default function LeaveRequestsPage() {
                         </td>
                       </tr>
                     )}
+                    {isCareLeaveType && (
+                      <tr>
+                        <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top">申出理由</th>
+                        <td className="border border-gray-400 px-3 py-1.5 h-16 whitespace-pre-wrap align-top">{formCareReason}</td>
+                      </tr>
+                    )}
                     {!isCareLeaveType && (
                       <tr>
                         <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top">理由</th>
@@ -1026,18 +1032,8 @@ export default function LeaveRequestsPage() {
                   </tbody>
                 </table>
                 {isCareLeaveType && (
-                  <table className="w-full border-collapse mb-3 text-sm">
-                    <tbody>
-                      <tr>
-                        <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top w-1/4">申出理由</th>
-                        <td className="border border-gray-400 px-3 py-1.5 h-16 whitespace-pre-wrap align-top">{formCareReason}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                )}
-                {isCareLeaveType && (
                   <div className="text-[10px] text-gray-700 leading-relaxed space-y-1 mb-3">
-                    <p>（注１）当日、電話などで申し出た場合は、出勤後すみやかに提出してください。3については、複数の日を一括して申し出る場合には、申し出る日をすべて記入してください。</p>
+                    <p>（注１）当日、電話などで申し出た場合は、出勤後すみやかに提出してください。取得する日については、複数の日を一括して申し出る場合には、申し出る日をすべて記入してください。</p>
                     <p>（注２）子の看護等休暇の場合、取得できる日数は、小学校第３学年修了までの子が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
                     <p className="pl-[3.5em] -indent-[3.5em]">介護休暇の場合、取得できる日数は、対象となる家族が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
                   </div>
