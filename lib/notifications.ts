@@ -151,6 +151,10 @@ export async function notifyLeaveRejected(
 
 // 日報未提出リマインダー（管理者向け：当日日報を提出していないユーザーのリスト）
 // 作業日報については、作成者だけでなくworkerRecordsに名前が含まれるユーザーも提出済みとみなす
+// 必要日報（defaultReportType: sales/work/both）に応じて判定：
+// - sales のみ: 営業日報を提出していなければ salesUnsubmitted
+// - work のみ: 作業日報を提出していなければ workUnsubmitted
+// - both: 営業/作業のどちらか欠けていれば該当リストに含まれる（=「要確認」状態も通知対象）
 export async function getUnsubmittedUsers(): Promise<{
   salesUnsubmitted: Array<{ id: string; name: string }>
   workUnsubmitted: Array<{ id: string; name: string }>

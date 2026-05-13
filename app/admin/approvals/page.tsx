@@ -758,6 +758,7 @@ export default function ApprovalsPage() {
                                 const isApproved = submissionStatus.approvalMap?.[user.id]?.[dateKey] === 'approved'
                                 const leaveInfo = submissionStatus.leaveMap?.[user.id]?.[dateKey]
                                 const submissionTypes = submissionStatus.submissionTypeMap?.[user.id]?.[dateKey]
+                                const cellStatus = submissionStatus.statusMap?.[user.id]?.[dateKey]
                                 const isWeekend = date.getDay() === 0 || date.getDay() === 6
                                 const todayKey = new Date().toISOString().split('T')[0]
                                 const isFuture = dateKey > todayKey
@@ -767,10 +768,18 @@ export default function ApprovalsPage() {
                                 const leaveColor = leaveInfo ? (LEAVE_TYPE_COLORS[leaveInfo.type] || LEAVE_TYPE_COLORS['その他']) : null
                                 const leaveShort = leaveInfo ? (LEAVE_TYPE_SHORT[leaveInfo.type] || '他') : ''
 
+                                // セル背景色（ステータス3値）— 休暇・未来日・週末は対象外
+                                let statusBg = ''
+                                if (!leaveInfo && !isFuture) {
+                                  if (cellStatus === 'complete') statusBg = 'bg-emerald-50'
+                                  else if (cellStatus === 'partial') statusBg = 'bg-amber-100'
+                                  else if (cellStatus === 'none') statusBg = 'bg-rose-50'
+                                }
+
                                 return (
                                   <td
                                     key={i}
-                                    className={`px-0.5 py-1.5 text-center ${isWeekend ? 'bg-red-50' : ''} ${hasContent ? 'cursor-pointer hover:opacity-70' : ''}`}
+                                    className={`px-0.5 py-1.5 text-center ${isWeekend ? 'bg-red-50' : statusBg} ${hasContent ? 'cursor-pointer hover:opacity-70' : ''}`}
                                     onClick={() => {
                                       // ③ クリックで詳細表示
                                       if (hasContent) {
@@ -862,8 +871,16 @@ export default function ApprovalsPage() {
                       その他
                     </div>
                     <div className="flex items-center gap-1">
-                      <XCircle className="w-3 h-3 text-red-500" />
+                      <div className="w-3 h-3 bg-rose-50 border border-rose-200 rounded" />
                       未提出
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-amber-100 border border-amber-200 rounded" />
+                      要確認
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-emerald-50 border border-emerald-200 rounded" />
+                      提出済
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-red-50 border border-red-200 rounded" />

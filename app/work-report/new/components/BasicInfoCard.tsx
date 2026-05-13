@@ -4,6 +4,8 @@ import { Calendar, Building2, User as UserIcon } from 'lucide-react'
 import { User } from '../types'
 import { WEATHER_OPTIONS } from '../constants'
 
+type SelectableUser = { id: string; name: string; position?: string | null }
+
 interface BasicInfoCardProps {
   date: string
   setDate: (date: string) => void
@@ -18,6 +20,9 @@ interface BasicInfoCardProps {
   currentUser: User | null
   projectLoaded: boolean
   projectTypesList: string[]
+  targetUserId?: string
+  setTargetUserId?: (id: string) => void
+  userOptions?: SelectableUser[]
 }
 
 export function BasicInfoCard({
@@ -29,6 +34,9 @@ export function BasicInfoCard({
   currentUser,
   projectLoaded,
   projectTypesList,
+  targetUserId,
+  setTargetUserId,
+  userOptions = [],
 }: BasicInfoCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200/50">
@@ -108,21 +116,48 @@ export function BasicInfoCard({
             )}
           </div>
 
-          {/* 氏名 */}
+          {/* 氏名（対象社員） */}
           <div className="lg:col-span-2">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <UserIcon className="w-4 h-4 text-gray-500" />
-              <span>氏名</span>
+              <span>氏名（対象社員）</span>
             </label>
-            <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50">
-              {currentUser ? (
-                <span className="text-gray-900">
-                  {currentUser.name} {currentUser.position ? `(${currentUser.position})` : ''}
-                </span>
-              ) : (
-                <span className="text-gray-400">読み込み中...</span>
-              )}
-            </div>
+            {setTargetUserId ? (
+              <>
+                <select
+                  value={targetUserId || ''}
+                  onChange={(e) => setTargetUserId(e.target.value)}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-[#0E3091] transition-all"
+                  required
+                >
+                  {userOptions.length === 0 && currentUser && (
+                    <option value={currentUser.id}>
+                      {currentUser.name}{currentUser.position ? ` (${currentUser.position})` : ''}
+                    </option>
+                  )}
+                  {userOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}{u.position ? ` (${u.position})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {currentUser && targetUserId && targetUserId !== currentUser.id && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    入力者: {currentUser.name}（代理入力）
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50">
+                {currentUser ? (
+                  <span className="text-gray-900">
+                    {currentUser.name} {currentUser.position ? `(${currentUser.position})` : ''}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">読み込み中...</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 日付 */}

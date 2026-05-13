@@ -98,6 +98,8 @@ export default function WorkReportDetailPage() {
   const [projectRefId, setProjectRefId] = useState<string | null>(null)
   const [weather, setWeather] = useState('')
   const [createdUserName, setCreatedUserName] = useState('')
+  const [reportOwner, setReportOwner] = useState<{ id: string; name: string; position?: string | null } | null>(null)
+  const [enteredBy, setEnteredBy] = useState<{ id: string; name: string; position?: string | null } | null>(null)
 
   // 作業者記録
   const [workerRecords, setWorkerRecords] = useState<WorkerRecord[]>([])
@@ -127,6 +129,8 @@ export default function WorkReportDetailPage() {
       .then(data => {
         const dateObj = new Date(data.date)
         setDate(dateObj.toISOString().split('T')[0])
+        if (data.user) setReportOwner({ id: data.userId, name: data.user.name, position: data.user.position })
+        if (data.enteredBy) setEnteredBy(data.enteredBy)
         setProjectName(data.projectName || '')
         setProjectType(data.projectType || '')
         setProjectId(data.projectId || '')
@@ -624,21 +628,26 @@ export default function WorkReportDetailPage() {
                   )}
                 </div>
 
-                {/* 氏名 */}
+                {/* 氏名（対象社員） */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                     <User className="w-4 h-4 text-gray-500" />
-                    <span>氏名</span>
+                    <span>氏名（対象社員）</span>
                   </label>
                   <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50">
-                    {currentUser ? (
+                    {reportOwner ? (
                       <span className="text-gray-900">
-                        {currentUser.name} {currentUser.position ? `(${currentUser.position})` : ''}
+                        {reportOwner.name}{reportOwner.position ? ` (${reportOwner.position})` : ''}
                       </span>
                     ) : (
                       <span className="text-gray-400">読み込み中...</span>
                     )}
                   </div>
+                  {enteredBy && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      入力者: {enteredBy.name}{enteredBy.position ? `（${enteredBy.position}）` : ''}（代理入力）
+                    </p>
+                  )}
                 </div>
 
                 {/* 日付 */}

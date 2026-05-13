@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
     const users = await prisma.user.findMany({
+      where: { isActive: true },
       orderBy: {
         name: 'asc',
       },

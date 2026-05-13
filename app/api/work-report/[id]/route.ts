@@ -79,7 +79,20 @@ export async function GET(
       }
     }
 
-    return NextResponse.json(report)
+    // 対象社員・入力者情報を付加
+    const owner = await prisma.user.findUnique({
+      where: { id: report.userId },
+      select: { id: true, name: true, position: true },
+    })
+    let enteredBy: { id: string; name: string; position: string | null } | null = null
+    if (report.enteredById && report.enteredById !== report.userId) {
+      enteredBy = await prisma.user.findUnique({
+        where: { id: report.enteredById },
+        select: { id: true, name: true, position: true },
+      })
+    }
+
+    return NextResponse.json({ ...report, user: owner, enteredBy })
   } catch (error) {
     console.error('作業日報取得エラー:', error)
     return NextResponse.json(

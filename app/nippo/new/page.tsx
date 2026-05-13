@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { VisitRecordInput } from '@/lib/types'
 import { Home, Settings, LogOut, Building2, Shield } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { apiPost } from '@/lib/api'
+import { apiGet, apiPost } from '@/lib/api'
+
+type SelectableUser = { id: string; name: string; position?: string | null }
 
 // CSSアニメーション定義用のスタイル
 const styles = `
@@ -49,6 +51,14 @@ export default function NewNippoPage() {
   const [visitRecords, setVisitRecords] = useState<VisitRecordInput[]>([
     { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 0 }
   ])
+
+  // 代理入力用：対象社員選択肢
+  const [userOptions, setUserOptions] = useState<SelectableUser[]>([])
+  useEffect(() => {
+    apiGet<SelectableUser[]>('/api/users')
+      .then(setUserOptions)
+      .catch(() => setUserOptions([]))
+  }, [])
 
   // 30分刻みの時刻オプションを生成（絶対に必要）
   const generateTimeOptions = () => {
@@ -245,17 +255,30 @@ export default function NewNippoPage() {
               </div>
               <div>
                 <label className="block text-xs font-normal text-gray-600 mb-2">
-                  氏名
+                  氏名（対象社員）
                 </label>
-                <div className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg bg-gray-50">
-                  {currentUser ? (
-                    <span className="text-gray-900">
-                      {currentUser.name} {currentUser.position ? `(${currentUser.position})` : ''}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">読み込み中...</span>
+                <select
+                  value={formData.userId}
+                  onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                  className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  required
+                >
+                  {userOptions.length === 0 && currentUser && (
+                    <option value={currentUser.id}>
+                      {currentUser.name}{currentUser.position ? ` (${currentUser.position})` : ''}
+                    </option>
                   )}
-                </div>
+                  {userOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}{u.position ? ` (${u.position})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {currentUser && formData.userId && formData.userId !== currentUser.id && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    入力者: {currentUser.name}（代理入力）
+                  </p>
+                )}
               </div>
             </div>
           </div>

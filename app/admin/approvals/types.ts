@@ -44,14 +44,17 @@ export interface ManagedUser extends ClientUser {
   username: string
 }
 
+export type CellStatus = 'none' | 'partial' | 'complete'
+
 export interface SubmissionStatus {
-  users: { id: string; name: string; position?: string }[]
+  users: { id: string; name: string; position?: string; defaultReportType?: string }[]
   year: number
   month: number
   periodStart: string
   periodEnd: string
   submissionMap: Record<string, Record<string, boolean>>
   submissionTypeMap?: Record<string, Record<string, { type: string; id: string }[]>>
+  statusMap?: Record<string, Record<string, CellStatus>>
   leaveMap?: Record<string, Record<string, { id: string; type: string; reason?: string; attachmentName?: string }>>
   approvalMap?: Record<string, Record<string, string>>
 }

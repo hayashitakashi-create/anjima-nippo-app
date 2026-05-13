@@ -27,6 +27,7 @@ export async function GET(
       include: {
         user: {
           select: {
+            id: true,
             name: true,
             position: true,
           }
@@ -66,7 +67,16 @@ export async function GET(
       }
     }
 
-    return NextResponse.json(report)
+    // 代理入力時の入力者情報を付加
+    let enteredBy: { id: string; name: string; position: string | null } | null = null
+    if (report.enteredById && report.enteredById !== report.userId) {
+      enteredBy = await prisma.user.findUnique({
+        where: { id: report.enteredById },
+        select: { id: true, name: true, position: true },
+      })
+    }
+
+    return NextResponse.json({ ...report, enteredBy })
   } catch (error) {
     console.error('日報取得エラー:', error)
     return NextResponse.json(

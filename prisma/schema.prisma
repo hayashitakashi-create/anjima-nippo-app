@@ -23,7 +23,7 @@ model User {
   isActive          Boolean  @default(true)   // アカウント有効/無効
   showInCalendar    Boolean  @default(true)   // 提出状況カレンダーに表示するか
   mustChangePassword Boolean @default(true)   // 初回ログイン時にパスワード変更を要求
-  defaultReportType String   @default("work") // デフォルト日報タイプ (sales: 営業日報, work: 作業日報)
+  defaultReportType String   @default("work") // 必要日報タイプ (sales: 営業のみ, work: 作業のみ, both: 両方)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -39,8 +39,9 @@ model User {
 model DailyReport {
   id              String   @id @default(cuid())
   date            DateTime // 日報の日付
-  userId          String   // 作成者
+  userId          String   // 対象社員（日報の主体）
   user            User     @relation(fields: [userId], references: [id])
+  enteredById     String?  // 実際に入力した人（代理入力時はuserIdと異なる）
   specialNotes    String?  // 特記事項
   approvalRouteId String?  // 使用した承認ルート
   approvalRoute   ApprovalRoute? @relation(fields: [approvalRouteId], references: [id])
@@ -134,7 +135,8 @@ model Project {
 model WorkReport {
   id                   String   @id @default(cuid())
   date                 DateTime // 作業日付
-  userId               String   // 作成者（代表者）
+  userId               String   // 対象社員（代表者・日報の主体）
+  enteredById          String?  // 実際に入力した人（代理入力時はuserIdと異なる）
   projectRefId         String?  // 物件マスタへの参照
   project              Project? @relation(fields: [projectRefId], references: [id])
   projectName          String   // 工事名（物件マスタから自動入力）

@@ -66,6 +66,23 @@ function WorkReportNewPageContent() {
   // 下書き復元バナー
   const [showDraftBanner, setShowDraftBanner] = useState(false)
 
+  // 代理入力用：対象社員ID + 選択肢
+  const [targetUserId, setTargetUserId] = useState<string>('')
+  const [userOptions, setUserOptions] = useState<{ id: string; name: string; position?: string | null }[]>([])
+
+  useEffect(() => {
+    apiGet<{ id: string; name: string; position?: string | null }[]>('/api/users')
+      .then(setUserOptions)
+      .catch(() => setUserOptions([]))
+  }, [])
+
+  // 認証ユーザー取得時にデフォルトで自分を選択
+  useEffect(() => {
+    if (currentUser && !targetUserId) {
+      setTargetUserId(currentUser.id)
+    }
+  }, [currentUser, targetUserId])
+
   // フォーム状態（カスタムフック）
   const form = useWorkReportForm()
 
@@ -249,7 +266,7 @@ function WorkReportNewPageContent() {
     try {
       await apiPost('/api/work-report', {
         date: new Date(form.date),
-        userId: currentUser?.id,
+        userId: targetUserId || currentUser?.id,
         projectRefId: projectRefId || undefined,
         projectName: form.projectName,
         projectType: form.projectType,
@@ -410,6 +427,9 @@ function WorkReportNewPageContent() {
             currentUser={currentUser}
             projectLoaded={projectLoaded}
             projectTypesList={projectTypesList}
+            targetUserId={targetUserId}
+            setTargetUserId={setTargetUserId}
+            userOptions={userOptions}
           />
 
           {/* 作業者記録 */}

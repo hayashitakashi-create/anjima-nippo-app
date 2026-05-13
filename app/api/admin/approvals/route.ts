@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       const [activeUsers, periodReports, periodWorkReports, periodLeaveRequests] = await Promise.all([
         prisma.user.findMany({
           where: { isActive: true, showInCalendar: true },
-          select: { id: true, name: true, position: true },
+          select: { id: true, name: true, position: true, defaultReportType: true },
           orderBy: { name: 'asc' },
         }),
         prisma.dailyReport.findMany({
@@ -260,6 +260,52 @@ export async function GET(request: NextRequest) {
         }
       })
 
+      // ステータス3値判定（未提出 / 要確認 / 提出済）
+      // 必要日報（defaultReportType: sales/work/both）と実提出（submissionTypeMap）から計算
+      // 休暇日は対象外（leaveMapが優先表示されるため判定スキップ）
+      const statusMap: Record<string, Record<string, 'none' | 'partial' | 'complete'>> = {}
+      activeUsers.forEach(u => {
+        statusMap[u.id] = {}
+      })
+
+      // 期間内の全日付を列挙
+      const allDateKeys: string[] = []
+      {
+        const cursor = new Date(periodStart)
+        while (cursor <= periodEnd) {
+          allDateKeys.push(cursor.toISOString().split('T')[0])
+          cursor.setDate(cursor.getDate() + 1)
+        }
+      }
+
+      const todayKey = new Date().toISOString().split('T')[0]
+
+      activeUsers.forEach(u => {
+        const required = u.defaultReportType // 'sales' | 'work' | 'both'
+        allDateKeys.forEach(dateKey => {
+          // 未来日・休暇日はステータス判定スキップ
+          if (dateKey > todayKey) return
+          if (leaveMap[u.id]?.[dateKey]) return
+
+          const types = submissionTypeMap[u.id]?.[dateKey] || []
+          const hasSales = types.some(e => e.type === 'sales')
+          const hasWork = types.some(e => e.type === 'work')
+
+          let status: 'none' | 'partial' | 'complete'
+          if (required === 'sales') {
+            status = hasSales ? 'complete' : 'none'
+          } else if (required === 'work') {
+            status = hasWork ? 'complete' : 'none'
+          } else {
+            // both
+            if (hasSales && hasWork) status = 'complete'
+            else if (hasSales || hasWork) status = 'partial'
+            else status = 'none'
+          }
+          statusMap[u.id][dateKey] = status
+        })
+      })
+
       submissionStatus = {
         users: activeUsers,
         year: displayYear,
@@ -268,6 +314,7 @@ export async function GET(request: NextRequest) {
         periodEnd: periodEnd.toISOString().split('T')[0],
         submissionMap,
         submissionTypeMap,
+        statusMap,
         leaveMap,
         approvalMap,
       }

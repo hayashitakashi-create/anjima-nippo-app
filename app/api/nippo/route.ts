@@ -102,13 +102,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    // 認証ユーザーのIDを使用（なりすまし防止）
-    body.userId = authResult.user.id
+    // 対象社員ID（代理入力時は他人のIDが入る）。未指定なら認証ユーザー自身。
+    const targetUserId = body.userId || authResult.user.id
+    // 実際の入力者（認証ユーザー）。代理入力時はtargetUserIdと異なる。
+    const enteredById = authResult.user.id
 
     const dailyReport = await prisma.dailyReport.create({
       data: {
         date: new Date(body.date),
-        userId: body.userId,
+        userId: targetUserId,
+        enteredById,
         specialNotes: body.specialNotes,
         visitRecords: {
           create: body.visitRecords.map((record: any) => ({

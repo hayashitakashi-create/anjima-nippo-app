@@ -59,6 +59,10 @@ export default function EditNippoPage() {
     specialNotes: '',
   })
 
+  // 対象社員・入力者表示用
+  const [reportOwner, setReportOwner] = useState<{ id: string; name: string; position?: string | null } | null>(null)
+  const [enteredBy, setEnteredBy] = useState<{ id: string; name: string; position?: string | null } | null>(null)
+
   const [visitRecords, setVisitRecords] = useState<VisitRecordInput[]>([
     { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 0 }
   ])
@@ -102,6 +106,13 @@ export default function EditNippoPage() {
           userId: data.userId,
           specialNotes: data.specialNotes || '',
         })
+
+        if (data.user) {
+          setReportOwner({ id: data.userId, name: data.user.name, position: data.user.position })
+        }
+        if (data.enteredBy) {
+          setEnteredBy(data.enteredBy)
+        }
 
         // 訪問記録を設定
         const loadedRecords = data.visitRecords.map((record: any, index: number) => ({
@@ -356,17 +367,22 @@ export default function EditNippoPage() {
               </div>
               <div>
                 <label className="block text-xs font-normal text-gray-600 mb-2">
-                  氏名
+                  氏名（対象社員）
                 </label>
                 <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50">
-                  {currentUser ? (
+                  {reportOwner ? (
                     <span className="text-gray-900 text-base">
-                      {currentUser.name} {currentUser.position ? `(${currentUser.position})` : ''}
+                      {reportOwner.name}{reportOwner.position ? ` (${reportOwner.position})` : ''}
                     </span>
                   ) : (
                     <span className="text-gray-400 text-base">読み込み中...</span>
                   )}
                 </div>
+                {enteredBy && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    入力者: {enteredBy.name}{enteredBy.position ? `（${enteredBy.position}）` : ''}（代理入力）
+                  </p>
+                )}
               </div>
             </div>
           </div>
