@@ -39,6 +39,7 @@ interface ReportData {
   id: string
   date: string
   userId: string
+  user?: { id: string; name: string; position?: string | null }
   projectName: string
   projectType?: string
   projectId?: string
@@ -66,7 +67,8 @@ export default function WorkReportPrintPage() {
   const [report, setReport] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const userName = currentUser?.name || ''
+  // 対象社員の氏名（代理入力時も含めて、日報の主体である対象社員を表示）
+  const userName = report?.user?.name || currentUser?.name || ''
 
   useEffect(() => {
     // 作業日報データ取得
