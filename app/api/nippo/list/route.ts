@@ -104,8 +104,32 @@ export async function GET(request: NextRequest) {
       })
     ])
 
+    // 代理入力時の入力者情報を付加（一覧で誰が入力したか確認できるように）
+    const entererIds = Array.from(
+      new Set(
+        reports
+          .map((r) => r.enteredById)
+          .filter((id): id is string => !!id)
+          .filter((id) => reports.find((r) => r.enteredById === id && r.userId !== id))
+      )
+    )
+    const entererUsers = entererIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: entererIds } },
+          select: { id: true, name: true, position: true },
+        })
+      : []
+    const entererMap = new Map(entererUsers.map((u) => [u.id, u]))
+    const reportsWithEnteredBy = reports.map((r) => ({
+      ...r,
+      enteredBy:
+        r.enteredById && r.enteredById !== r.userId
+          ? entererMap.get(r.enteredById) || null
+          : null,
+    }))
+
     return NextResponse.json({
-      reports,
+      reports: reportsWithEnteredBy,
       pagination: {
         page,
         limit,

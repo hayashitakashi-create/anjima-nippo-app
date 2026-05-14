@@ -200,6 +200,22 @@ export async function GET(request: NextRequest) {
         orderBy: {
           date: 'desc',
         },
+      }).then(async (reports) => {
+        // 対象社員・入力者情報を付加（一覧で誰の日報か確認できるように）
+        const userIds = Array.from(new Set([
+          ...reports.map((r) => r.userId),
+          ...reports.map((r) => r.enteredById).filter(Boolean) as string[],
+        ]))
+        const users = await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true, position: true },
+        })
+        const userMap = new Map(users.map((u) => [u.id, u]))
+        return reports.map((r) => ({
+          ...r,
+          user: userMap.get(r.userId) || null,
+          enteredBy: r.enteredById && r.enteredById !== r.userId ? userMap.get(r.enteredById) || null : null,
+        }))
       }),
     ])
 

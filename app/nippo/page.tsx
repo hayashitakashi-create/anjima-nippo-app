@@ -55,6 +55,7 @@ interface DailyReport {
     name: string
     position?: string
   }
+  enteredBy?: { id: string; name: string; position?: string | null } | null
   visitRecords: VisitRecord[]
   approvals: Approval[]
 }
@@ -63,6 +64,8 @@ interface WorkReport {
   id: string
   date: string
   userId: string
+  user?: { id: string; name: string; position?: string | null }
+  enteredBy?: { id: string; name: string; position?: string | null } | null
   projectRefId?: string
   projectName: string
   projectType?: string
@@ -806,15 +809,9 @@ export default function NippoListPage() {
                 <button
                   key={index}
                   onClick={() => {
+                    // 日付クリックでは詳細に飛ばず、選択日のみ更新。
+                    // 下部の一覧から提出者を確認した上で個別の日報をクリックする運用。
                     setSelectedDate(new Date(date))
-                    const reportId = reportIdMap.get(dateKey)
-                    if (reportId) {
-                      if (reportType === 'sales') {
-                        router.push(`/nippo/${reportId}`)
-                      } else {
-                        router.push(`/work-report/${reportId}`)
-                      }
-                    }
                   }}
                   className={`relative flex flex-col items-center justify-center py-2.5 sm:py-3 transition-colors ${
                     !inMonth ? 'opacity-30' : ''
@@ -905,7 +902,12 @@ export default function NippoListPage() {
                           <p className="text-base font-bold text-gray-900">
                             {formatDateDisplay(report.date)}
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">{report.user.name}</p>
+                          <p className="text-xs text-gray-700 mt-0.5">
+                            <span className="font-medium">対象社員:</span> {report.user.name}
+                            {report.enteredBy && (
+                              <span className="ml-2 text-amber-700">（入力者: {report.enteredBy.name}）</span>
+                            )}
+                          </p>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusStyle(status)}`}>
                           {status}
@@ -967,6 +969,14 @@ export default function NippoListPage() {
                           {formatDateDisplay(report.date)}
                           {report.weather && ` / ${report.weather}`}
                         </p>
+                        {report.user?.name && (
+                          <p className="text-xs text-gray-700 mt-1">
+                            <span className="font-medium">対象社員:</span> {report.user.name}
+                            {report.enteredBy && (
+                              <span className="ml-2 text-amber-700">（入力者: {report.enteredBy.name}）</span>
+                            )}
+                          </p>
+                        )}
                       </div>
                       {report.projectType && (
                         <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-50 text-[#0E3091]">
