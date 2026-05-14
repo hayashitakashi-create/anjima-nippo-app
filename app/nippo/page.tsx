@@ -121,6 +121,9 @@ export default function NippoListPage() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
+  // 全員の日報を閲覧できる管理者か（view_all_reports権限）
+  const canViewAll = !!currentUser?.permissions?.view_all_reports
+
   useEffect(() => {
     if (!currentUser) return
     setReportType(currentUser.defaultReportType === 'work' ? 'work' : currentUser.defaultReportType === 'both' ? 'work' : 'sales')
@@ -131,8 +134,8 @@ export default function NippoListPage() {
   useEffect(() => {
     if (!currentUser) return
 
-    // 営業日報取得（salesユーザーのみ）
-    if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
+    // 営業日報取得（salesユーザー or 管理者）
+    if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both' || canViewAll) {
       apiGet<any>('/api/nippo/list')
         .then(data => {
           if (data?.reports) {
@@ -144,8 +147,9 @@ export default function NippoListPage() {
         })
     }
 
-    // 作業日報取得
-    apiGet<any>(`/api/work-report?userId=${currentUser.id}&limit=100`)
+    // 作業日報取得（管理者は全件、それ以外は自分の分）
+    const workUrl = canViewAll ? '/api/work-report?limit=100' : `/api/work-report?userId=${currentUser.id}&limit=100`
+    apiGet<any>(workUrl)
       .then(data => {
         if (data && data.reports) {
           setWorkReports(data.reports)
@@ -156,7 +160,7 @@ export default function NippoListPage() {
       .catch(error => {
         console.error('作業日報取得エラー:', error)
       })
-  }, [currentUser])
+  }, [currentUser, canViewAll])
 
 
 
@@ -172,13 +176,15 @@ export default function NippoListPage() {
       if (searchEndDate) params.set('endDate', searchEndDate)
 
       let salesData: any = { reports: [] }
-      // 営業日報検索（salesユーザーのみ）
-      if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both') {
+      // 営業日報検索（salesユーザー or 管理者）
+      if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both' || canViewAll) {
         salesData = await apiGet<any>(`/api/nippo/list?${params.toString()}`)
       }
 
-      // 作業日報検索
-      params.set('userId', currentUser.id)
+      // 作業日報検索（管理者は全件・それ以外は自分の分）
+      if (!canViewAll) {
+        params.set('userId', currentUser.id)
+      }
       const workData = await apiGet<any>(`/api/work-report?${params.toString()}`)
 
       setSearchResults({
@@ -466,8 +472,8 @@ export default function NippoListPage() {
             </div>
           </div>
 
-          {/* 日報タイプ切り替え（営業の人は両方表示、作業の人は作業のみ） */}
-          {(currentUser?.defaultReportType === 'sales' || currentUser?.defaultReportType === 'both') ? (
+          {/* 日報タイプ切り替え（営業/両方/管理者は両方表示、作業のみの人は作業のみ） */}
+          {(currentUser?.defaultReportType === 'sales' || currentUser?.defaultReportType === 'both' || canViewAll) ? (
             <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1 w-fit">
               <button
                 type="button"

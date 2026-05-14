@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { notifyReportSubmitted } from '@/lib/notifications'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
+import { getUserPermissions } from '@/lib/permissions'
 
 export interface WorkReportInput {
   date: string | Date
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const userId = searchParams.get('userId')
+    const userIdParam = searchParams.get('userId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const keyword = searchParams.get('keyword')?.trim() || ''
@@ -73,6 +74,18 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     // AND条件を構築するための配列
     const andConditions: any[] = []
+
+    // 権限チェック：全員の日報を閲覧できるか
+    const permissions = await getUserPermissions(authResult.user.role)
+    const canViewAll = permissions.view_all_reports
+
+    // userId未指定の場合は、権限に応じて挙動を変える
+    // - canViewAll: 全件取得（userIdフィルタなし）
+    // - 非管理者: 自分の日報のみ
+    const userId = userIdParam || (canViewAll ? null : authResult.user.id)
+    if (userIdParam && !canViewAll && userIdParam !== authResult.user.id) {
+      return NextResponse.json({ error: '他ユーザーの作業日報を閲覧する権限がありません' }, { status: 403 })
+    }
 
     if (userId) {
       // ユーザーの名前を取得して、作成者 OR workerRecordsに名前が含まれる日報を取得

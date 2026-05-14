@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
+import { getUserPermissions } from '@/lib/permissions'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,14 +19,30 @@ export async function GET(request: NextRequest) {
     const keyword = searchParams.get('keyword')?.trim() || ''
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const targetUserId = searchParams.get('userId') // 任意。未指定なら本人 or 全員（権限による）
 
     // ページネーションパラメータ
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100) // 最大100件
     const skip = (page - 1) * limit
 
+    // 全員の日報を閲覧できるか
+    const permissions = await getUserPermissions(authUser.role)
+    const canViewAll = permissions.view_all_reports
+
     // where条件を構築
-    const where: any = { userId: authUser.id }
+    // - userIdパラメータ指定: その人の日報のみ（権限チェック）
+    // - 未指定 + canViewAll: 全員
+    // - 未指定 + canViewAllなし: 本人のみ
+    const where: any = {}
+    if (targetUserId) {
+      if (!canViewAll && targetUserId !== authUser.id) {
+        return NextResponse.json({ error: '他ユーザーの日報を閲覧する権限がありません' }, { status: 403 })
+      }
+      where.userId = targetUserId
+    } else if (!canViewAll) {
+      where.userId = authUser.id
+    }
 
     // 期間フィルター
     if (startDate || endDate) {
