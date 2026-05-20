@@ -242,19 +242,19 @@ export default function AdminProjectsPage() {
 
   // Delete project
   const handleDelete = async (project: Project) => {
-    if (project.reportCount && project.reportCount > 0) {
-      alert(`この案件には${project.reportCount}件の日報が紐づいているため削除できません。アーカイブをご利用ください。`)
-      return
-    }
+    const reportCount = project.reportCount ?? 0
+    const message = reportCount > 0
+      ? `案件「${project.name}」を完全に削除します。\n\n紐づく日報 ${reportCount} 件も同時に削除されます。\nこの操作は取り消せません。\n\n※ 後で見返したい場合は「保管」をお使いください（保管なら復元できます）\n\n本当に削除しますか？`
+      : `案件「${project.name}」を完全に削除します。\nこの操作は取り消せません。\n\n※ 後で見返したい場合は「保管」をお使いください（保管なら復元できます）\n\n本当に削除しますか？`
 
-    if (!confirm(`案件「${project.name}」を削除しますか？この操作は取り消せません。`)) return
+    if (!confirm(message)) return
 
     setMessage('')
     setError('')
 
     try {
       await apiDelete(`/api/projects/${project.id}`)
-      setMessage('案件を削除しました')
+      setMessage(reportCount > 0 ? `案件を削除しました（日報${reportCount}件も削除）` : '案件を削除しました')
       fetchProjects()
     } catch (err) {
       console.error('案件削除エラー:', err)
@@ -595,9 +595,8 @@ export default function AdminProjectsPage() {
 
                     <button
                       onClick={() => handleDelete(project)}
-                      disabled={!!project.reportCount && project.reportCount > 0}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                      title={project.reportCount && project.reportCount > 0 ? '日報が紐づいているため削除できません' : ''}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                      title={project.reportCount && project.reportCount > 0 ? `紐づく日報${project.reportCount}件も同時に削除されます` : ''}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       削除

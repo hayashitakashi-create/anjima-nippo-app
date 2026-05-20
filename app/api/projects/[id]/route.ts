@@ -158,23 +158,20 @@ export async function DELETE(
 
     const { id } = await params
 
-    // 紐づく日報があるか確認
-    const reportCount = await prisma.workReport.count({
-      where: { projectRefId: id },
+    const deletedReports = await prisma.$transaction(async (tx) => {
+      const del = await tx.workReport.deleteMany({
+        where: { projectRefId: id },
+      })
+      await tx.project.delete({
+        where: { id },
+      })
+      return del.count
     })
 
-    if (reportCount > 0) {
-      return NextResponse.json(
-        { error: `この物件には${reportCount}件の日報が紐づいているため削除できません。アーカイブをご利用ください。` },
-        { status: 400 }
-      )
-    }
-
-    await prisma.project.delete({
-      where: { id },
+    return NextResponse.json({
+      message: `物件を削除しました（紐づく日報${deletedReports}件も削除）`,
+      deletedReports,
     })
-
-    return NextResponse.json({ message: '物件を削除しました' })
   } catch (error) {
     console.error('物件削除エラー:', error)
     return NextResponse.json(
