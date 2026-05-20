@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api'
-import { canDeleteProject } from '@/lib/permissions'
+import { canDeleteProject } from '@/lib/project-permissions'
 
 interface Project {
   id: string
