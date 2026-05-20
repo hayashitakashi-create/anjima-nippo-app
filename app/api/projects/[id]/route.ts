@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
+import { canDeleteProject } from '@/lib/permissions'
 
 // 物件を個別取得（日報一覧付き）
 export async function GET(
@@ -154,6 +155,13 @@ export async function DELETE(
     const authResult = await requireAuth(request)
     if ('error' in authResult) {
       return authErrorResponse(authResult)
+    }
+
+    if (!canDeleteProject(authResult.user.id)) {
+      return NextResponse.json(
+        { error: '案件の削除権限がありません' },
+        { status: 403 }
+      )
     }
 
     const { id } = await params

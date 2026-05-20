@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api'
+import { canDeleteProject } from '@/lib/permissions'
 
 interface Project {
   id: string
@@ -593,14 +594,16 @@ export default function AdminProjectsPage() {
                       </button>
                     )}
 
-                    <button
-                      onClick={() => handleDelete(project)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
-                      title={project.reportCount && project.reportCount > 0 ? `紐づく日報${project.reportCount}件も同時に削除されます` : ''}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      削除
-                    </button>
+                    {canDeleteProject(currentUser?.id) && (
+                      <button
+                        onClick={() => handleDelete(project)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                        title={project.reportCount && project.reportCount > 0 ? `紐づく日報${project.reportCount}件も同時に削除されます` : ''}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        削除
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

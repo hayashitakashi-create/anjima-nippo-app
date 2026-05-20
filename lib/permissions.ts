@@ -1,5 +1,16 @@
 import { prisma } from './prisma'
 
+// 案件削除を許可するユーザーID（田邊沙帆・林　崇のみ）
+export const PROJECT_DELETE_ALLOWED_USER_IDS: string[] = [
+  'cmlaavq4k000cyl1ob7o3pyo5', // 田邊沙帆
+  'cmmulndvi0000822roznduf98', // 林　崇
+]
+
+export function canDeleteProject(userId: string | undefined | null): boolean {
+  if (!userId) return false
+  return PROJECT_DELETE_ALLOWED_USER_IDS.includes(userId)
+}
+
 // 権限キー型
 export type PermissionKey =
   | 'view_all_reports'
