@@ -75,6 +75,7 @@ export default function ApprovalsPage() {
   // 絞り込み条件
   const [selectedUserId, setSelectedUserId] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
+  const [selectedReportType, setSelectedReportType] = useState<'' | 'sales' | 'work'>('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [showFilters, setShowFilters] = useState(true)
@@ -158,8 +159,13 @@ export default function ApprovalsPage() {
       result = result.filter(r => new Date(r.date) <= end)
     }
 
+    // 日報種別で絞り込み
+    if (selectedReportType) {
+      result = result.filter(r => ((r as any).reportType || 'sales') === selectedReportType)
+    }
+
     return result
-  }, [reports, selectedUserId, selectedRole, startDate, endDate])
+  }, [reports, selectedUserId, selectedRole, startDate, endDate, selectedReportType])
 
   // 承認待ちの日報のみを取得
   const pendingReports = useMemo(() => {
@@ -342,6 +348,7 @@ export default function ApprovalsPage() {
   const clearFilters = () => {
     setSelectedUserId('')
     setSelectedRole('')
+    setSelectedReportType('')
     setStartDate('')
     setEndDate('')
   }
@@ -365,7 +372,7 @@ export default function ApprovalsPage() {
   }, [users])
 
   // 絞り込みが適用されているか
-  const hasActiveFilters = selectedUserId || selectedRole || startDate || endDate
+  const hasActiveFilters = selectedUserId || selectedRole || startDate || endDate || selectedReportType
 
   if (loading && !currentUser) {
     return (
@@ -476,7 +483,7 @@ export default function ApprovalsPage() {
 
           {showFilters && (
             <div className="border-t border-gray-200 p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* ユーザー選択 */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
@@ -510,6 +517,23 @@ export default function ApprovalsPage() {
                     {positionOptions.map(pos => (
                       <option key={pos} value={pos}>{pos}</option>
                     ))}
+                  </select>
+                </div>
+
+                {/* 日報種別 */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    日報種別
+                  </label>
+                  <select
+                    value={selectedReportType}
+                    onChange={(e) => setSelectedReportType(e.target.value as '' | 'sales' | 'work')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  >
+                    <option value="">両方</option>
+                    <option value="sales">営業日報</option>
+                    <option value="work">作業日報</option>
                   </select>
                 </div>
 
@@ -1158,10 +1182,17 @@ export default function ApprovalsPage() {
                         <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
                           訪問記録 ({report.visitRecords.length}件)
+                          <span className="text-xs font-normal text-gray-500 ml-2">（クリックで日報を別タブで開きます）</span>
                         </h4>
                         <div className="space-y-2 mb-6">
                           {report.visitRecords.map((visit, i) => (
-                            <div key={visit.id} className="bg-gray-50 rounded-lg p-3 text-sm">
+                            <Link
+                              key={visit.id}
+                              href={`/nippo/${report.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block bg-gray-50 rounded-lg p-3 text-sm hover:bg-purple-50 hover:ring-1 hover:ring-purple-300 transition-colors cursor-pointer"
+                            >
                               <div className="flex items-center justify-between mb-1">
                                 <span className="font-medium text-gray-900">{visit.destination}</span>
                                 {visit.startTime && visit.endTime && (
@@ -1179,7 +1210,7 @@ export default function ApprovalsPage() {
                               {visit.expense != null && visit.expense > 0 && (
                                 <p className="text-xs text-gray-500 mt-1">経費: {visit.expense.toLocaleString()}円</p>
                               )}
-                            </div>
+                            </Link>
                           ))}
                         </div>
 
@@ -1272,7 +1303,9 @@ export default function ApprovalsPage() {
                         {/* 日報詳細へのリンク */}
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <Link
-                            href={`/nippo/${report.id}`}
+                            href={`${(report as any).reportType === 'work' ? '/work-report' : '/nippo'}/${report.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-medium"
                           >
                             <FileText className="w-4 h-4" />
