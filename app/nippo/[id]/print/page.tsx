@@ -198,7 +198,7 @@ export default function NippoPrintPage() {
                 </td>
                 <th style={{ width: '60px' }}>承認</th>
                 {/* 4段階承認欄 */}
-                {['社長', '専務', '常務', '上長'].map(role => {
+                {['社長', '専務', '常務', '上長', '承認者'].map(role => {
                   const approval = report.approvals.find((a: any) => a.approverRole === role)
                   return (
                     <td key={role} className="text-center" style={{ width: '70px' }}>

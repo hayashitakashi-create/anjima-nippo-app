@@ -257,6 +257,25 @@ export default function AdminPage() {
     }
   }
 
+  // 承認者枠 ON/OFF
+  const [togglingAuthorizer, setTogglingAuthorizer] = useState<string | null>(null)
+  const handleToggleAuthorizer = async (user: ManagedUser) => {
+    const newIsAuthorizer = !user.isAuthorizer
+    setError('')
+    setMessage('')
+    setTogglingAuthorizer(user.id)
+    try {
+      await adminApi.updateUser({ userId: user.id, isAuthorizer: newIsAuthorizer })
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isAuthorizer: newIsAuthorizer } : u))
+      setMessage(newIsAuthorizer ? `${user.name}を承認者枠に設定しました` : `${user.name}の承認者枠を解除しました`)
+    } catch (err) {
+      console.error('承認者枠トグルエラー:', err)
+      setError(err instanceof Error ? err.message : '承認者枠の更新に失敗しました')
+    } finally {
+      setTogglingAuthorizer(null)
+    }
+  }
+
   const filteredUsers = users.filter(u => {
     if (filterActive === 'active') return u.isActive !== false
     if (filterActive === 'inactive') return u.isActive === false
@@ -629,18 +648,38 @@ export default function AdminPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleToggleApprover(user)}
-                        disabled={togglingApprover === user.id}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          user.isApprover ? 'bg-purple-600' : 'bg-gray-300'
-                        } ${togglingApprover === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
-                        title={user.isApprover ? '承認者を解除' : '承認者に設定'}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          user.isApprover ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-500 w-12 text-right">役職</span>
+                          <button
+                            onClick={() => handleToggleApprover(user)}
+                            disabled={togglingApprover === user.id}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              user.isApprover ? 'bg-purple-600' : 'bg-gray-300'
+                            } ${togglingApprover === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+                            title={user.isApprover ? '役職承認者を解除' : '役職承認者に設定（上長/常務/専務/社長）'}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              user.isApprover ? 'translate-x-6' : 'translate-x-1'
+                            }`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-500 w-12 text-right">承認者</span>
+                          <button
+                            onClick={() => handleToggleAuthorizer(user)}
+                            disabled={togglingAuthorizer === user.id}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              user.isAuthorizer ? 'bg-emerald-600' : 'bg-gray-300'
+                            } ${togglingAuthorizer === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+                            title={user.isAuthorizer ? '承認者枠を解除' : '承認者枠に設定'}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              user.isAuthorizer ? 'translate-x-6' : 'translate-x-1'
+                            }`} />
+                          </button>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingUser === user.id ? (

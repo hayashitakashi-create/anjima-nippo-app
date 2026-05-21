@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 各日報に対して4段階承認レコードを作成
-    const approvalRoles = ['上長', '常務', '専務', '社長']
+    // 各日報に対して承認レコードを作成（承認者 + 4段階）
+    const approvalRoles = ['承認者', '上長', '常務', '専務', '社長']
     const approvalRecords: { dailyReportId: string; approverRole: string; status: string }[] = []
     for (const reportId of reportIds) {
       for (const role of approvalRoles) {

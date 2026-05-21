@@ -560,7 +560,7 @@ export default function EditNippoPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">承認状況</h2>
               {/* 承認バッジ */}
               <div className="flex flex-wrap items-center gap-2 mb-6">
-                {['上長', '常務', '専務', '社長'].map((role) => {
+                {['承認者', '上長', '常務', '専務', '社長'].map((role) => {
                   const approval = approvals.find(a => a.approverRole === role)
                   const status = approval?.status || 'pending'
                   const style = status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
@@ -579,7 +579,7 @@ export default function EditNippoPage() {
               </div>
               {/* 各段階の詳細 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {['上長', '常務', '専務', '社長'].map(role => {
+                {['承認者', '上長', '常務', '専務', '社長'].map(role => {
                   const approval = approvals.find(a => a.approverRole === role)
                   if (!approval) return null
 

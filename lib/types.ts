@@ -5,6 +5,7 @@ export interface ClientUser {
   position?: string
   role: string
   isApprover?: boolean
+  isAuthorizer?: boolean
   isActive?: boolean
   defaultReportType?: string
   permissions?: Record<string, boolean>

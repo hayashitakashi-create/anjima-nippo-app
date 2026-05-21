@@ -19,7 +19,8 @@ model User {
   password          String            // ハッシュ化されたパスワード
   position          String?           // 役職(社長、専務、常務、部長など)
   role              String   @default("user") // ユーザー権限 (admin/user)
-  isApprover        Boolean  @default(false)  // 承認者かどうか
+  isApprover        Boolean  @default(false)  // 役職承認者かどうか（上長/常務/専務/社長）
+  isAuthorizer      Boolean  @default(false)  // 「承認者」枠の承認権限を持つかどうか
   isActive          Boolean  @default(true)   // アカウント有効/無効
   showInCalendar    Boolean  @default(true)   // 提出状況カレンダーに表示するか
   mustChangePassword Boolean @default(true)   // 初回ログイン時にパスワード変更を要求

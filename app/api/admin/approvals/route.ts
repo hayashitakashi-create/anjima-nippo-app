@@ -4,22 +4,28 @@ import { notifyReportApproved, notifyReportRejected } from '@/lib/notifications'
 import { requirePermission, authErrorResponse } from '@/lib/auth'
 import { logAuditEvent } from '@/lib/audit-log'
 
-// 承認者の役職 → 承認可能なapproverRoleの対応
-function getApprovalRolesForUser(position: string | null | undefined): string[] {
-  if (!position) return []
-  switch (position) {
+// 承認者の役職/フラグ → 承認可能なapproverRoleの対応
+function getApprovalRolesForUser(user: { position?: string | null; isAuthorizer?: boolean | null }): string[] {
+  const roles: string[] = []
+  switch (user.position) {
     case '部長':
     case '課長':
-      return ['上長']
+      roles.push('上長')
+      break
     case '常務':
-      return ['常務']
+      roles.push('常務')
+      break
     case '専務':
-      return ['専務']
+      roles.push('専務')
+      break
     case '社長':
-      return ['社長']
-    default:
-      return []
+      roles.push('社長')
+      break
   }
+  if (user.isAuthorizer) {
+    roles.push('承認者')
+  }
+  return roles
 }
 
 // 承認待ち日報一覧を取得（管理者用）
@@ -378,17 +384,20 @@ export async function PUT(request: NextRequest) {
       const newStatus = action === 'bulk_approve' ? 'approved' : 'rejected'
 
       // 承認者の役職に対応するロールのみ更新
-      const adminUser = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true } })
-      const allowedRoles = getApprovalRolesForUser(adminUser?.position)
+      const adminUser = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true, isAuthorizer: true } })
+      const allowedRoles = getApprovalRolesForUser(adminUser || {})
+
+      if (allowedRoles.length === 0) {
+        return NextResponse.json(
+          { error: '承認権限がありません（役職または「承認者」の設定が必要です）' },
+          { status: 403 }
+        )
+      }
 
       // トランザクションで一括処理
       await prisma.$transaction(async (tx) => {
-        const whereClause: any = { dailyReportId: { in: reportIds } }
-        if (allowedRoles.length > 0) {
-          whereClause.approverRole = { in: allowedRoles }
-        }
         await tx.approval.updateMany({
-          where: whereClause,
+          where: { dailyReportId: { in: reportIds }, approverRole: { in: allowedRoles } },
           data: {
             status: newStatus,
             approverUserId: admin.id,
@@ -450,15 +459,18 @@ export async function PUT(request: NextRequest) {
       const newStatus = action === 'approve_all' ? 'approved' : 'rejected'
 
       // 承認者の役職に対応するロールのみ更新
-      const adminUserForAll = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true } })
-      const allowedRolesForAll = getApprovalRolesForUser(adminUserForAll?.position)
-      const whereClauseForAll: any = { dailyReportId: reportId }
-      if (allowedRolesForAll.length > 0) {
-        whereClauseForAll.approverRole = { in: allowedRolesForAll }
+      const adminUserForAll = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true, isAuthorizer: true } })
+      const allowedRolesForAll = getApprovalRolesForUser(adminUserForAll || {})
+
+      if (allowedRolesForAll.length === 0) {
+        return NextResponse.json(
+          { error: '承認権限がありません（役職または「承認者」の設定が必要です）' },
+          { status: 403 }
+        )
       }
 
       await prisma.approval.updateMany({
-        where: whereClauseForAll,
+        where: { dailyReportId: reportId, approverRole: { in: allowedRolesForAll } },
         data: {
           status: newStatus,
           approverUserId: admin.id,
@@ -546,9 +558,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // 役職チェック: 承認者が該当する役職の承認のみ操作可能
-    const adminUserIndiv = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true } })
-    const allowedRolesIndiv = getApprovalRolesForUser(adminUserIndiv?.position)
-    if (allowedRolesIndiv.length > 0 && !allowedRolesIndiv.includes(approval.approverRole)) {
+    const adminUserIndiv = await prisma.user.findUnique({ where: { id: admin.id }, select: { position: true, isAuthorizer: true } })
+    const allowedRolesIndiv = getApprovalRolesForUser(adminUserIndiv || {})
+    if (allowedRolesIndiv.length === 0 || !allowedRolesIndiv.includes(approval.approverRole)) {
       return NextResponse.json(
         { error: `この承認は${approval.approverRole}のみ操作可能です` },
         { status: 403 }

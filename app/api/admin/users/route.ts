@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         position: true,
         role: true,
         isApprover: true,
+        isAuthorizer: true,
         isActive: true,
         defaultReportType: true,
         createdAt: true,
@@ -124,7 +125,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId, role, defaultReportType, position, isActive, isApprover } = body
+    const { userId, role, defaultReportType, position, isActive, isApprover, isAuthorizer } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -151,6 +152,7 @@ export async function PUT(request: NextRequest) {
     if (position !== undefined) updateData.position = position
     if (isActive !== undefined) updateData.isActive = isActive
     if (isApprover !== undefined) updateData.isApprover = isApprover
+    if (isAuthorizer !== undefined) updateData.isAuthorizer = isAuthorizer
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -161,6 +163,7 @@ export async function PUT(request: NextRequest) {
         position: true,
         role: true,
         isApprover: true,
+        isAuthorizer: true,
         isActive: true,
         defaultReportType: true,
       },

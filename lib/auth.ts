@@ -32,6 +32,7 @@ export interface AuthenticatedUser {
   name: string
   role: string
   isApprover?: boolean
+  isAuthorizer?: boolean
   position?: string | null
   defaultReportType?: string
 }
@@ -77,6 +78,7 @@ export async function getAuthFromRequest(request: NextRequest): Promise<Authenti
       name: true,
       role: true,
       isApprover: true,
+      isAuthorizer: true,
       position: true,
       defaultReportType: true,
       isActive: true,
@@ -91,6 +93,7 @@ export async function getAuthFromRequest(request: NextRequest): Promise<Authenti
     name: user.name,
     role: user.role,
     isApprover: user.isApprover,
+    isAuthorizer: user.isAuthorizer,
     position: user.position,
     defaultReportType: user.defaultReportType,
   }
