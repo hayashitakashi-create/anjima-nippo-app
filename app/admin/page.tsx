@@ -235,13 +235,6 @@ export default function AdminPage() {
   const [togglingApprover, setTogglingApprover] = useState<string | null>(null)
   const handleToggleApprover = async (user: ManagedUser) => {
     const newIsApprover = !user.isApprover
-    if (newIsApprover) {
-      const currentApproverCount = users.filter(u => u.isApprover).length
-      if (currentApproverCount >= 5) {
-        setError('承認者は最大5名までです')
-        return
-      }
-    }
     setError('')
     setMessage('')
     setTogglingApprover(user.id)
@@ -603,7 +596,7 @@ export default function AdminPage() {
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                     承認者
-                    <span className="block text-[10px] text-gray-400 normal-case">({users.filter(u => u.isApprover).length}/5)</span>
+                    <span className="block text-[10px] text-gray-400 normal-case">役職:{users.filter(u => u.isApprover).length} / 承認:{users.filter(u => u.isAuthorizer).length}</span>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">日報</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状態</th>

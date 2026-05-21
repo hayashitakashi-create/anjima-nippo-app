@@ -134,17 +134,6 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // 承認者は最大5名まで
-    if (isApprover === true) {
-      const approverUsers = await prisma.user.findMany({ where: { isApprover: true }, select: { id: true } })
-      const otherApproverCount = approverUsers.filter(u => u.id !== userId).length
-      if (otherApproverCount >= 5) {
-        return NextResponse.json(
-          { error: '承認者は最大5名までです' },
-          { status: 400 }
-        )
-      }
-    }
 
     const updateData: any = {}
     if (role !== undefined) updateData.role = role
