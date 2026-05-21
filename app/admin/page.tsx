@@ -250,6 +250,24 @@ export default function AdminPage() {
     }
   }
 
+  // 日報種別の即時切替
+  const [changingReportType, setChangingReportType] = useState<string | null>(null)
+  const handleChangeReportType = async (user: ManagedUser, newType: string) => {
+    setError('')
+    setMessage('')
+    setChangingReportType(user.id)
+    try {
+      await adminApi.updateUser({ userId: user.id, defaultReportType: newType })
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, defaultReportType: newType } : u))
+      setMessage(`${user.name}の日報種別を変更しました`)
+    } catch (err) {
+      console.error('日報種別変更エラー:', err)
+      setError(err instanceof Error ? err.message : '日報種別の変更に失敗しました')
+    } finally {
+      setChangingReportType(null)
+    }
+  }
+
   // 承認者枠 ON/OFF
   const [togglingAuthorizer, setTogglingAuthorizer] = useState<string | null>(null)
   const handleToggleAuthorizer = async (user: ManagedUser) => {
@@ -675,20 +693,26 @@ export default function AdminPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {editingUser === user.id ? (
-                        <select value={editForm.defaultReportType} onChange={e => setEditForm({ ...editForm, defaultReportType: e.target.value })}
-                          className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none">
-                          <option value="sales">営業日報</option>
-                          <option value="work">作業日報</option>
-                          <option value="both">両方</option>
-                        </select>
-                      ) : (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.defaultReportType === 'sales' ? 'bg-emerald-100 text-emerald-800' : user.defaultReportType === 'both' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {user.defaultReportType === 'sales' ? '営業' : user.defaultReportType === 'both' ? '両方' : '作業'}
-                        </span>
-                      )}
+                      <select
+                        value={(editingUser === user.id ? editForm.defaultReportType : user.defaultReportType) || 'work'}
+                        onChange={e => {
+                          if (editingUser === user.id) {
+                            setEditForm({ ...editForm, defaultReportType: e.target.value })
+                          } else {
+                            handleChangeReportType(user, e.target.value)
+                          }
+                        }}
+                        disabled={changingReportType === user.id}
+                        className={`px-2 py-1 text-xs font-medium border rounded-full transition-colors cursor-pointer ${
+                          user.defaultReportType === 'sales' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                          user.defaultReportType === 'both' ? 'bg-purple-100 text-purple-800 border-purple-300' :
+                          'bg-blue-100 text-blue-800 border-blue-300'
+                        } ${changingReportType === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="sales">営業</option>
+                        <option value="work">作業</option>
+                        <option value="both">両方</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

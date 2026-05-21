@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
         position: true,
         role: true,
         isApprover: true,
+        isAuthorizer: true,
         defaultReportType: true,
       },
     })
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     const permissions = await getUserPermissions(user.role)
     // 承認者は追加権限を持つ
-    if (user.isApprover) {
+    if (user.isApprover || user.isAuthorizer) {
       permissions.approve_reports = true
       permissions.view_all_reports = true
     }

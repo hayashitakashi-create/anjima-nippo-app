@@ -58,6 +58,8 @@ function getStatusIcon(status: string) {
 export default function ApprovalsPage() {
   const router = useRouter()
   const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'approve_reports' })
+  // 承認権限フラグ: 役職承認者 or 承認者枠のどちらかがON
+  const canActAsApprover = !!(currentUser?.isApprover || currentUser?.isAuthorizer)
   const [reports, setReports] = useState<DailyReport[]>([])
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -637,7 +639,8 @@ export default function ApprovalsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleBulkApprove}
-                    disabled={processing === 'bulk'}
+                    disabled={processing === 'bulk' || !canActAsApprover}
+                    title={!canActAsApprover ? '承認権限がありません（役職または承認者の設定が必要）' : ''}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 transition-colors"
                   >
                     <CheckCheck className="w-4 h-4" />
@@ -645,7 +648,8 @@ export default function ApprovalsPage() {
                   </button>
                   <button
                     onClick={handleBulkReject}
-                    disabled={processing === 'bulk'}
+                    disabled={processing === 'bulk' || !canActAsApprover}
+                    title={!canActAsApprover ? '承認権限がありません（役職または承認者の設定が必要）' : ''}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors"
                   >
                     <Undo2 className="w-4 h-4" />
@@ -1125,7 +1129,8 @@ export default function ApprovalsPage() {
                               <div className="hidden sm:flex items-center gap-2">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleApproveAll(report.id) }}
-                                  disabled={processing === report.id}
+                                  disabled={processing === report.id || !canActAsApprover}
+                                  title={!canActAsApprover ? '承認権限がありません' : ''}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 transition-colors"
                                 >
                                   <CheckCheck className="w-3.5 h-3.5" />
@@ -1133,7 +1138,8 @@ export default function ApprovalsPage() {
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleRejectAll(report.id) }}
-                                  disabled={processing === report.id}
+                                  disabled={processing === report.id || !canActAsApprover}
+                                  title={!canActAsApprover ? '承認権限がありません' : ''}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors"
                                 >
                                   <Undo2 className="w-3.5 h-3.5" />
@@ -1160,7 +1166,8 @@ export default function ApprovalsPage() {
                         <div className="sm:hidden flex gap-2 p-4 bg-gray-50 border-b border-gray-200">
                           <button
                             onClick={() => handleApproveAll(report.id)}
-                            disabled={processing === report.id}
+                            disabled={processing === report.id || !canActAsApprover}
+                            title={!canActAsApprover ? '承認権限がありません' : ''}
                             className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400"
                           >
                             <CheckCheck className="w-4 h-4" />
@@ -1168,7 +1175,8 @@ export default function ApprovalsPage() {
                           </button>
                           <button
                             onClick={() => handleRejectAll(report.id)}
-                            disabled={processing === report.id}
+                            disabled={processing === report.id || !canActAsApprover}
+                            title={!canActAsApprover ? '承認権限がありません' : ''}
                             className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400"
                           >
                             <Undo2 className="w-4 h-4" />
@@ -1279,17 +1287,17 @@ export default function ApprovalsPage() {
                                   <div className="flex items-center gap-1">
                                     <button
                                       onClick={() => handleApprove(approval.id, report.id)}
-                                      disabled={processing === approval.id}
-                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                                      title="承認"
+                                      disabled={processing === approval.id || !canActAsApprover}
+                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                      title={!canActAsApprover ? '承認権限がありません' : '承認'}
                                     >
                                       <CheckCircle className="w-4 h-4" />
                                     </button>
                                     <button
                                       onClick={() => handleReject(approval.id, report.id)}
-                                      disabled={processing === approval.id}
-                                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                      title="差戻し"
+                                      disabled={processing === approval.id || !canActAsApprover}
+                                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                      title={!canActAsApprover ? '承認権限がありません' : '差戻し'}
                                     >
                                       <XCircle className="w-4 h-4" />
                                     </button>
