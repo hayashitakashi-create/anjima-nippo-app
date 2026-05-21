@@ -55,11 +55,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 各日報に対して承認レコードを作成（承認者 + 4段階）
-    const approvalRoles = ['承認者', '上長', '常務', '専務', '社長']
-    const approvalRecords: { dailyReportId: string; approverRole: string; status: string }[] = []
+    // 「承認者」枠は isAuthorizer=true のユーザー数分作成（各人ごとに1枠）
+    const authorizers = await prisma.user.findMany({
+      where: { isAuthorizer: true, isActive: true },
+      select: { id: true },
+    })
+
+    // 各日報に対して承認レコードを作成（承認者×N + 上長 + 常務 + 専務 + 社長）
+    const fixedRoles = ['上長', '常務', '専務', '社長']
+    const approvalRecords: { dailyReportId: string; approverRole: string; status: string; approverUserId?: string }[] = []
     for (const reportId of reportIds) {
-      for (const role of approvalRoles) {
+      // 承認者枠（人数分・approverUserId 事前セット）
+      for (const a of authorizers) {
+        approvalRecords.push({
+          dailyReportId: reportId,
+          approverRole: '承認者',
+          status: 'pending',
+          approverUserId: a.id,
+        })
+      }
+      // 固定4段階
+      for (const role of fixedRoles) {
         approvalRecords.push({
           dailyReportId: reportId,
           approverRole: role,

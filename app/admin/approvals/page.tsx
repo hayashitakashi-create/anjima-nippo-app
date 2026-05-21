@@ -1063,9 +1063,12 @@ export default function ApprovalsPage() {
                             </div>
                             {/* 承認状況バッジ（未承認者がひと目でわかる） */}
                             <div className="flex items-center gap-1.5 mt-1">
-                              {['上長', '常務', '専務', '社長'].map(role => {
-                                const approval = report.approvals.find((a: Approval) => a.approverRole === role)
-                                const st = approval?.status || 'pending'
+                              {['承認者', '上長', '常務', '専務', '社長'].map(role => {
+                                const items = report.approvals.filter((a: Approval) => a.approverRole === role)
+                                if (items.length === 0) return null
+                                const anyRejected = items.some(a => a.status === 'rejected')
+                                const allApproved = items.every(a => a.status === 'approved')
+                                const st = anyRejected ? 'rejected' : allApproved ? 'approved' : 'pending'
                                 return (
                                   <span
                                     key={role}
@@ -1078,7 +1081,7 @@ export default function ApprovalsPage() {
                                     {st === 'approved' ? <CheckCircle className="w-2.5 h-2.5" /> :
                                      st === 'rejected' ? <XCircle className="w-2.5 h-2.5" /> :
                                      <Clock className="w-2.5 h-2.5" />}
-                                    {role}
+                                    {role}{items.length > 1 ? ` (${items.filter(a => a.status === 'approved').length}/${items.length})` : ''}
                                   </span>
                                 )
                               })}
@@ -1189,22 +1192,24 @@ export default function ApprovalsPage() {
                           承認状況
                         </h4>
                         <div className="flex flex-wrap items-center gap-2 mb-3">
-                          {['上長', '常務', '専務', '社長'].map((role) => {
-                            const approval = report.approvals.find(a => a.approverRole === role)
-                            const status = approval?.status || 'pending'
+                          {['承認者', '上長', '常務', '専務', '社長'].map((role) => {
+                            const items = report.approvals.filter(a => a.approverRole === role)
+                            if (items.length === 0) return null
+                            const anyRejected = items.some(a => a.status === 'rejected')
+                            const allApproved = items.every(a => a.status === 'approved')
+                            const status = anyRejected ? 'rejected' : allApproved ? 'approved' : 'pending'
                             return (
                               <span key={role} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusStyle(status)}`}>
                                 {getStatusIcon(status)}
-                                {role}
+                                {role}{items.length > 1 ? ` (${items.filter(a => a.status === 'approved').length}/${items.length})` : ''}
                               </span>
                             )
                           })}
                         </div>
                         <div className="space-y-2">
-                          {['上長', '常務', '専務', '社長'].map(role => {
-                            const approval = report.approvals.find(a => a.approverRole === role)
-                            if (!approval) return null
-                            return (
+                          {['承認者', '上長', '常務', '専務', '社長'].flatMap(role => {
+                            const items = report.approvals.filter(a => a.approverRole === role)
+                            return items.map(approval => (
                               <div
                                 key={approval.id}
                                 className={`flex items-center justify-between rounded-lg p-3 ${
@@ -1253,7 +1258,7 @@ export default function ApprovalsPage() {
                                   </div>
                                 )}
                               </div>
-                            )
+                            ))
                           })}
                         </div>
 

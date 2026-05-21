@@ -394,16 +394,30 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      // トランザクションで一括処理
+      // 承認者枠は本人の枠のみ、それ以外は役職一致で更新
+      const nonAuthorizerRoles = allowedRoles.filter(r => r !== '承認者')
+      const includesAuthorizer = allowedRoles.includes('承認者')
+
       await prisma.$transaction(async (tx) => {
-        await tx.approval.updateMany({
-          where: { dailyReportId: { in: reportIds }, approverRole: { in: allowedRoles } },
-          data: {
-            status: newStatus,
-            approverUserId: admin.id,
-            approvedAt: newStatus === 'approved' ? new Date() : null,
-          },
-        })
+        if (nonAuthorizerRoles.length > 0) {
+          await tx.approval.updateMany({
+            where: { dailyReportId: { in: reportIds }, approverRole: { in: nonAuthorizerRoles } },
+            data: {
+              status: newStatus,
+              approverUserId: admin.id,
+              approvedAt: newStatus === 'approved' ? new Date() : null,
+            },
+          })
+        }
+        if (includesAuthorizer) {
+          await tx.approval.updateMany({
+            where: { dailyReportId: { in: reportIds }, approverRole: '承認者', approverUserId: admin.id },
+            data: {
+              status: newStatus,
+              approvedAt: newStatus === 'approved' ? new Date() : null,
+            },
+          })
+        }
       })
 
       // 通知は非同期でバックグラウンド処理
@@ -469,14 +483,28 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      await prisma.approval.updateMany({
-        where: { dailyReportId: reportId, approverRole: { in: allowedRolesForAll } },
-        data: {
-          status: newStatus,
-          approverUserId: admin.id,
-          approvedAt: newStatus === 'approved' ? new Date() : null,
-        },
-      })
+      const nonAuthorizerRolesAll = allowedRolesForAll.filter(r => r !== '承認者')
+      const includesAuthorizerAll = allowedRolesForAll.includes('承認者')
+
+      if (nonAuthorizerRolesAll.length > 0) {
+        await prisma.approval.updateMany({
+          where: { dailyReportId: reportId, approverRole: { in: nonAuthorizerRolesAll } },
+          data: {
+            status: newStatus,
+            approverUserId: admin.id,
+            approvedAt: newStatus === 'approved' ? new Date() : null,
+          },
+        })
+      }
+      if (includesAuthorizerAll) {
+        await prisma.approval.updateMany({
+          where: { dailyReportId: reportId, approverRole: '承認者', approverUserId: admin.id },
+          data: {
+            status: newStatus,
+            approvedAt: newStatus === 'approved' ? new Date() : null,
+          },
+        })
+      }
 
       const updatedReport = await prisma.dailyReport.findUnique({
         where: { id: reportId },
@@ -563,6 +591,14 @@ export async function PUT(request: NextRequest) {
     if (allowedRolesIndiv.length === 0 || !allowedRolesIndiv.includes(approval.approverRole)) {
       return NextResponse.json(
         { error: `この承認は${approval.approverRole}のみ操作可能です` },
+        { status: 403 }
+      )
+    }
+
+    // 「承認者」枠は事前に approverUserId が設定されている場合、本人のみ操作可
+    if (approval.approverRole === '承認者' && approval.approverUserId && approval.approverUserId !== admin.id) {
+      return NextResponse.json(
+        { error: 'この承認者枠は他の方の枠です' },
         { status: 403 }
       )
     }

@@ -558,11 +558,14 @@ export default function EditNippoPage() {
           {approvals.length > 0 && (
             <div className="bg-white shadow rounded-lg p-8">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">承認状況</h2>
-              {/* 承認バッジ */}
+              {/* 承認バッジ（承認者は全員承認で approved になる） */}
               <div className="flex flex-wrap items-center gap-2 mb-6">
                 {['承認者', '上長', '常務', '専務', '社長'].map((role) => {
-                  const approval = approvals.find(a => a.approverRole === role)
-                  const status = approval?.status || 'pending'
+                  const items = approvals.filter(a => a.approverRole === role)
+                  if (items.length === 0) return null
+                  const anyRejected = items.some(a => a.status === 'rejected')
+                  const allApproved = items.every(a => a.status === 'approved')
+                  const status = anyRejected ? 'rejected' : allApproved ? 'approved' : 'pending'
                   const style = status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                     : status === 'rejected' ? 'bg-red-100 text-red-700 border-red-300'
                     : 'bg-yellow-50 text-yellow-700 border-yellow-300'
@@ -572,59 +575,58 @@ export default function EditNippoPage() {
                   return (
                     <span key={role} className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold border ${style}`}>
                       {icon}
-                      {role}
+                      {role}{items.length > 1 ? ` (${items.filter(a => a.status === 'approved').length}/${items.length})` : ''}
                     </span>
                   )
                 })}
               </div>
-              {/* 各段階の詳細 */}
+              {/* 各段階の詳細（承認者は複数枠を個別表示） */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {['承認者', '上長', '常務', '専務', '社長'].map(role => {
-                  const approval = approvals.find(a => a.approverRole === role)
-                  if (!approval) return null
-
-                  let statusIcon, statusLabel, statusStyle
-                  switch (approval.status) {
-                    case 'approved':
-                      statusIcon = <CheckCircle className="w-5 h-5 text-green-500" />
-                      statusLabel = '承認済み'
-                      statusStyle = 'bg-green-50 border-green-200 text-green-800'
-                      break
-                    case 'rejected':
-                      statusIcon = <XCircle className="w-5 h-5 text-red-500" />
-                      statusLabel = '差戻し'
-                      statusStyle = 'bg-red-50 border-red-200 text-red-800'
-                      break
-                    default:
-                      statusIcon = <Clock className="w-5 h-5 text-yellow-500" />
-                      statusLabel = '承認待ち'
-                      statusStyle = 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                  }
-
-                  return (
-                    <div
-                      key={approval.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border ${statusStyle}`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {statusIcon}
-                        <div>
-                          <div className="font-bold">{role}</div>
-                          {approval.approver && (
-                            <div className="text-xs opacity-75">
-                              {approval.approver.name}
-                              {approval.approvedAt && (
-                                <span className="ml-2">
-                                  ({new Date(approval.approvedAt).toLocaleDateString('ja-JP')})
-                                </span>
-                              )}
-                            </div>
-                          )}
+                {['承認者', '上長', '常務', '専務', '社長'].flatMap(role => {
+                  const items = approvals.filter(a => a.approverRole === role)
+                  return items.map(approval => {
+                    let statusIcon, statusLabel, statusStyle
+                    switch (approval.status) {
+                      case 'approved':
+                        statusIcon = <CheckCircle className="w-5 h-5 text-green-500" />
+                        statusLabel = '承認済み'
+                        statusStyle = 'bg-green-50 border-green-200 text-green-800'
+                        break
+                      case 'rejected':
+                        statusIcon = <XCircle className="w-5 h-5 text-red-500" />
+                        statusLabel = '差戻し'
+                        statusStyle = 'bg-red-50 border-red-200 text-red-800'
+                        break
+                      default:
+                        statusIcon = <Clock className="w-5 h-5 text-yellow-500" />
+                        statusLabel = '承認待ち'
+                        statusStyle = 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                    }
+                    return (
+                      <div
+                        key={approval.id}
+                        className={`flex items-center justify-between p-4 rounded-lg border ${statusStyle}`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {statusIcon}
+                          <div>
+                            <div className="font-bold">{role}</div>
+                            {approval.approver && (
+                              <div className="text-xs opacity-75">
+                                {approval.approver.name}
+                                {approval.approvedAt && (
+                                  <span className="ml-2">
+                                    ({new Date(approval.approvedAt).toLocaleDateString('ja-JP')})
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        <span className="text-sm font-medium">{statusLabel}</span>
                       </div>
-                      <span className="text-sm font-medium">{statusLabel}</span>
-                    </div>
-                  )
+                    )
+                  })
                 })}
               </div>
             </div>

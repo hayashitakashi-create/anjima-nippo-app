@@ -199,13 +199,15 @@ export default function NippoPrintPage() {
                 <th style={{ width: '60px' }}>承認</th>
                 {/* 4段階承認欄 */}
                 {['社長', '専務', '常務', '上長', '承認者'].map(role => {
-                  const approval = report.approvals.find((a: any) => a.approverRole === role)
+                  const items = report.approvals.filter((a: any) => a.approverRole === role)
+                  if (items.length === 0) return null
+                  const anyRejected = items.some((a: any) => a.status === 'rejected')
+                  const allApproved = items.every((a: any) => a.status === 'approved')
+                  const mark = anyRejected ? '×' : allApproved ? '✓' : ''
                   return (
                     <td key={role} className="text-center" style={{ width: '70px' }}>
-                      <div className="text-[10px] font-medium">{role}</div>
-                      <div className="text-xs font-bold">
-                        {approval?.status === 'approved' ? '✓' : approval?.status === 'rejected' ? '×' : ''}
-                      </div>
+                      <div className="text-[10px] font-medium">{role}{items.length > 1 ? ` (${items.filter((a: any) => a.status === 'approved').length}/${items.length})` : ''}</div>
+                      <div className="text-xs font-bold">{mark}</div>
                     </td>
                   )
                 })}
