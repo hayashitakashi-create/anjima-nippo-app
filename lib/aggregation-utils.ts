@@ -66,9 +66,11 @@ export function overlapMinutes(s1: number, e1: number, s2: number, e2: number): 
  * startTime, endTime: "HH:MM" 形式
  *
  * 返り値: { normal: 分, overtime: 分, lateNight: 分 }
- * - normal: 8:00~17:00 の範囲内の時間
+ * - normal: 8:00~17:00 の範囲内の時間（昼休憩控除後）
  * - overtime: 8:00~17:00 外の時間（深夜除く）
  * - lateNight: 22:00~5:00 の時間（overtimeに含まれる分から抽出）
+ *
+ * 昼休憩(12:00~13:00) と勤務時間の重複分は自動控除する
  */
 export function classifyWorkHours(startTime: string, endTime: string): {
   normal: number    // 8:00~17:00 の分
@@ -97,16 +99,20 @@ export function classifyWorkHours(startTime: string, endTime: string): {
   const lateNightStart2 = 0
   const lateNightEnd2 = 5 * 60     // 300
 
-  // 通常時間（8:00~17:00の重複）
-  const normal = overlapMinutes(start, end, normalStart, normalEnd)
+  // 昼休憩(12:00~13:00)と勤務時間の重複分（normalから自動控除）
+  const lunchBreakMinutes = overlapMinutes(start, end, 12 * 60, 13 * 60)
+
+  // 通常時間（8:00~17:00の重複から昼休憩を控除）
+  const normal = Math.max(0, overlapMinutes(start, end, normalStart, normalEnd) - lunchBreakMinutes)
 
   // 深夜時間（22:00~翌5:00の重複）
   let lateNight = overlapMinutes(start, end, lateNightStart1, lateNightEnd1)
   // 日をまたがない場合の 0:00~5:00 もチェック
   lateNight += overlapMinutes(start, end, lateNightStart2, lateNightEnd2)
 
-  // 時間外 = 合計 - 通常 - 深夜
-  const overtime = Math.max(0, totalMinutes - normal - lateNight)
+  // 時間外 = 合計（昼休憩控除後） - 通常 - 深夜
+  const adjustedTotal = totalMinutes - lunchBreakMinutes
+  const overtime = Math.max(0, adjustedTotal - normal - lateNight)
 
   return { normal, overtime, lateNight }
 }
