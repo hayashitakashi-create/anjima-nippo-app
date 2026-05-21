@@ -23,35 +23,30 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
 
     const where: any = {}
+    // 名前比較は空白（半角・全角）除去後の一致で行う
+    const normalize = (s: string | null | undefined) => (s || '').replace(/[\s　]+/g, '')
+    const normalizedUserName = normalize(user.name)
 
-    // 「自分の休暇届」= applicantName が自分の名前 OR (applicantName 未設定 AND userId が自分)
-    const mineFilter = {
-      OR: [
-        { applicantName: user.name },
-        { applicantName: null, userId: user.id },
-      ],
-    }
+    // 「自分の休暇届」判定はクエリでは完全に絞れないため、月フィルタ後にアプリ側で絞る
+    let postFilterScope: 'mine' | 'others' | null = null
 
     if (scope === 'others') {
-      // 自分以外（管理者のみ）
       const perms = await getUserPermissions(user.role)
       if (!perms.view_all_reports) {
-        Object.assign(where, mineFilter)
+        postFilterScope = 'mine'
       } else {
-        where.NOT = mineFilter
+        postFilterScope = 'others'
       }
     } else if (scope === 'all' || allUsers) {
-      // 全員（管理者のみ）
       const perms = await getUserPermissions(user.role)
       if (!perms.view_all_reports) {
-        Object.assign(where, mineFilter)
+        postFilterScope = 'mine'
       }
+      // 管理者なら全件 (postFilterScope = null)
     } else if (userId) {
-      // 特定ユーザー指定（後方互換）
       where.userId = userId
     } else {
-      // デフォルト: 自分のみ
-      Object.assign(where, mineFilter)
+      postFilterScope = 'mine'
     }
 
     if (month) {
@@ -66,7 +61,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const leaveRequests = await prisma.leaveRequest.findMany({
+    const allLeaveRequests = await prisma.leaveRequest.findMany({
       where,
       orderBy: { date: 'desc' },
       select: {
@@ -93,8 +88,22 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // 「自分の休暇届」判定: applicantName を空白除去して user.name と一致 or applicantName 未設定で userId 一致
+    const isMine = (l: { applicantName: string | null; userId: string }) => {
+      if (l.applicantName && normalize(l.applicantName) === normalizedUserName) return true
+      if (!l.applicantName && l.userId === user.id) return true
+      return false
+    }
+
+    let leaveRequests = allLeaveRequests
+    if (postFilterScope === 'mine') {
+      leaveRequests = allLeaveRequests.filter(isMine)
+    } else if (postFilterScope === 'others') {
+      leaveRequests = allLeaveRequests.filter(l => !isMine(l))
+    }
+
     // 全ユーザー取得時はユーザー名もJOIN
-    if (allUsers || (userId && userId !== user.id)) {
+    if (allUsers || (userId && userId !== user.id) || postFilterScope === 'others' || postFilterScope === null) {
       const userIds = [...new Set(leaveRequests.map(l => l.userId))]
       const users = await prisma.user.findMany({
         where: { id: { in: userIds } },

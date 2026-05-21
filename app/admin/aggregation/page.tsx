@@ -191,6 +191,8 @@ export default function AggregationPage() {
 
   // 時間表示フォーマット（小数2桁、0.00は0.00と表示）
   const fh = (n: number) => n.toFixed(2)
+  // 休暇日数フォーマット（小数3桁）
+  const fh3 = (n: number) => n.toFixed(3)
 
   const formatNumber = (n: number) => {
     return n.toLocaleString('ja-JP', { maximumFractionDigits: 3 })
@@ -865,10 +867,10 @@ export default function AggregationPage() {
                               <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
                               {(data.leaveTypes || []).map(t => (
                                 <td key={t} className="px-4 py-3 text-sm text-right font-mono text-gray-900">
-                                  {Number(item[t] || 0) > 0 ? fh(Number(item[t])) : '-'}
+                                  {Number(item[t] || 0) > 0 ? fh3(Number(item[t])) : '-'}
                                 </td>
                               ))}
-                              <td className="px-6 py-3 text-sm text-right font-mono font-bold text-rose-700 bg-rose-50/50">{fh(item.total)}</td>
+                              <td className="px-6 py-3 text-sm text-right font-mono font-bold text-rose-700 bg-rose-50/50">{fh3(item.total)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -879,11 +881,11 @@ export default function AggregationPage() {
                               const sum = (data.leaves || []).reduce((s, l) => s + Number(l[t] || 0), 0)
                               return (
                                 <td key={t} className="px-4 py-3 text-sm text-right font-mono font-bold text-rose-700">
-                                  {sum > 0 ? fh(sum) : '-'}
+                                  {sum > 0 ? fh3(sum) : '-'}
                                 </td>
                               )
                             })}
-                            <td className="px-6 py-3 text-sm text-right font-mono font-bold text-rose-700">{fh(data.totals.leaveDays || 0)}</td>
+                            <td className="px-6 py-3 text-sm text-right font-mono font-bold text-rose-700">{fh3(data.totals.leaveDays || 0)}</td>
                           </tr>
                         </tfoot>
                       </table>
@@ -895,7 +897,7 @@ export default function AggregationPage() {
                         <div key={item.name} className="p-4">
                           <div className="flex justify-between items-center mb-2">
                             <span className="font-medium text-gray-900">{item.name}</span>
-                            <span className="font-mono font-bold text-rose-700">{fh(item.total)}日</span>
+                            <span className="font-mono font-bold text-rose-700">{fh3(item.total)}日</span>
                           </div>
                           <div className="flex flex-wrap gap-1.5 text-xs">
                             {(data.leaveTypes || []).map(t => {
@@ -903,7 +905,7 @@ export default function AggregationPage() {
                               if (v === 0) return null
                               return (
                                 <span key={t} className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                                  {t}: {fh(v)}
+                                  {t}: {fh3(v)}
                                 </span>
                               )
                             })}
@@ -913,7 +915,7 @@ export default function AggregationPage() {
                       <div className="p-4 bg-rose-50">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-gray-900">休暇合計</span>
-                          <span className="font-mono font-bold text-rose-700">{fh(data.totals.leaveDays || 0)}日</span>
+                          <span className="font-mono font-bold text-rose-700">{fh3(data.totals.leaveDays || 0)}日</span>
                         </div>
                       </div>
                     </div>

@@ -237,10 +237,10 @@ export async function GET(request: NextRequest) {
         const [sh, sm] = lr.startTime.split(':').map(Number)
         const [eh, em] = lr.endTime.split(':').map(Number)
         const hours = (eh + (em || 0) / 60) - (sh + (sm || 0) / 60)
-        days = hours > 0 ? +(hours / 8).toFixed(2) : 0
+        days = hours > 0 ? +(hours / 8).toFixed(3) : 0
       }
-      entry[type] = +((entry[type] || 0) + days).toFixed(2)
-      entry.total = +((entry.total || 0) + days).toFixed(2)
+      entry[type] = +((entry[type] || 0) + days).toFixed(3)
+      entry.total = +((entry.total || 0) + days).toFixed(3)
     }
 
     const leaveSummary = Array.from(leaveMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ja'))
