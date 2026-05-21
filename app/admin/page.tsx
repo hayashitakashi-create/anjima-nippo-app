@@ -529,8 +529,8 @@ export default function AdminPage() {
                     <Clock className="w-5 h-5 text-rose-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">労働時間集計</p>
-                    <p className="text-xs text-gray-500 hidden sm:block">月次・材料・外注</p>
+                    <p className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">月次集計</p>
+                    <p className="text-xs text-gray-500 hidden sm:block">労働時間・材料・外注・休暇</p>
                   </div>
                 </div>
               </Link>

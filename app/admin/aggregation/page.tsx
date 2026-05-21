@@ -235,7 +235,7 @@ export default function AggregationPage() {
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">月次集計</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">労働時間・材料・外注</p>
+                <p className="text-xs text-gray-500 hidden sm:block">労働時間・材料・外注・休暇</p>
               </div>
             </div>
             <div className="flex items-center space-x-1 sm:space-x-3">
