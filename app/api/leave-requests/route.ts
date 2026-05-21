@@ -17,20 +17,41 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const userId = searchParams.get('userId')
     const allUsers = searchParams.get('all') === 'true'
-    const month = searchParams.get('month') // YYYY-MM format
+    const scope = searchParams.get('scope') // 'mine' | 'others' | 'all'
+    const month = searchParams.get('month')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
     const where: any = {}
 
-    // 管理者は全ユーザー取得可能、一般は自分のみ
-    if (allUsers) {
+    // 「自分の休暇届」= applicantName が自分の名前 OR (applicantName 未設定 AND userId が自分)
+    const mineFilter = {
+      OR: [
+        { applicantName: user.name },
+        { applicantName: null, userId: user.id },
+      ],
+    }
+
+    if (scope === 'others') {
+      // 自分以外（管理者のみ）
       const perms = await getUserPermissions(user.role)
       if (!perms.view_all_reports) {
-        where.userId = user.id
+        Object.assign(where, mineFilter)
+      } else {
+        where.NOT = mineFilter
       }
+    } else if (scope === 'all' || allUsers) {
+      // 全員（管理者のみ）
+      const perms = await getUserPermissions(user.role)
+      if (!perms.view_all_reports) {
+        Object.assign(where, mineFilter)
+      }
+    } else if (userId) {
+      // 特定ユーザー指定（後方互換）
+      where.userId = userId
     } else {
-      where.userId = userId || user.id
+      // デフォルト: 自分のみ
+      Object.assign(where, mineFilter)
     }
 
     if (month) {

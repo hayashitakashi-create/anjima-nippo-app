@@ -119,11 +119,15 @@ export default function LeaveRequestsPage() {
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date())
 
+  // 管理者の表示切替: 'mine' / 'others'
+  const [scope, setScope] = useState<'mine' | 'others'>('mine')
+
   const currentMonth = formatYearMonth(calendarDate)
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     fetchLeaveRequests()
-  }, [currentMonth])
+  }, [currentMonth, scope])
 
   useEffect(() => {
     adminApi.fetchWorkers()
@@ -142,7 +146,7 @@ export default function LeaveRequestsPage() {
 
   const fetchLeaveRequests = async () => {
     try {
-      const data = await apiGet<any>(`/api/leave-requests?month=${currentMonth}`)
+      const data = await apiGet<any>(`/api/leave-requests?month=${currentMonth}&scope=${scope}`)
       setLeaveRequests(data.leaveRequests)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -790,10 +794,28 @@ export default function LeaveRequestsPage() {
           transition={{ duration: 0.4, delay: 0.2 }}
           className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
         >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
             <h2 className="text-lg font-bold text-gray-900">
               {calendarDate.getMonth() + 1}月の休暇届 ({leaveRequests.length}件)
             </h2>
+            {isAdmin && (
+              <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-sm">
+                <button
+                  type="button"
+                  onClick={() => setScope('mine')}
+                  className={`px-3 py-1.5 font-medium transition-colors ${scope === 'mine' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}
+                >
+                  自分の休暇届
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScope('others')}
+                  className={`px-3 py-1.5 font-medium transition-colors ${scope === 'others' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}
+                >
+                  自分以外の休暇届
+                </button>
+              </div>
+            )}
           </div>
 
           {leaveRequests.length === 0 ? (
