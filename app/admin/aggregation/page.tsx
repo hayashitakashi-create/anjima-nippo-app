@@ -52,6 +52,12 @@ interface SubcontractorItem {
   totalDays: number
 }
 
+interface LeaveItem {
+  name: string
+  total: number
+  [type: string]: string | number
+}
+
 interface AggregationData {
   period: {
     start: string
@@ -62,14 +68,17 @@ interface AggregationData {
   labor: LaborItem[]
   materials: MaterialItem[]
   subcontractors: SubcontractorItem[]
+  leaves?: LeaveItem[]
+  leaveTypes?: string[]
   totals: {
     laborHours: number
     materialAmount: number
     subcontractorCount: number
+    leaveDays?: number
   }
 }
 
-type TabType = 'labor' | 'materials' | 'subcontractors'
+type TabType = 'labor' | 'materials' | 'subcontractors' | 'leaves'
 
 export default function AggregationPage() {
   const router = useRouter()
@@ -144,19 +153,30 @@ export default function AggregationPage() {
         csvContent += `"${item.name}","${vol}",${item.unitPrice},${item.totalQuantity},${item.totalAmount}\n`
       })
       csvContent += `"合計",,,,${data.totals.materialAmount}\n`
-    } else {
+    } else if (activeTab === 'subcontractors') {
       csvContent = '(外注)会社名,工数\n'
       data.subcontractors.forEach(item => {
         csvContent += `"${item.name}",${item.totalWorkerCount}\n`
       })
       csvContent += `"合計",${data.totals.subcontractorCount}\n`
+    } else if (activeTab === 'leaves') {
+      const leaveTypes = data.leaveTypes || []
+      csvContent = `氏名,${leaveTypes.join(',')},合計\n`
+      ;(data.leaves || []).forEach(item => {
+        const cells = leaveTypes.map(t => Number(item[t] || 0))
+        csvContent += `"${item.name}",${cells.join(',')},${item.total}\n`
+      })
+      const totals = leaveTypes.map(t =>
+        (data.leaves || []).reduce((sum, l) => sum + Number(l[t] || 0), 0)
+      )
+      csvContent += `"合計",${totals.join(',')},${data.totals.leaveDays || 0}\n`
     }
 
     const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    const tabLabel = activeTab === 'labor' ? '労働時間' : activeTab === 'materials' ? '材料' : '外注'
+    const tabLabel = activeTab === 'labor' ? '労働時間' : activeTab === 'materials' ? '材料' : activeTab === 'subcontractors' ? '外注' : '休暇'
     link.download = `${tabLabel}集計_${data.period.label.replace(/\//g, '-').replace(/ /g, '')}.csv`
     link.click()
     URL.revokeObjectURL(url)
@@ -166,6 +186,7 @@ export default function AggregationPage() {
     { key: 'labor', label: '労働時間', icon: Clock },
     { key: 'materials', label: '材料', icon: Package },
     { key: 'subcontractors', label: '外注', icon: Truck },
+    { key: 'leaves', label: '休暇', icon: Calendar },
   ]
 
   // 時間表示フォーマット（小数2桁、0.00は0.00と表示）
@@ -801,6 +822,98 @@ export default function AggregationPage() {
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-gray-900">工数合計</span>
                           <span className="font-mono font-bold text-indigo-700">{formatNumber(data.totals.subcontractorCount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* ④ 休暇タブ */}
+            {activeTab === 'leaves' && (
+              <>
+                <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-rose-50/50">
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-rose-600" />
+                    休暇集計（種別 × 社員）
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1">{data.period.label} / {(data.leaves || []).length}名 / 単位: 日（半休=0.5, 時間休=時間÷8）</p>
+                </div>
+
+                {!data.leaves || data.leaves.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    該当期間のデータがありません
+                  </div>
+                ) : (
+                  <>
+                    {/* PC表示 */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-slate-200">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">氏名</th>
+                            {(data.leaveTypes || []).map(t => (
+                              <th key={t} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t}</th>
+                            ))}
+                            <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase bg-rose-50">合計</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(data.leaves || []).map(item => (
+                            <tr key={item.name} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
+                              {(data.leaveTypes || []).map(t => (
+                                <td key={t} className="px-4 py-3 text-sm text-right font-mono text-gray-900">
+                                  {Number(item[t] || 0) > 0 ? fh(Number(item[t])) : '-'}
+                                </td>
+                              ))}
+                              <td className="px-6 py-3 text-sm text-right font-mono font-bold text-rose-700 bg-rose-50/50">{fh(item.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-rose-50 border-t-2 border-rose-200">
+                          <tr>
+                            <td className="px-6 py-3 text-sm font-bold text-gray-900">合計</td>
+                            {(data.leaveTypes || []).map(t => {
+                              const sum = (data.leaves || []).reduce((s, l) => s + Number(l[t] || 0), 0)
+                              return (
+                                <td key={t} className="px-4 py-3 text-sm text-right font-mono font-bold text-rose-700">
+                                  {sum > 0 ? fh(sum) : '-'}
+                                </td>
+                              )
+                            })}
+                            <td className="px-6 py-3 text-sm text-right font-mono font-bold text-rose-700">{fh(data.totals.leaveDays || 0)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    {/* モバイル表示 */}
+                    <div className="md:hidden divide-y divide-slate-100">
+                      {(data.leaves || []).map(item => (
+                        <div key={item.name} className="p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-gray-900">{item.name}</span>
+                            <span className="font-mono font-bold text-rose-700">{fh(item.total)}日</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 text-xs">
+                            {(data.leaveTypes || []).map(t => {
+                              const v = Number(item[t] || 0)
+                              if (v === 0) return null
+                              return (
+                                <span key={t} className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                                  {t}: {fh(v)}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="p-4 bg-rose-50">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-gray-900">休暇合計</span>
+                          <span className="font-mono font-bold text-rose-700">{fh(data.totals.leaveDays || 0)}日</span>
                         </div>
                       </div>
                     </div>

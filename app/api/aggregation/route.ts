@@ -197,6 +197,54 @@ export async function GET(request: NextRequest) {
       .map(({ name, totalWorkerCount, totalDays }) => ({ name, totalWorkerCount, totalDays }))
       .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
 
+    // ④ 休暇集計（社員別 × 種別の日数）
+    const leaveRequests = await prisma.leaveRequest.findMany({
+      where: {
+        date: { gte: periodStart, lte: periodEnd },
+      },
+      select: {
+        applicantName: true,
+        userId: true,
+        leaveType: true,
+        leaveUnit: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+      },
+    })
+
+    const LEAVE_TYPES = ['有給', '振替', '代休', '看護', '介護', '特別休暇', '慶弔', 'その他']
+    const userNameMap = new Map<string, string>()
+    const usersForLeave = await prisma.user.findMany({
+      where: { id: { in: [...new Set(leaveRequests.map(l => l.userId))] } },
+      select: { id: true, name: true },
+    })
+    usersForLeave.forEach(u => userNameMap.set(u.id, u.name))
+
+    const leaveMap = new Map<string, Record<string, number> & { name: string; total: number }>()
+    for (const lr of leaveRequests) {
+      const name = (lr.applicantName && lr.applicantName.trim()) || userNameMap.get(lr.userId) || '(不明)'
+      if (!leaveMap.has(name)) {
+        const init: any = { name, total: 0 }
+        LEAVE_TYPES.forEach(t => { init[t] = 0 })
+        leaveMap.set(name, init)
+      }
+      const entry = leaveMap.get(name)!
+      const type = LEAVE_TYPES.includes(lr.leaveType) ? lr.leaveType : 'その他'
+      let days = 1
+      if (lr.leaveUnit === 'am' || lr.leaveUnit === 'pm') days = 0.5
+      else if (lr.leaveUnit === 'hourly' && lr.startTime && lr.endTime) {
+        const [sh, sm] = lr.startTime.split(':').map(Number)
+        const [eh, em] = lr.endTime.split(':').map(Number)
+        const hours = (eh + (em || 0) / 60) - (sh + (sm || 0) / 60)
+        days = hours > 0 ? +(hours / 8).toFixed(2) : 0
+      }
+      entry[type] = +((entry[type] || 0) + days).toFixed(2)
+      entry.total = +((entry.total || 0) + days).toFixed(2)
+    }
+
+    const leaveSummary = Array.from(leaveMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+
     return NextResponse.json({
       period: {
         start: periodStart.toISOString(),
@@ -207,10 +255,13 @@ export async function GET(request: NextRequest) {
       labor: laborSummary,
       materials: materialSummary,
       subcontractors: subcontractorSummary,
+      leaves: leaveSummary,
+      leaveTypes: LEAVE_TYPES,
       totals: {
         laborHours: laborSummary.reduce((sum, l) => sum + l.total, 0),
         materialAmount: materialSummary.reduce((sum, m) => sum + m.totalAmount, 0),
         subcontractorCount: subcontractorSummary.reduce((sum, s) => sum + s.totalWorkerCount, 0),
+        leaveDays: leaveSummary.reduce((sum, l) => sum + (l.total || 0), 0),
       },
     })
   } catch (error) {
