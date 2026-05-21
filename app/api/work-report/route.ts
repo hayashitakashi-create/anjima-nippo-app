@@ -349,6 +349,31 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 承認レコード作成（営業日報と同仕様: 承認者×isAuthorizer + 上長/常務/専務/社長）
+    const authorizers = await prisma.user.findMany({
+      where: { isAuthorizer: true, isActive: true },
+      select: { id: true },
+    })
+    const approvalRecords: { workReportId: string; approverRole: string; status: string; approverUserId?: string }[] = []
+    for (const a of authorizers) {
+      approvalRecords.push({
+        workReportId: workReport.id,
+        approverRole: '承認者',
+        status: 'pending',
+        approverUserId: a.id,
+      })
+    }
+    for (const role of ['上長', '常務', '専務', '社長']) {
+      approvalRecords.push({
+        workReportId: workReport.id,
+        approverRole: role,
+        status: 'pending',
+      })
+    }
+    if (approvalRecords.length > 0) {
+      await prisma.workReportApproval.createMany({ data: approvalRecords })
+    }
+
     // 通知: 管理者に日報提出を通知（非同期・エラーは握りつぶす）
     const user = await prisma.user.findUnique({
       where: { id: body.userId },

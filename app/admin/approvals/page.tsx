@@ -387,7 +387,7 @@ export default function ApprovalsPage() {
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">承認管理</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">営業日報の承認・差戻し</p>
+                <p className="text-xs text-gray-500 hidden sm:block">営業日報・作業日報の承認・差戻し</p>
               </div>
             </Link>
             <div className="flex items-center space-x-1 sm:space-x-3">
@@ -1044,6 +1044,13 @@ export default function ApprovalsPage() {
                               </span>
                               <span className="text-sm font-medium text-gray-900">
                                 {formatDate(report.date)}
+                              </span>
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                (report as any).reportType === 'work'
+                                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                  : 'bg-purple-100 text-purple-700 border border-purple-300'
+                              }`}>
+                                {(report as any).reportType === 'work' ? '作業' : '営業'}
                               </span>
                             </div>
 

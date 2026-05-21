@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
     // 総件数を取得
     const total = await prisma.dailyReport.count({ where })
 
-    // 日報一覧を取得（ページネーション対応）
-    const reports = await prisma.dailyReport.findMany({
+    // 営業日報一覧を取得（ページネーション対応）
+    const salesReports = await prisma.dailyReport.findMany({
       where,
       orderBy: { date: 'desc' },
       ...(usePagination ? { skip: (page - 1) * limit, take: limit } : {}),
@@ -96,6 +96,57 @@ export async function GET(request: NextRequest) {
         },
       },
     })
+
+    // 作業日報一覧を取得（同じ status フィルタを適用）
+    const workWhere: any = {}
+    if (status === 'pending') {
+      workWhere.approvals = { some: { status: 'pending' } }
+    } else if (status === 'approved') {
+      workWhere.approvals = { every: { status: 'approved' }, some: {} }
+    } else if (status === 'rejected') {
+      workWhere.approvals = { some: { status: 'rejected' } }
+    } else {
+      // 'all' でも承認レコードが付いている作業日報のみ
+      workWhere.approvals = { some: {} }
+    }
+    const workReportsRaw = await prisma.workReport.findMany({
+      where: workWhere,
+      orderBy: { date: 'desc' },
+      ...(usePagination ? { skip: (page - 1) * limit, take: limit } : {}),
+      include: {
+        approvals: {
+          include: {
+            approver: {
+              select: { id: true, name: true, position: true },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    })
+
+    // 作業日報の userId → User 情報を取得
+    const workUserIds = [...new Set(workReportsRaw.map(r => r.userId))]
+    const workUsers = workUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: workUserIds } },
+          select: { id: true, name: true, position: true },
+        })
+      : []
+    const workUserMap = new Map(workUsers.map(u => [u.id, u]))
+
+    // 統合: 種別マーキングして date 降順で合体
+    const reports = [
+      ...salesReports.map(r => ({ ...r, reportType: 'sales' as const })),
+      ...workReportsRaw.map(r => ({
+        ...r,
+        reportType: 'work' as const,
+        user: workUserMap.get(r.userId) || { id: r.userId, name: '(不明)', position: null },
+        visitRecords: [] as any[],
+        approvalRoute: null,
+        specialNotes: null,
+      })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     // 提出状況サマリーを返す（カレンダー用）
     let submissionStatus = null
@@ -562,23 +613,26 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const approval = await prisma.approval.findUnique({
-      where: { id: approvalId },
-    })
+    // 営業日報の Approval を検索、無ければ作業日報の WorkReportApproval を検索
+    const salesApproval = await prisma.approval.findUnique({ where: { id: approvalId } })
+    const workApproval = salesApproval ? null : await prisma.workReportApproval.findUnique({ where: { id: approvalId } })
 
-    if (!approval) {
+    if (!salesApproval && !workApproval) {
       return NextResponse.json(
         { error: '承認レコードが見つかりません' },
         { status: 404 }
       )
     }
 
+    const approval = salesApproval || workApproval!
+    const isWorkReport = !!workApproval
+
     // 自己承認チェック（個別）
-    const approvalReport = await prisma.dailyReport.findUnique({
-      where: { id: approval.dailyReportId },
-      select: { userId: true },
-    })
-    if (approvalReport?.userId === admin.id) {
+    const targetUserId = isWorkReport
+      ? (await prisma.workReport.findUnique({ where: { id: workApproval!.workReportId }, select: { userId: true } }))?.userId
+      : (await prisma.dailyReport.findUnique({ where: { id: salesApproval!.dailyReportId }, select: { userId: true } }))?.userId
+
+    if (targetUserId === admin.id) {
       return NextResponse.json(
         { error: '自分の日報を承認することはできません' },
         { status: 403 }
@@ -605,39 +659,42 @@ export async function PUT(request: NextRequest) {
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected'
 
-    const updatedApproval = await prisma.approval.update({
-      where: { id: approvalId },
-      data: {
-        status: newStatus,
-        approverUserId: admin.id,
-        approvedAt: newStatus === 'approved' ? new Date() : null,
-      },
-      include: {
-        approver: {
-          select: { id: true, name: true, position: true },
-        },
-      },
-    })
+    const updatedApproval = isWorkReport
+      ? await prisma.workReportApproval.update({
+          where: { id: approvalId },
+          data: {
+            status: newStatus,
+            approverUserId: admin.id,
+            approvedAt: newStatus === 'approved' ? new Date() : null,
+          },
+          include: { approver: { select: { id: true, name: true, position: true } } },
+        })
+      : await prisma.approval.update({
+          where: { id: approvalId },
+          data: {
+            status: newStatus,
+            approverUserId: admin.id,
+            approvedAt: newStatus === 'approved' ? new Date() : null,
+          },
+          include: { approver: { select: { id: true, name: true, position: true } } },
+        })
 
-    const report = await prisma.dailyReport.findUnique({
-      where: { id: approval.dailyReportId },
-      select: { id: true, date: true, userId: true },
-    })
-    if (report) {
-      const reportDate = new Date(report.date)
+    const reportIdForNotify = isWorkReport ? workApproval!.workReportId : salesApproval!.dailyReportId
+    if (targetUserId) {
+      const reportDate = new Date()
       const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
       if (action === 'approve') {
-        notifyReportApproved(report.userId, dateStr, report.id, admin.name).catch(() => {})
+        notifyReportApproved(targetUserId, dateStr, reportIdForNotify, admin.name).catch(() => {})
       } else {
-        notifyReportRejected(report.userId, dateStr, report.id, admin.name).catch(() => {})
+        notifyReportRejected(targetUserId, dateStr, reportIdForNotify, admin.name).catch(() => {})
       }
     }
 
     logAuditEvent({
       userId: admin.id,
       action: action === 'approve' ? 'report_approved' : 'report_rejected',
-      targetType: 'nippo',
-      targetId: approval.dailyReportId,
+      targetType: isWorkReport ? 'work_report' : 'nippo',
+      targetId: reportIdForNotify,
     })
 
     return NextResponse.json({

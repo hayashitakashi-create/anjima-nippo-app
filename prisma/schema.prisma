@@ -30,6 +30,7 @@ model User {
 
   dailyReports  DailyReport[]
   approvals     Approval[]
+  workReportApprovals WorkReportApproval[] @relation("WorkReportApprovals")
   notifications Notification[]
 
   @@index([role])
@@ -158,12 +159,31 @@ model WorkReport {
   workerRecords        WorkerRecord[]
   materialRecords      MaterialRecord[]
   subcontractorRecords SubcontractorRecord[]
+  approvals            WorkReportApproval[]
 
   @@index([userId])
   @@index([date])
   @@index([userId, date])
   @@index([projectRefId])
   @@index([createdAt])
+}
+
+// 作業日報の承認（営業日報の Approval と同構造）
+model WorkReportApproval {
+  id              String   @id @default(cuid())
+  workReportId    String
+  workReport      WorkReport @relation(fields: [workReportId], references: [id], onDelete: Cascade)
+  approverRole    String   // 承認者, 上長, 常務, 専務, 社長
+  approverUserId  String?
+  approver        User?    @relation("WorkReportApprovals", fields: [approverUserId], references: [id])
+  approvedAt      DateTime?
+  status          String   @default("pending") // pending, approved, rejected
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workReportId])
+  @@index([status])
+  @@index([approverUserId])
 }
 
 // 作業者記録
