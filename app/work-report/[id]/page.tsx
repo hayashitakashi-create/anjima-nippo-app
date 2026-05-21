@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -79,6 +79,8 @@ const calculateManHours = calculateManHoursFromTime
 export default function WorkReportDetailPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
+  const isPreview = searchParams.get('preview') === '1'
   const reportId = params.id as string
 
   const { user: currentUser, logout: handleLogout } = useAuth()
@@ -526,15 +528,17 @@ export default function WorkReportDetailPage() {
               <Printer className="h-4 w-4" />
               印刷 / PDF
             </Link>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-white hover:bg-red-50 border border-red-300 rounded-lg transition-colors"
-            >
-              <Trash2 className="h-4 w-4" />
-              削除
-            </button>
+            {!isPreview && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-white hover:bg-red-50 border border-red-300 rounded-lg transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+                削除
+              </button>
+            )}
           </div>
-          {!isEditing && (
+          {!isEditing && !isPreview && (
             <button
               onClick={() => setIsEditing(true)}
               className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] hover:from-[#0a2470] hover:to-[#0E3091] rounded-lg shadow-md transition-all"
@@ -542,6 +546,11 @@ export default function WorkReportDetailPage() {
               <Edit3 className="h-4 w-4" />
               編集する
             </button>
+          )}
+          {isPreview && (
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded-full">
+              閲覧専用モード
+            </span>
           )}
         </div>
 

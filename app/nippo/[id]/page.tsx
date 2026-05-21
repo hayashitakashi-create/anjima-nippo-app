@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { VisitRecordInput } from '@/lib/types'
 import { Home, Settings, LogOut, Building2, Shield, CheckCircle, XCircle, Clock, Trash2, Printer } from 'lucide-react'
@@ -36,6 +36,8 @@ const styles = `
 export default function EditNippoPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
+  const isPreview = searchParams.get('preview') === '1'
   const reportId = params.id as string
 
   const { user: currentUser, logout: handleLogout } = useAuth()
@@ -309,7 +311,7 @@ export default function EditNippoPage() {
                 <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">{reportTypeName}編集</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">{reportTypeName}{isPreview ? 'プレビュー（閲覧専用）' : '編集'}</h1>
               </div>
             </div>
             <div className="flex items-center space-x-1 sm:space-x-3">
@@ -349,7 +351,14 @@ export default function EditNippoPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        {isPreview && (
+          <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-center gap-2">
+            <span className="font-bold">閲覧専用モード</span>
+            <span>この画面は確認用のプレビューです。編集はできません。</span>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
+          <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-100">
           {/* 基本情報 */}
           <div className="bg-white shadow rounded-lg p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -633,6 +642,7 @@ export default function EditNippoPage() {
           )}
 
           {/* フッター */}
+          </fieldset>
           <div className="bg-white shadow rounded-lg p-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-3">
@@ -644,14 +654,16 @@ export default function EditNippoPage() {
                   <Printer className="w-4 h-4" />
                   印刷 / PDF
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  削除
-                </button>
+                {!isPreview && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    削除
+                  </button>
+                )}
               </div>
               <div className="space-x-4">
                 <button
@@ -659,23 +671,27 @@ export default function EditNippoPage() {
                   onClick={handleBackButton}
                   className="px-6 py-3 border border-gray-300 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  キャンセル
+                  {isPreview ? '閉じる' : 'キャンセル'}
                 </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg text-base font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {loading ? '更新中...' : '更新'}
-                </button>
-                <button
-                  type="button"
-                  onClick={addVisitRecord}
-                  disabled={visitRecords.length >= 16}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg text-base font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  + 訪問記録を追加
-                </button>
+                {!isPreview && (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg text-base font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {loading ? '更新中...' : '更新'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={addVisitRecord}
+                      disabled={visitRecords.length >= 16}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg text-base font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      + 訪問記録を追加
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

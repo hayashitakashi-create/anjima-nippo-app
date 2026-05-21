@@ -1196,7 +1196,7 @@ export default function ApprovalsPage() {
                           {report.visitRecords.map((visit, i) => (
                             <Link
                               key={visit.id}
-                              href={`/nippo/${report.id}`}
+                              href={`/nippo/${report.id}?preview=1`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="block bg-gray-50 rounded-lg p-3 text-sm hover:bg-purple-50 hover:ring-1 hover:ring-purple-300 transition-colors cursor-pointer"
@@ -1311,7 +1311,7 @@ export default function ApprovalsPage() {
                         {/* 日報詳細へのリンク */}
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <Link
-                            href={`${(report as any).reportType === 'work' ? '/work-report' : '/nippo'}/${report.id}`}
+                            href={`${(report as any).reportType === 'work' ? '/work-report' : '/nippo'}/${report.id}?preview=1`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-medium"
