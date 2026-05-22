@@ -1237,7 +1237,7 @@ export default function ApprovalsPage() {
                         )}
 
                         {/* 承認状況 */}
-                        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <div className="flex items-center mb-3 flex-wrap gap-3">
                           <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
                             <Shield className="w-4 h-4" />
                             承認状況
