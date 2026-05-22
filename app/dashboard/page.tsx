@@ -42,6 +42,7 @@ interface Stats {
   thisMonth: number
   pendingApproval: number
   approved: number
+  rejected: number
 }
 
 interface UnsubmittedData {
@@ -60,13 +61,15 @@ export default function DashboardPage() {
     totalReports: 0,
     thisMonth: 0,
     pendingApproval: 0,
-    approved: 0
+    approved: 0,
+    rejected: 0
   })
   const [workStats, setWorkStats] = useState<Stats>({
     totalReports: 0,
     thisMonth: 0,
     pendingApproval: 0,
-    approved: 0
+    approved: 0,
+    rejected: 0
   })
   const [leaveRequests, setLeaveRequests] = useState<Array<{ id: string; date: string; leaveType: string; status: string }>>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -115,20 +118,26 @@ export default function DashboardPage() {
                      reportDate.getFullYear() === now.getFullYear()
             }).length
 
-            const pending = data.reports.filter((r: any) => {
-              const reportDate = new Date(r.date)
-              const now = new Date()
-              return reportDate.getMonth() === now.getMonth() &&
-                     reportDate.getFullYear() === now.getFullYear() &&
-                     r.approvals?.some((a: any) => a.status === 'pending')
-            }).length
-            const approvedCount = thisMonth - pending
+            const isThisMonth = (r: any) => {
+              const d = new Date(r.date); const n = new Date()
+              return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear()
+            }
+            const monthReports = data.reports.filter(isThisMonth)
+            const rejected = monthReports.filter((r: any) => r.approvals?.some((a: any) => a.status === 'rejected')).length
+            const pending = monthReports.filter((r: any) =>
+              !r.approvals?.some((a: any) => a.status === 'rejected') &&
+              r.approvals?.some((a: any) => a.status === 'pending')
+            ).length
+            const approvedCount = monthReports.filter((r: any) =>
+              r.approvals?.length > 0 && r.approvals.every((a: any) => a.status === 'approved')
+            ).length
 
             setSalesStats({
               totalReports: total,
               thisMonth: thisMonth,
               pendingApproval: pending,
-              approved: approvedCount
+              approved: approvedCount,
+              rejected,
             })
           }
         })
@@ -166,18 +175,27 @@ export default function DashboardPage() {
           setWorkReports(recent)
 
           const total = data?.pagination?.total ?? reports.length
-          const thisMonth = reports.filter((r: any) => {
-            const reportDate = new Date(r.date)
-            const now = new Date()
-            return reportDate.getMonth() === now.getMonth() &&
-                   reportDate.getFullYear() === now.getFullYear()
-          }).length
+          const isThisMonth = (r: any) => {
+            const d = new Date(r.date); const n = new Date()
+            return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear()
+          }
+          const monthReports = reports.filter(isThisMonth)
+          const thisMonth = monthReports.length
+          const rejected = monthReports.filter((r: any) => r.approvals?.some((a: any) => a.status === 'rejected')).length
+          const pending = monthReports.filter((r: any) =>
+            !r.approvals?.some((a: any) => a.status === 'rejected') &&
+            r.approvals?.some((a: any) => a.status === 'pending')
+          ).length
+          const approvedCount = monthReports.filter((r: any) =>
+            r.approvals?.length > 0 && r.approvals.every((a: any) => a.status === 'approved')
+          ).length
 
           setWorkStats({
             totalReports: total,
             thisMonth: thisMonth,
-            pendingApproval: 0,
-            approved: thisMonth
+            pendingApproval: pending,
+            approved: approvedCount,
+            rejected,
           })
         }
       })
@@ -678,7 +696,7 @@ export default function DashboardPage() {
                     <div className="w-full bg-slate-100 rounded-full h-2">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${(stats.thisMonth / 30) * 100}%` }}
+                        animate={{ width: `${stats.thisMonth > 0 ? 100 : 0}%` }}
                         transition={{ duration: 1, delay: 0.5 }}
                         className={`h-2 rounded-full ${
                           reportType === 'sales'
@@ -687,7 +705,6 @@ export default function DashboardPage() {
                         }`}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">目標: 月30件</p>
                   </div>
 
                   {/* 承認待ち */}
@@ -725,6 +742,17 @@ export default function DashboardPage() {
                       />
                     </div>
                   </div>
+
+                  {/* 差戻し（あれば赤強調） */}
+                  {stats.rejected > 0 && (
+                    <div className="bg-red-50 border-2 border-red-400 rounded-lg p-3 -mx-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-red-700">⚠ 差戻し（要対応）</span>
+                        <span className="text-2xl font-bold text-red-600">{stats.rejected}</span>
+                      </div>
+                      <p className="text-xs text-red-600 mt-1">該当日報を修正のうえ、再申請してください</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
 

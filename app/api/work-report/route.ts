@@ -196,6 +196,9 @@ export async function GET(request: NextRequest) {
               order: 'asc',
             },
           },
+          approvals: {
+            select: { status: true },
+          },
         },
         orderBy: {
           date: 'desc',

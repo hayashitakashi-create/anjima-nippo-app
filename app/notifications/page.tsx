@@ -286,10 +286,22 @@ export default function NotificationsPage() {
                             {formatDate(notification.createdAt)}
                           </span>
                         </div>
-                        <p className={`text-sm mt-0.5 ${
+                        <p className={`text-sm mt-0.5 whitespace-pre-wrap ${
                           notification.isRead ? 'text-gray-500' : 'text-gray-700'
                         }`}>
-                          {notification.message}
+                          {(() => {
+                            const m = notification.message
+                            const idx = m.indexOf('差し戻しコメント：')
+                            if (idx === -1) return m
+                            const before = m.slice(0, idx)
+                            const after = m.slice(idx + '差し戻しコメント：'.length)
+                            return (
+                              <>
+                                {before}
+                                <span className="font-bold text-red-700">差し戻しコメント：{after}</span>
+                              </>
+                            )
+                          })()}
                         </p>
                         {notification.linkUrl && (
                           <p className="text-xs text-[#0E3091] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">

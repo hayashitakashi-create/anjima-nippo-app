@@ -459,6 +459,15 @@ export async function PUT(request: NextRequest) {
               rejectComment: commentForReject,
             },
           })
+          await tx.workReportApproval.updateMany({
+            where: { workReportId: { in: reportIds }, approverRole: { in: nonAuthorizerRoles } },
+            data: {
+              status: newStatus,
+              approverUserId: admin.id,
+              approvedAt: newStatus === 'approved' ? new Date() : null,
+              rejectComment: commentForReject,
+            },
+          })
         }
         if (includesAuthorizer) {
           await tx.approval.updateMany({
@@ -469,22 +478,34 @@ export async function PUT(request: NextRequest) {
               rejectComment: commentForReject,
             },
           })
+          await tx.workReportApproval.updateMany({
+            where: { workReportId: { in: reportIds }, approverRole: '承認者', approverUserId: admin.id },
+            data: {
+              status: newStatus,
+              approvedAt: newStatus === 'approved' ? new Date() : null,
+              rejectComment: commentForReject,
+            },
+          })
         }
       })
 
-      // 通知は非同期でバックグラウンド処理
-      const reports = await prisma.dailyReport.findMany({
-        where: { id: { in: reportIds } },
-        select: { id: true, date: true, userId: true },
-      })
+      // 通知は非同期で（営業/作業 両方検索）
+      const [salesReportsList, workReportsList] = await Promise.all([
+        prisma.dailyReport.findMany({ where: { id: { in: reportIds } }, select: { id: true, date: true, userId: true } }),
+        prisma.workReport.findMany({ where: { id: { in: reportIds } }, select: { id: true, date: true, userId: true } }),
+      ])
+      const allTargets = [
+        ...salesReportsList.map(r => ({ ...r, type: 'sales' as const })),
+        ...workReportsList.map(r => ({ ...r, type: 'work' as const })),
+      ]
 
-      reports.forEach(report => {
+      allTargets.forEach(report => {
         const reportDate = new Date(report.date)
         const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
         if (action === 'bulk_approve') {
           notifyReportApproved(report.userId, dateStr, report.id, admin.name).catch(() => {})
         } else {
-          notifyReportRejected(report.userId, dateStr, report.id, admin.name, cleanComment, 'sales').catch(() => {})
+          notifyReportRejected(report.userId, dateStr, report.id, admin.name, cleanComment, report.type).catch(() => {})
         }
       })
 
@@ -510,12 +531,22 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      // 自己承認チェック
-      const targetReport = await prisma.dailyReport.findUnique({
+      // 日報の種別を判定（営業/作業）
+      const salesReport = await prisma.dailyReport.findUnique({
         where: { id: reportId },
-        select: { userId: true },
+        select: { userId: true, date: true },
       })
-      if (targetReport?.userId === admin.id) {
+      const workReport = salesReport ? null : await prisma.workReport.findUnique({
+        where: { id: reportId },
+        select: { userId: true, date: true },
+      })
+      const targetReport = salesReport || workReport
+      const isWorkReportTarget = !!workReport
+
+      if (!targetReport) {
+        return NextResponse.json({ error: '日報が見つかりません' }, { status: 404 })
+      }
+      if (targetReport.userId === admin.id) {
         return NextResponse.json(
           { error: '自分の日報を承認することはできません' },
           { status: 403 }
@@ -540,54 +571,53 @@ export async function PUT(request: NextRequest) {
 
       const commentForRejectAll = newStatus === 'rejected' ? cleanComment : null
 
-      if (nonAuthorizerRolesAll.length > 0) {
-        await prisma.approval.updateMany({
-          where: { dailyReportId: reportId, approverRole: { in: nonAuthorizerRolesAll } },
-          data: {
-            status: newStatus,
-            approverUserId: admin.id,
-            approvedAt: newStatus === 'approved' ? new Date() : null,
-            rejectComment: commentForRejectAll,
-          },
-        })
-      }
-      if (includesAuthorizerAll) {
-        await prisma.approval.updateMany({
-          where: { dailyReportId: reportId, approverRole: '承認者', approverUserId: admin.id },
-          data: {
-            status: newStatus,
-            approvedAt: newStatus === 'approved' ? new Date() : null,
-            rejectComment: commentForRejectAll,
-          },
-        })
-      }
-
-      const updatedReport = await prisma.dailyReport.findUnique({
-        where: { id: reportId },
-        include: {
-          user: {
-            select: { id: true, name: true, position: true },
-          },
-          approvals: {
-            include: {
-              approver: {
-                select: { id: true, name: true, position: true },
-              },
-            },
-            orderBy: { createdAt: 'asc' },
-          },
-        },
-      })
-
-      if (updatedReport) {
-        const reportDate = new Date(updatedReport.date)
-        const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
-        if (action === 'approve_all') {
-          notifyReportApproved(updatedReport.user.id, dateStr, reportId, admin.name).catch(() => {})
-        } else {
-          notifyReportRejected(updatedReport.user.id, dateStr, reportId, admin.name, cleanComment, 'sales').catch(() => {})
+      if (isWorkReportTarget) {
+        if (nonAuthorizerRolesAll.length > 0) {
+          await prisma.workReportApproval.updateMany({
+            where: { workReportId: reportId, approverRole: { in: nonAuthorizerRolesAll } },
+            data: { status: newStatus, approverUserId: admin.id, approvedAt: newStatus === 'approved' ? new Date() : null, rejectComment: commentForRejectAll },
+          })
+        }
+        if (includesAuthorizerAll) {
+          await prisma.workReportApproval.updateMany({
+            where: { workReportId: reportId, approverRole: '承認者', approverUserId: admin.id },
+            data: { status: newStatus, approvedAt: newStatus === 'approved' ? new Date() : null, rejectComment: commentForRejectAll },
+          })
+        }
+      } else {
+        if (nonAuthorizerRolesAll.length > 0) {
+          await prisma.approval.updateMany({
+            where: { dailyReportId: reportId, approverRole: { in: nonAuthorizerRolesAll } },
+            data: { status: newStatus, approverUserId: admin.id, approvedAt: newStatus === 'approved' ? new Date() : null, rejectComment: commentForRejectAll },
+          })
+        }
+        if (includesAuthorizerAll) {
+          await prisma.approval.updateMany({
+            where: { dailyReportId: reportId, approverRole: '承認者', approverUserId: admin.id },
+            data: { status: newStatus, approvedAt: newStatus === 'approved' ? new Date() : null, rejectComment: commentForRejectAll },
+          })
         }
       }
+
+      // 通知（営業/作業 種別に応じて）
+      const reportDate = new Date(targetReport.date)
+      const dateStr = `${reportDate.getMonth() + 1}月${reportDate.getDate()}日`
+      if (action === 'approve_all') {
+        notifyReportApproved(targetReport.userId, dateStr, reportId, admin.name).catch(() => {})
+      } else {
+        notifyReportRejected(targetReport.userId, dateStr, reportId, admin.name, cleanComment, isWorkReportTarget ? 'work' : 'sales').catch(() => {})
+      }
+
+      // レスポンス用に最新の Approval を取得
+      const updatedReport = isWorkReportTarget
+        ? await prisma.workReport.findUnique({
+            where: { id: reportId },
+            include: { approvals: { include: { approver: { select: { id: true, name: true, position: true } } }, orderBy: { createdAt: 'asc' } } },
+          })
+        : await prisma.dailyReport.findUnique({
+            where: { id: reportId },
+            include: { user: { select: { id: true, name: true, position: true } }, approvals: { include: { approver: { select: { id: true, name: true, position: true } } }, orderBy: { createdAt: 'asc' } } },
+          })
 
       logAuditEvent({
         userId: admin.id,
