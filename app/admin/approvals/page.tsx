@@ -1185,42 +1185,46 @@ export default function ApprovalsPage() {
                         </div>
                       )}
 
-                      {/* 訪問記録 */}
+                      {/* 訪問記録（営業日報のみ） */}
                       <div className="p-4 sm:p-5">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                          <MapPin className="w-4 h-4" />
-                          訪問記録 ({report.visitRecords.length}件)
-                          <span className="text-xs font-normal text-gray-500 ml-2">（クリックで日報を別タブで開きます）</span>
-                        </h4>
-                        <div className="space-y-2 mb-6">
-                          {report.visitRecords.map((visit, i) => (
-                            <Link
-                              key={visit.id}
-                              href={`/nippo/${report.id}?preview=1`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block bg-gray-50 rounded-lg p-3 text-sm hover:bg-purple-50 hover:ring-1 hover:ring-purple-300 transition-colors cursor-pointer"
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-medium text-gray-900">{visit.destination}</span>
-                                {visit.startTime && visit.endTime && (
-                                  <span className="text-xs text-gray-500">
-                                    {visit.startTime} 〜 {visit.endTime}
-                                  </span>
-                                )}
-                              </div>
-                              {visit.contactPerson && (
-                                <p className="text-xs text-gray-500">面接者: {visit.contactPerson}</p>
-                              )}
-                              {visit.content && (
-                                <p className="text-gray-600 mt-1 whitespace-pre-wrap">{visit.content}</p>
-                              )}
-                              {visit.expense != null && visit.expense > 0 && (
-                                <p className="text-xs text-gray-500 mt-1">経費: {visit.expense.toLocaleString()}円</p>
-                              )}
-                            </Link>
-                          ))}
-                        </div>
+                        {(report as any).reportType !== 'work' && (
+                          <>
+                            <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                              <MapPin className="w-4 h-4" />
+                              訪問記録 ({report.visitRecords.length}件)
+                              <span className="text-xs font-normal text-gray-500 ml-2">（クリックで日報を別タブで開きます）</span>
+                            </h4>
+                            <div className="space-y-2 mb-6">
+                              {report.visitRecords.map((visit, i) => (
+                                <Link
+                                  key={visit.id}
+                                  href={`/nippo/${report.id}?preview=1`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block bg-gray-50 rounded-lg p-3 text-sm hover:bg-purple-50 hover:ring-1 hover:ring-purple-300 transition-colors cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-medium text-gray-900">{visit.destination}</span>
+                                    {visit.startTime && visit.endTime && (
+                                      <span className="text-xs text-gray-500">
+                                        {visit.startTime} 〜 {visit.endTime}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {visit.contactPerson && (
+                                    <p className="text-xs text-gray-500">面接者: {visit.contactPerson}</p>
+                                  )}
+                                  {visit.content && (
+                                    <p className="text-gray-600 mt-1 whitespace-pre-wrap">{visit.content}</p>
+                                  )}
+                                  {visit.expense != null && visit.expense > 0 && (
+                                    <p className="text-xs text-gray-500 mt-1">経費: {visit.expense.toLocaleString()}円</p>
+                                  )}
+                                </Link>
+                              ))}
+                            </div>
+                          </>
+                        )}
 
                         {/* 特記事項 */}
                         {report.specialNotes && (

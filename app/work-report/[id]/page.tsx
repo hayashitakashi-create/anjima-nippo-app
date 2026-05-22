@@ -80,7 +80,7 @@ export default function WorkReportDetailPage() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
-  const isPreview = searchParams.get('preview') === '1'
+  const isPreviewParam = searchParams.get('preview') === '1'
   const reportId = params.id as string
 
   const { user: currentUser, logout: handleLogout } = useAuth()
@@ -126,6 +126,13 @@ export default function WorkReportDetailPage() {
 
   // 承認状況
   const [approvals, setApprovals] = useState<any[]>([])
+
+  // 閲覧専用判定: preview=1 OR ログインユーザーが対象社員/代理入力者でない場合
+  const isOwnerOrEntrant = !!currentUser && (
+    (reportOwner && currentUser.id === reportOwner.id) ||
+    (enteredBy && currentUser.id === enteredBy.id)
+  )
+  const isPreview = isPreviewParam || !currentUser || !reportOwner || !isOwnerOrEntrant
 
   // 初期データ読み込み: 作業日報データ
   useEffect(() => {

@@ -97,6 +97,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 作業者マスタにも同名がなければ自動追加（作業日報の氏名プルダウン用）
+    try {
+      const existing = await prisma.workerName.findFirst({ where: { name } })
+      if (!existing) {
+        await prisma.workerName.create({ data: { name, isActive: true } })
+      }
+    } catch (e) {
+      console.error('作業者マスタへの同期エラー:', e)
+    }
+
     logAuditEvent({
       userId: authResult.user.id,
       action: 'user_created',

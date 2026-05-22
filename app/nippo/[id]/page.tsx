@@ -37,7 +37,7 @@ export default function EditNippoPage() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
-  const isPreview = searchParams.get('preview') === '1'
+  const isPreviewParam = searchParams.get('preview') === '1'
   const reportId = params.id as string
 
   const { user: currentUser, logout: handleLogout } = useAuth()
@@ -68,6 +68,13 @@ export default function EditNippoPage() {
   const [visitRecords, setVisitRecords] = useState<VisitRecordInput[]>([
     { destination: '', contactPerson: '', startTime: '08:00', endTime: '09:00', content: '', expense: undefined, order: 0 }
   ])
+
+  // 閲覧専用判定: preview=1 OR ログインユーザーが対象社員/代理入力者でない場合
+  const isOwnerOrEntrant = !!currentUser && (
+    (reportOwner && currentUser.id === reportOwner.id) ||
+    (enteredBy && currentUser.id === enteredBy.id)
+  )
+  const isPreview = isPreviewParam || !currentUser || !reportOwner || !isOwnerOrEntrant
 
   // 30分刻みの時刻オプションを生成（絶対に必要）
   const generateTimeOptions = () => {
