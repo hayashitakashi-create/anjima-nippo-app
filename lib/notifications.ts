@@ -15,7 +15,8 @@ export async function notifyReportSubmitted(
   reporterName: string,
   reportDate: string,
   reportId: string,
-  reportType: 'sales' | 'work' = 'sales'
+  reportType: 'sales' | 'work' = 'sales',
+  isResubmit: boolean = false,
 ) {
   try {
     const adminIds = await getAdminUserIds()
@@ -23,12 +24,13 @@ export async function notifyReportSubmitted(
 
     const typeLabel = reportType === 'sales' ? '営業日報' : '作業日報'
     const linkUrl = reportType === 'sales' ? `/nippo/${reportId}` : `/work-report/${reportId}`
+    const prefix = isResubmit ? '差し戻した' : ''
 
     const notifications = adminIds.map(userId => ({
       userId,
       type: 'report_submitted',
-      title: `${typeLabel}が提出されました`,
-      message: `${reporterName}さんが${reportDate}の${typeLabel}を提出しました`,
+      title: `${prefix}${typeLabel}が提出されました`,
+      message: `${reporterName}さんが${reportDate}の${prefix}${typeLabel}を提出しました`,
       linkUrl,
     }))
 

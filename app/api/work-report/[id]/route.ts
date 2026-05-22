@@ -233,7 +233,7 @@ export async function PUT(
       if (reportUser) {
         const d = new Date(updatedReport.date)
         const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`
-        notifyReportSubmitted(reportUser.name, dateStr, updatedReport.id, 'work').catch(() => {})
+        notifyReportSubmitted(reportUser.name, dateStr, updatedReport.id, 'work', true).catch(() => {})
       }
     }
 
