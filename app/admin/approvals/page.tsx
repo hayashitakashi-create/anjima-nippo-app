@@ -60,6 +60,32 @@ export default function ApprovalsPage() {
   const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth({ requiredPermission: 'approve_reports' })
   // 承認権限フラグ: 役職承認者 or 承認者枠のどちらかがON
   const canActAsApprover = !!(currentUser?.isApprover || currentUser?.isAuthorizer)
+
+  // ログインユーザーが操作できる approverRole を判定
+  const myAllowedRoles = (() => {
+    const roles: string[] = []
+    switch ((currentUser as any)?.position) {
+      case '部長': case '課長': roles.push('上長'); break
+      case '常務': roles.push('常務'); break
+      case '専務': roles.push('専務'); break
+      case '社長': roles.push('社長'); break
+    }
+    if (currentUser?.isAuthorizer && !['社長', '専務', '常務'].includes((currentUser as any)?.position || '')) {
+      roles.push('承認者')
+    }
+    return roles
+  })()
+
+  // 「自分が承認できる枠が全て承認済み」か判定
+  const isMyApprovalDone = (report: any) => {
+    if (myAllowedRoles.length === 0) return false
+    const myItems = report.approvals.filter((a: any) =>
+      myAllowedRoles.includes(a.approverRole) &&
+      (a.approverRole !== '承認者' || !a.approverUserId || a.approverUserId === currentUser?.id)
+    )
+    if (myItems.length === 0) return false
+    return myItems.every((a: any) => a.status === 'approved')
+  }
   const [reports, setReports] = useState<DailyReport[]>([])
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -1127,24 +1153,33 @@ export default function ApprovalsPage() {
                             {/* 一括承認/差戻しボタン（承認待ちのもののみ） */}
                             {isPending && (
                               <div className="hidden sm:flex items-center gap-2">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleApproveAll(report.id) }}
-                                  disabled={processing === report.id || !canActAsApprover}
-                                  title={!canActAsApprover ? '承認権限がありません' : ''}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 transition-colors"
-                                >
-                                  <CheckCheck className="w-3.5 h-3.5" />
-                                  承認
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleRejectAll(report.id) }}
-                                  disabled={processing === report.id || !canActAsApprover}
-                                  title={!canActAsApprover ? '承認権限がありません' : ''}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors"
-                                >
-                                  <Undo2 className="w-3.5 h-3.5" />
-                                  差戻し
-                                </button>
+                                {isMyApprovalDone(report) ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-bold rounded-lg">
+                                    <CheckCircle className="w-3.5 h-3.5" />
+                                    あなたは承認済み
+                                  </span>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleApproveAll(report.id) }}
+                                      disabled={processing === report.id || !canActAsApprover}
+                                      title={!canActAsApprover ? '承認権限がありません' : ''}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 transition-colors"
+                                    >
+                                      <CheckCheck className="w-3.5 h-3.5" />
+                                      承認
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRejectAll(report.id) }}
+                                      disabled={processing === report.id || !canActAsApprover}
+                                      title={!canActAsApprover ? '承認権限がありません' : ''}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors"
+                                    >
+                                      <Undo2 className="w-3.5 h-3.5" />
+                                      差戻し
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             )}
                             {isExpanded ? (
@@ -1164,24 +1199,33 @@ export default function ApprovalsPage() {
                       {/* モバイル用 一括ボタン */}
                       {isPending && (
                         <div className="sm:hidden flex gap-2 p-4 bg-gray-50 border-b border-gray-200">
-                          <button
-                            onClick={() => handleApproveAll(report.id)}
-                            disabled={processing === report.id || !canActAsApprover}
-                            title={!canActAsApprover ? '承認権限がありません' : ''}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400"
-                          >
-                            <CheckCheck className="w-4 h-4" />
-                            一括承認
-                          </button>
-                          <button
-                            onClick={() => handleRejectAll(report.id)}
-                            disabled={processing === report.id || !canActAsApprover}
-                            title={!canActAsApprover ? '承認権限がありません' : ''}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400"
-                          >
-                            <Undo2 className="w-4 h-4" />
-                            差戻し
-                          </button>
+                          {isMyApprovalDone(report) ? (
+                            <span className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 text-emerald-700 border border-emerald-300 text-sm font-bold rounded-lg">
+                              <CheckCircle className="w-4 h-4" />
+                              あなたは承認済み
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleApproveAll(report.id)}
+                                disabled={processing === report.id || !canActAsApprover}
+                                title={!canActAsApprover ? '承認権限がありません' : ''}
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400"
+                              >
+                                <CheckCheck className="w-4 h-4" />
+                                一括承認
+                              </button>
+                              <button
+                                onClick={() => handleRejectAll(report.id)}
+                                disabled={processing === report.id || !canActAsApprover}
+                                title={!canActAsApprover ? '承認権限がありません' : ''}
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400"
+                              >
+                                <Undo2 className="w-4 h-4" />
+                                差戻し
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
 
