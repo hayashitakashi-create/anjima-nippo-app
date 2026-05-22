@@ -1156,7 +1156,7 @@ export default function ApprovalsPage() {
                                 {isMyApprovalDone(report) ? (
                                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-bold rounded-lg">
                                     <CheckCircle className="w-3.5 h-3.5" />
-                                    あなたは承認済み
+                                    承認済
                                   </span>
                                 ) : (
                                   <>
@@ -1202,7 +1202,7 @@ export default function ApprovalsPage() {
                           {isMyApprovalDone(report) ? (
                             <span className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 text-emerald-700 border border-emerald-300 text-sm font-bold rounded-lg">
                               <CheckCircle className="w-4 h-4" />
-                              あなたは承認済み
+                              承認済
                             </span>
                           ) : (
                             <>
