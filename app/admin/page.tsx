@@ -901,26 +901,26 @@ export default function AdminPage() {
                 <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-xs mb-3">
                   <button type="button" onClick={() => setNameMode('japanese')}
                     className={`px-3 py-1.5 font-medium transition-colors ${nameMode === 'japanese' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}>
-                    日本のお名前（姓・名）
+                    姓・名を分けて入力
                   </button>
                   <button type="button" onClick={() => setNameMode('foreign')}
                     className={`px-3 py-1.5 font-medium transition-colors ${nameMode === 'foreign' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}>
-                    海外の方（分けない）
+                    氏名をまとめて入力
                   </button>
                 </div>
                 {nameMode === 'japanese' ? (
                   <div className="grid grid-cols-2 gap-2">
                     <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="姓 例: 田邊" />
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="姓" />
                     <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="名 例: 沙帆" />
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="名" />
                   </div>
                 ) : (
                   <input type="text" value={foreignName} onChange={e => setForeignName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="例: グエン・ホアン・トウン" />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="氏名" />
                 )}
                 <p className="mt-1 text-xs text-gray-500">
-                  {nameMode === 'japanese' ? '姓と名の間に全角スペースが自動で入ります' : '中黒（・）でつないで入力してください'}
+                  {nameMode === 'japanese' ? '姓と名の間に全角スペースが自動で入ります' : 'ミドルネーム等を含む場合などは、こちらにまとめて入力してください'}
                 </p>
               </div>
               <div>
