@@ -230,7 +230,11 @@ export default function EditNippoPage() {
   const reportTypeName = reportType === 'sales' ? '営業日報' : '作業日報'
 
   const handleBackButton = () => {
-    router.push('/nippo')
+    if (isPreviewParam) {
+      router.push('/admin/approvals')
+    } else {
+      router.push('/nippo')
+    }
   }
 
   const handleSettings = () => {
@@ -685,7 +689,7 @@ export default function EditNippoPage() {
                   onClick={handleBackButton}
                   className="px-6 py-3 border border-gray-300 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  {isPreview ? '閉じる' : 'キャンセル'}
+                  {isPreviewParam ? '承認管理に戻る' : (isPreview ? '閉じる' : 'キャンセル')}
                 </button>
                 {!isPreview && (
                   <>
