@@ -71,6 +71,11 @@ export default function AdminPage() {
     role: 'user',
     defaultReportType: 'work',
   })
+  // 氏名入力モード: japanese=姓/名 分割, foreign=分けない
+  const [nameMode, setNameMode] = useState<'japanese' | 'foreign'>('japanese')
+  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [foreignName, setForeignName] = useState('')
   const [creating, setCreating] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -175,7 +180,12 @@ export default function AdminPage() {
 
   // 新規作成
   const handleCreate = async () => {
-    if (!createForm.name || !createForm.username || !createForm.password) {
+    // 氏名を入力モードに応じて合成
+    const composedName = nameMode === 'japanese'
+      ? `${lastName.trim()}　${firstName.trim()}`.trim()
+      : foreignName.trim()
+
+    if (!composedName || composedName === '　' || !createForm.username || !createForm.password) {
       setError('氏名、ユーザー名、パスワードは必須です')
       return
     }
@@ -187,10 +197,14 @@ export default function AdminPage() {
     setCreating(true)
     setError('')
     try {
-      const data = await adminApi.createUser(createForm) as any
+      const data = await adminApi.createUser({ ...createForm, name: composedName }) as any
       setUsers(prev => [...prev, data.user])
       setShowCreateModal(false)
       setCreateForm({ name: '', username: '', password: '', position: '', role: 'user', defaultReportType: 'work' })
+      setLastName('')
+      setFirstName('')
+      setForeignName('')
+      setNameMode('japanese')
       setMessage('ユーザーを作成しました')
     } catch (err) {
       setError(err instanceof Error ? err.message : '作成に失敗しました')
@@ -882,9 +896,32 @@ export default function AdminPage() {
             </div>
             <div className="px-6 py-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">氏名 <span className="text-red-500">*</span></label>
-                <input type="text" value={createForm.name} onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="山田 太郎" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">氏名 <span className="text-red-500">*</span></label>
+                {/* 氏名モード切替 */}
+                <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-xs mb-3">
+                  <button type="button" onClick={() => setNameMode('japanese')}
+                    className={`px-3 py-1.5 font-medium transition-colors ${nameMode === 'japanese' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}>
+                    日本のお名前（姓・名）
+                  </button>
+                  <button type="button" onClick={() => setNameMode('foreign')}
+                    className={`px-3 py-1.5 font-medium transition-colors ${nameMode === 'foreign' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}>
+                    海外の方（分けない）
+                  </button>
+                </div>
+                {nameMode === 'japanese' ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="姓 例: 田邊" />
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="名 例: 沙帆" />
+                  </div>
+                ) : (
+                  <input type="text" value={foreignName} onChange={e => setForeignName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="例: グエン・ホアン・トウン" />
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  {nameMode === 'japanese' ? '姓と名の間に全角スペースが自動で入ります' : '中黒（・）でつないで入力してください'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">ユーザー名（メールアドレス） <span className="text-red-500">*</span></label>
