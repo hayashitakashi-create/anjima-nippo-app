@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
 import { getUserPermissions } from '@/lib/permissions'
 import { WorkReportInput } from '../route'
+import { notifyReportSubmitted } from '@/lib/notifications'
 
 // 工数をサーバー側で計算（1時間 = 0.125、昼休憩12:00-13:00を自動控除）
 function calcWorkHours(startTime?: string, endTime?: string): number {
@@ -213,6 +214,28 @@ export async function PUT(
         },
       })
     })
+
+    // 差戻し状態の日報が編集された場合は「再申請」扱いにする
+    // - 全 Approval を pending にリセット
+    // - rejectComment クリア
+    // - 管理者へ再提出通知
+    const hadRejected = await prisma.workReportApproval.findFirst({
+      where: { workReportId: id, status: 'rejected' },
+      select: { id: true },
+    })
+    if (hadRejected) {
+      await prisma.workReportApproval.updateMany({
+        where: { workReportId: id },
+        data: { status: 'pending', approvedAt: null, rejectComment: null },
+      })
+      // 通知（管理者全員に再提出）
+      const reportUser = await prisma.user.findUnique({ where: { id: updatedReport.userId }, select: { name: true } })
+      if (reportUser) {
+        const d = new Date(updatedReport.date)
+        const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`
+        notifyReportSubmitted(reportUser.name, dateStr, updatedReport.id, 'work').catch(() => {})
+      }
+    }
 
     return NextResponse.json(updatedReport)
   } catch (error) {

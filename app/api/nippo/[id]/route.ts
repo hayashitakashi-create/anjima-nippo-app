@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
 import { getUserPermissions } from '@/lib/permissions'
 import { DailyReportInput } from '@/lib/types'
+import { notifyReportSubmitted } from '@/lib/notifications'
 
 // 日報詳細取得
 export async function GET(
@@ -155,6 +156,21 @@ export async function PUT(
         },
       })
     })
+
+    // 差戻し状態の日報が編集された場合は再申請扱い
+    const hadRejected = await prisma.approval.findFirst({
+      where: { dailyReportId: id, status: 'rejected' },
+      select: { id: true },
+    })
+    if (hadRejected) {
+      await prisma.approval.updateMany({
+        where: { dailyReportId: id },
+        data: { status: 'pending', approvedAt: null, rejectComment: null },
+      })
+      const d = new Date(updatedReport.date)
+      const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`
+      notifyReportSubmitted(updatedReport.user?.name || '', dateStr, updatedReport.id, 'sales').catch(() => {})
+    }
 
     return NextResponse.json(updatedReport)
   } catch (error) {
