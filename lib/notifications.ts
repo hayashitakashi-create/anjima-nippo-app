@@ -66,15 +66,20 @@ export async function notifyReportRejected(
   reportDate: string,
   reportId: string,
   approverName: string,
+  rejectComment?: string | null,
+  reportType: 'sales' | 'work' = 'sales',
 ) {
   try {
+    const typeLabel = reportType === 'work' ? '作業日報' : '営業日報'
+    const linkPath = reportType === 'work' ? `/work-report/${reportId}` : `/nippo/${reportId}`
+    const commentPart = rejectComment && rejectComment.trim() ? `\n差し戻しコメント：${rejectComment.trim()}` : ''
     await prisma.notification.create({
       data: {
         userId: reportUserId,
         type: 'report_rejected',
         title: '日報が差し戻されました',
-        message: `${reportDate}の営業日報が${approverName}さんにより差し戻されました。内容をご確認ください`,
-        linkUrl: `/nippo/${reportId}`,
+        message: `${reportDate}の${typeLabel}が${approverName}さんにより差し戻されました。内容をご確認ください${commentPart}`,
+        linkUrl: linkPath,
       },
     })
   } catch (error) {

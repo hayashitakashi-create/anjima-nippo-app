@@ -223,30 +223,66 @@ export default function ApprovalsPage() {
     }
   }
 
+  // 差戻しモーダル state
+  const [rejectModal, setRejectModal] = useState<
+    | null
+    | { kind: 'individual'; approvalId: string; reportId: string }
+    | { kind: 'all'; reportId: string }
+    | { kind: 'bulk'; reportIds: string[] }
+  >(null)
+  const [rejectComment, setRejectComment] = useState('')
+
+  // 差戻し送信
+  const submitReject = async () => {
+    if (!rejectModal) return
+    const comment = rejectComment.trim()
+    if (!comment) {
+      alert('差戻しの理由（コメント）を入力してください')
+      return
+    }
+    const processingKey = rejectModal.kind === 'individual' ? rejectModal.approvalId : rejectModal.kind === 'all' ? rejectModal.reportId : 'bulk'
+    setProcessing(processingKey)
+    setMessage('')
+    setError('')
+    try {
+      if (rejectModal.kind === 'individual') {
+        const data = await apiPut<any>('/api/admin/approvals', {
+          approvalId: rejectModal.approvalId, action: 'reject', rejectComment: comment,
+        })
+        setMessage(data.message)
+        const reportId = rejectModal.reportId
+        setReports(prev => prev.map(r => r.id === reportId ? { ...r, approvals: r.approvals.map(a => a.id === rejectModal.approvalId ? data.approval : a) } : r))
+      } else if (rejectModal.kind === 'all') {
+        const data = await apiPut<any>('/api/admin/approvals', {
+          reportId: rejectModal.reportId, action: 'reject_all', rejectComment: comment,
+        })
+        setMessage(data.message)
+        setReports(prev => prev.map(r => r.id === rejectModal.reportId && data.report ? { ...r, approvals: data.report.approvals } : r))
+      } else {
+        const data = await apiPut<any>('/api/admin/approvals', {
+          reportIds: rejectModal.reportIds, action: 'bulk_reject', rejectComment: comment,
+        })
+        setMessage(data.message)
+        setSelectedReportIds(new Set())
+        fetchReports()
+      }
+      setRejectModal(null)
+      setRejectComment('')
+    } catch (err: any) {
+      setError(err.message || '差戻しに失敗しました')
+    } finally {
+      setProcessing(null)
+    }
+  }
+
   // 一括差戻し（選択した複数日報）
   const handleBulkReject = async () => {
     if (selectedReportIds.size === 0) {
       alert('差戻しする日報を選択してください')
       return
     }
-    if (!confirm(`選択した${selectedReportIds.size}件の日報を差戻ししますか？`)) return
-
-    setProcessing('bulk')
-    setMessage('')
-    setError('')
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', {
-        reportIds: Array.from(selectedReportIds),
-        action: 'bulk_reject'
-      })
-      setMessage(data.message)
-      setSelectedReportIds(new Set())
-      fetchReports()
-    } catch (err: any) {
-      setError(err.message || '差戻しに失敗しました')
-    } finally {
-      setProcessing(null)
-    }
+    setRejectComment('')
+    setRejectModal({ kind: 'bulk', reportIds: Array.from(selectedReportIds) })
   }
 
   // 一括承認（単一日報）
@@ -272,24 +308,8 @@ export default function ApprovalsPage() {
 
   // 一括差戻し（単一日報）
   const handleRejectAll = async (reportId: string) => {
-    if (!confirm('この日報を差戻ししますか？')) return
-    setProcessing(reportId)
-    setMessage('')
-    setError('')
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', { reportId, action: 'reject_all' })
-      setMessage(data.message)
-      setReports(prev => prev.map(r => {
-        if (r.id === reportId && data.report) {
-          return { ...r, approvals: data.report.approvals }
-        }
-        return r
-      }))
-    } catch (err: any) {
-      setError(err.message || '差戻しに失敗しました')
-    } finally {
-      setProcessing(null)
-    }
+    setRejectComment('')
+    setRejectModal({ kind: 'all', reportId })
   }
 
   // 個別承認
@@ -320,28 +340,8 @@ export default function ApprovalsPage() {
 
   // 個別差戻し
   const handleReject = async (approvalId: string, reportId: string) => {
-    setProcessing(approvalId)
-    setMessage('')
-    setError('')
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', { approvalId, action: 'reject' })
-      setMessage(data.message)
-      setReports(prev => prev.map(r => {
-        if (r.id === reportId) {
-          return {
-            ...r,
-            approvals: r.approvals.map(a =>
-              a.id === approvalId ? data.approval : a
-            ),
-          }
-        }
-        return r
-      }))
-    } catch (err: any) {
-      setError(err.message || '差戻しに失敗しました')
-    } finally {
-      setProcessing(null)
-    }
+    setRejectComment('')
+    setRejectModal({ kind: 'individual', approvalId, reportId })
   }
 
 
@@ -1258,12 +1258,13 @@ export default function ApprovalsPage() {
                             return items.map(approval => (
                               <div
                                 key={approval.id}
-                                className={`flex items-center justify-between rounded-lg p-3 ${
+                                className={`rounded-lg p-3 ${
                                   approval.status === 'approved' ? 'bg-emerald-50 border border-emerald-200' :
                                   approval.status === 'rejected' ? 'bg-red-50 border border-red-200' :
                                   'bg-gray-50 border border-gray-200'
                                 }`}
                               >
+                                <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(approval.status)}`}>
                                     {getStatusIcon(approval.status)}
@@ -1303,6 +1304,12 @@ export default function ApprovalsPage() {
                                     </button>
                                   </div>
                                 )}
+                                </div>
+                                {approval.status === 'rejected' && (approval as any).rejectComment && (
+                                  <div className="mt-2 pt-2 border-t border-red-200 text-xs text-red-800 bg-white/50 rounded p-2 whitespace-pre-wrap">
+                                    <span className="font-bold">差戻しコメント：</span>{(approval as any).rejectComment}
+                                  </div>
+                                )}
                               </div>
                             ))
                           })}
@@ -1329,6 +1336,49 @@ export default function ApprovalsPage() {
           </div>
         )}
       </main>
+
+      {/* 差戻しコメント入力モーダル */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRejectModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Undo2 className="w-5 h-5 text-red-600" />
+                {rejectModal.kind === 'individual' ? '差戻し（個別）' : rejectModal.kind === 'all' ? '差戻し（この日報の全段階）' : `差戻し（${rejectModal.reportIds.length}件まとめて）`}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">差戻しの理由を入力してください（提出者へ通知されます）</p>
+            </div>
+            <div className="px-6 py-4">
+              <textarea
+                value={rejectComment}
+                onChange={(e) => setRejectComment(e.target.value)}
+                placeholder="例：訪問記録の記載が不足しています。詳細を追記してください。"
+                maxLength={500}
+                rows={5}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none resize-none"
+                autoFocus
+              />
+              <p className="text-xs text-gray-400 mt-1 text-right">{rejectComment.length}/500</p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+              <button
+                onClick={() => { setRejectModal(null); setRejectComment('') }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={submitReject}
+                disabled={!rejectComment.trim() || processing !== null}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg inline-flex items-center gap-1.5"
+              >
+                <Undo2 className="w-4 h-4" />
+                差戻し
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

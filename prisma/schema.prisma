@@ -103,6 +103,7 @@ model Approval {
   approver        User?    @relation(fields: [approverUserId], references: [id])
   approvedAt      DateTime?
   status          String   @default("pending") // pending, approved, rejected
+  rejectComment   String?  // 差し戻しコメント
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -178,6 +179,7 @@ model WorkReportApproval {
   approver        User?    @relation("WorkReportApprovals", fields: [approverUserId], references: [id])
   approvedAt      DateTime?
   status          String   @default("pending") // pending, approved, rejected
+  rejectComment   String?  // 差し戻しコメント
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

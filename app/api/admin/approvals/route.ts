@@ -406,7 +406,8 @@ export async function PUT(request: NextRequest) {
     const admin = authResult.user
 
     const body = await request.json()
-    const { approvalId, action, reportId, reportIds } = body
+    const { approvalId, action, reportId, reportIds, rejectComment } = body
+    const cleanComment = typeof rejectComment === 'string' ? rejectComment.trim().slice(0, 500) : null
 
     // 複数日報の一括承認/差戻し（トランザクションで最適化）
     if (action === 'bulk_approve' || action === 'bulk_reject') {
@@ -445,6 +446,7 @@ export async function PUT(request: NextRequest) {
       // 承認者枠は本人の枠のみ、それ以外は役職一致で更新
       const nonAuthorizerRoles = allowedRoles.filter(r => r !== '承認者')
       const includesAuthorizer = allowedRoles.includes('承認者')
+      const commentForReject = newStatus === 'rejected' ? cleanComment : null
 
       await prisma.$transaction(async (tx) => {
         if (nonAuthorizerRoles.length > 0) {
@@ -454,6 +456,7 @@ export async function PUT(request: NextRequest) {
               status: newStatus,
               approverUserId: admin.id,
               approvedAt: newStatus === 'approved' ? new Date() : null,
+              rejectComment: commentForReject,
             },
           })
         }
@@ -463,6 +466,7 @@ export async function PUT(request: NextRequest) {
             data: {
               status: newStatus,
               approvedAt: newStatus === 'approved' ? new Date() : null,
+              rejectComment: commentForReject,
             },
           })
         }
@@ -480,7 +484,7 @@ export async function PUT(request: NextRequest) {
         if (action === 'bulk_approve') {
           notifyReportApproved(report.userId, dateStr, report.id, admin.name).catch(() => {})
         } else {
-          notifyReportRejected(report.userId, dateStr, report.id, admin.name).catch(() => {})
+          notifyReportRejected(report.userId, dateStr, report.id, admin.name, cleanComment, 'sales').catch(() => {})
         }
       })
 
@@ -534,6 +538,8 @@ export async function PUT(request: NextRequest) {
       const nonAuthorizerRolesAll = allowedRolesForAll.filter(r => r !== '承認者')
       const includesAuthorizerAll = allowedRolesForAll.includes('承認者')
 
+      const commentForRejectAll = newStatus === 'rejected' ? cleanComment : null
+
       if (nonAuthorizerRolesAll.length > 0) {
         await prisma.approval.updateMany({
           where: { dailyReportId: reportId, approverRole: { in: nonAuthorizerRolesAll } },
@@ -541,6 +547,7 @@ export async function PUT(request: NextRequest) {
             status: newStatus,
             approverUserId: admin.id,
             approvedAt: newStatus === 'approved' ? new Date() : null,
+            rejectComment: commentForRejectAll,
           },
         })
       }
@@ -550,6 +557,7 @@ export async function PUT(request: NextRequest) {
           data: {
             status: newStatus,
             approvedAt: newStatus === 'approved' ? new Date() : null,
+            rejectComment: commentForRejectAll,
           },
         })
       }
@@ -577,7 +585,7 @@ export async function PUT(request: NextRequest) {
         if (action === 'approve_all') {
           notifyReportApproved(updatedReport.user.id, dateStr, reportId, admin.name).catch(() => {})
         } else {
-          notifyReportRejected(updatedReport.user.id, dateStr, reportId, admin.name).catch(() => {})
+          notifyReportRejected(updatedReport.user.id, dateStr, reportId, admin.name, cleanComment, 'sales').catch(() => {})
         }
       }
 
@@ -656,6 +664,8 @@ export async function PUT(request: NextRequest) {
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected'
 
+    const commentForRejectIndiv = newStatus === 'rejected' ? cleanComment : null
+
     const updatedApproval = isWorkReport
       ? await prisma.workReportApproval.update({
           where: { id: approvalId },
@@ -663,6 +673,7 @@ export async function PUT(request: NextRequest) {
             status: newStatus,
             approverUserId: admin.id,
             approvedAt: newStatus === 'approved' ? new Date() : null,
+            rejectComment: commentForRejectIndiv,
           },
           include: { approver: { select: { id: true, name: true, position: true } } },
         })
@@ -672,6 +683,7 @@ export async function PUT(request: NextRequest) {
             status: newStatus,
             approverUserId: admin.id,
             approvedAt: newStatus === 'approved' ? new Date() : null,
+            rejectComment: commentForRejectIndiv,
           },
           include: { approver: { select: { id: true, name: true, position: true } } },
         })
@@ -683,7 +695,7 @@ export async function PUT(request: NextRequest) {
       if (action === 'approve') {
         notifyReportApproved(targetUserId, dateStr, reportIdForNotify, admin.name).catch(() => {})
       } else {
-        notifyReportRejected(targetUserId, dateStr, reportIdForNotify, admin.name).catch(() => {})
+        notifyReportRejected(targetUserId, dateStr, reportIdForNotify, admin.name, cleanComment, isWorkReport ? 'work' : 'sales').catch(() => {})
       }
     }
 

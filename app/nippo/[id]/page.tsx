@@ -614,25 +614,32 @@ export default function EditNippoPage() {
                     return (
                       <div
                         key={approval.id}
-                        className={`flex items-center justify-between p-4 rounded-lg border ${statusStyle}`}
+                        className={`p-4 rounded-lg border ${statusStyle}`}
                       >
-                        <div className="flex items-center space-x-3">
-                          {statusIcon}
-                          <div>
-                            <div className="font-bold">{role}</div>
-                            {approval.approver && (
-                              <div className="text-xs opacity-75">
-                                {approval.approver.name}
-                                {approval.approvedAt && (
-                                  <span className="ml-2">
-                                    ({new Date(approval.approvedAt).toLocaleDateString('ja-JP')})
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            {statusIcon}
+                            <div>
+                              <div className="font-bold">{role}</div>
+                              {approval.approver && (
+                                <div className="text-xs opacity-75">
+                                  {approval.approver.name}
+                                  {approval.approvedAt && (
+                                    <span className="ml-2">
+                                      ({new Date(approval.approvedAt).toLocaleDateString('ja-JP')})
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          <span className="text-sm font-medium">{statusLabel}</span>
                         </div>
-                        <span className="text-sm font-medium">{statusLabel}</span>
+                        {approval.status === 'rejected' && (approval as any).rejectComment && (
+                          <div className="mt-2 pt-2 border-t border-red-200 text-xs bg-white/60 rounded p-2 whitespace-pre-wrap text-red-900">
+                            <span className="font-bold">差戻しコメント：</span>{(approval as any).rejectComment}
+                          </div>
+                        )}
                       </div>
                     )
                   })
