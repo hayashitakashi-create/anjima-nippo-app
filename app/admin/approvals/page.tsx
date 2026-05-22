@@ -1237,10 +1237,21 @@ export default function ApprovalsPage() {
                         )}
 
                         {/* 承認状況 */}
-                        <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                          <Shield className="w-4 h-4" />
-                          承認状況
-                        </h4>
+                        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                          <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Shield className="w-4 h-4" />
+                            承認状況
+                          </h4>
+                          <Link
+                            href={`${(report as any).reportType === 'work' ? '/work-report' : '/nippo'}/${report.id}?preview=1`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            日報詳細を表示
+                          </Link>
+                        </div>
                         <div className="flex flex-wrap items-center gap-2 mb-3">
                           {['承認者', '上長', '常務', '専務', '社長'].map((role) => {
                             const items = report.approvals.filter(a => a.approverRole === role)
@@ -1319,18 +1330,6 @@ export default function ApprovalsPage() {
                           })}
                         </div>
 
-                        {/* 日報詳細へのリンク */}
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <Link
-                            href={`${(report as any).reportType === 'work' ? '/work-report' : '/nippo'}/${report.id}?preview=1`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-medium"
-                          >
-                            <FileText className="w-4 h-4" />
-                            日報詳細を表示
-                          </Link>
-                        </div>
                       </div>
                     </div>
                   )}
