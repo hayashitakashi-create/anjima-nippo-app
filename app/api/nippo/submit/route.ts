@@ -55,9 +55,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 「承認者」枠は isAuthorizer=true のユーザー数分作成（各人ごとに1枠）
+    // 「承認者」枠は isAuthorizer=true のユーザー数分作成（社長/専務/常務 以外）
     const authorizers = await prisma.user.findMany({
-      where: { isAuthorizer: true, isActive: true },
+      where: {
+        isAuthorizer: true,
+        isActive: true,
+        NOT: { position: { in: ['社長', '専務', '常務'] } },
+      },
       select: { id: true },
     })
 

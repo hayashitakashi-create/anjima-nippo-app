@@ -350,8 +350,13 @@ export async function POST(request: NextRequest) {
     })
 
     // 承認レコード作成（営業日報と同仕様: 承認者×isAuthorizer + 上長/常務/専務/社長）
+    // 「承認者」枠は社長/専務/常務 以外の isAuthorizer ユーザーのみ
     const authorizers = await prisma.user.findMany({
-      where: { isAuthorizer: true, isActive: true },
+      where: {
+        isAuthorizer: true,
+        isActive: true,
+        NOT: { position: { in: ['社長', '専務', '常務'] } },
+      },
       select: { id: true },
     })
     const approvalRecords: { workReportId: string; approverRole: string; status: string; approverUserId?: string }[] = []

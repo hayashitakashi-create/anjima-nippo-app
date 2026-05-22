@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { normalizeName } from '@/lib/name-normalize'
 
 // 管理者（admin）のユーザーIDを取得
 async function getAdminUserIds(): Promise<string[]> {
@@ -191,39 +192,42 @@ export async function getUnsubmittedUsers(): Promise<{
       },
     })
 
-    // ユーザー名からIDへのマッピングを作成
+    // ユーザー名からIDへのマッピング（完全一致 + 正規化版）
     const nameToUserIds: Record<string, string[]> = {}
+    const normalizedNameToUserIds: Record<string, string[]> = {}
     allUsers.forEach(u => {
-      if (!nameToUserIds[u.name]) {
-        nameToUserIds[u.name] = []
-      }
+      if (!nameToUserIds[u.name]) nameToUserIds[u.name] = []
       nameToUserIds[u.name].push(u.id)
+      const normalized = normalizeName(u.name)
+      if (!normalizedNameToUserIds[normalized]) normalizedNameToUserIds[normalized] = []
+      normalizedNameToUserIds[normalized].push(u.id)
     })
 
-    // 作業日報提出済みユーザーID（作成者 + workerRecordsに含まれるユーザー）
+    // 作業日報提出済みユーザーID（作成者 + workerRecordsに含まれるユーザー、正規化照合）
     const workSubmittedIds = new Set<string>()
     todayWorkReports.forEach(r => {
-      // 作成者自身
       workSubmittedIds.add(r.userId)
-      // workerRecordsに名前が含まれるユーザー
       r.workerRecords.forEach(worker => {
-        const matchedUserIds = nameToUserIds[worker.name]
-        if (matchedUserIds) {
-          matchedUserIds.forEach(uid => workSubmittedIds.add(uid))
-        }
+        let matched = nameToUserIds[worker.name]
+        if (!matched) matched = normalizedNameToUserIds[normalizeName(worker.name)]
+        if (matched) matched.forEach(uid => workSubmittedIds.add(uid))
       })
     })
+
+    // 「両方」ユーザーは営業or作業のどちらか提出していれば未提出リストから外す
+    const isUnsubmitted = (u: { id: string; defaultReportType: string }) => {
+      if (u.defaultReportType === 'sales') return !salesSubmittedIds.has(u.id)
+      if (u.defaultReportType === 'work') return !workSubmittedIds.has(u.id)
+      // both: 両方とも未提出のときのみ未提出扱い
+      return !salesSubmittedIds.has(u.id) && !workSubmittedIds.has(u.id)
+    }
 
     const salesUsers = allUsers.filter(u => u.defaultReportType === 'sales' || u.defaultReportType === 'both')
     const workUsers = allUsers.filter(u => u.defaultReportType === 'work' || u.defaultReportType === 'both')
 
     return {
-      salesUnsubmitted: salesUsers
-        .filter(u => !salesSubmittedIds.has(u.id))
-        .map(u => ({ id: u.id, name: u.name })),
-      workUnsubmitted: workUsers
-        .filter(u => !workSubmittedIds.has(u.id))
-        .map(u => ({ id: u.id, name: u.name })),
+      salesUnsubmitted: salesUsers.filter(isUnsubmitted).map(u => ({ id: u.id, name: u.name })),
+      workUnsubmitted: workUsers.filter(isUnsubmitted).map(u => ({ id: u.id, name: u.name })),
     }
   } catch (error) {
     console.error('未提出者取得エラー:', error)

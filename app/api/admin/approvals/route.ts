@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { notifyReportApproved, notifyReportRejected } from '@/lib/notifications'
 import { requirePermission, authErrorResponse } from '@/lib/auth'
 import { logAuditEvent } from '@/lib/audit-log'
+import { normalizeName } from '@/lib/name-normalize'
 
 // 承認者の役職/フラグ → 承認可能なapproverRoleの対応
 function getApprovalRolesForUser(user: { position?: string | null; isAuthorizer?: boolean | null }): string[] {
@@ -22,7 +23,8 @@ function getApprovalRolesForUser(user: { position?: string | null; isAuthorizer?
       roles.push('社長')
       break
   }
-  if (user.isAuthorizer) {
+  // 「承認者」枠は社長/専務/常務 以外の isAuthorizer ユーザーのみ
+  if (user.isAuthorizer && user.position !== '社長' && user.position !== '専務' && user.position !== '常務') {
     roles.push('承認者')
   }
   return roles
@@ -219,18 +221,16 @@ export async function GET(request: NextRequest) {
       ])
 
       // ユーザー名からIDへのマッピングを作成（workerRecord.nameでの照合用）
-      // スペース除去版でもマッピングを作成して柔軟に照合
+      // 正規化版（スペース除去・中黒統一・異体字吸収）でもマッピング
       const nameToUserIds: Record<string, string[]> = {}
       const normalizedNameToUserIds: Record<string, string[]> = {}
       activeUsers.forEach(u => {
-        // 元の名前でマッピング
         if (!nameToUserIds[u.name]) {
           nameToUserIds[u.name] = []
         }
         nameToUserIds[u.name].push(u.id)
 
-        // 正規化（全角・半角スペース除去）版でもマッピング
-        const normalized = u.name.replace(/[\s　]+/g, '')
+        const normalized = normalizeName(u.name)
         if (!normalizedNameToUserIds[normalized]) {
           normalizedNameToUserIds[normalized] = []
         }
@@ -279,13 +279,10 @@ export async function GET(request: NextRequest) {
         }
         // workerRecordsに含まれる名前と一致するユーザーも提出済みにする
         r.workerRecords.forEach(worker => {
-          // まず完全一致を試す
+          // 完全一致 → 正規化（スペース除去・中黒統一・異体字吸収）
           let matchedUserIds = nameToUserIds[worker.name]
-
-          // 完全一致しない場合は、スペースを除去して照合
           if (!matchedUserIds) {
-            const normalizedWorkerName = worker.name.replace(/[\s　]+/g, '')
-            matchedUserIds = normalizedNameToUserIds[normalizedWorkerName]
+            matchedUserIds = normalizedNameToUserIds[normalizeName(worker.name)]
           }
 
           if (matchedUserIds) {
