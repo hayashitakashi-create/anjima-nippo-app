@@ -58,6 +58,12 @@ export async function GET(
         subcontractorRecords: {
           orderBy: { order: 'asc' },
         },
+        approvals: {
+          include: {
+            approver: { select: { id: true, name: true, position: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     })
 
