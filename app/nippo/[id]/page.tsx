@@ -7,6 +7,7 @@ import { VisitRecordInput } from '@/lib/types'
 import { Home, Settings, LogOut, Building2, Shield, CheckCircle, XCircle, Clock, Trash2, Printer } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { apiPut, apiDelete } from '@/lib/api'
+import { canActOnApproval } from '@/lib/approval-permissions'
 
 // CSSアニメーション定義用のスタイル
 const styles = `
@@ -53,7 +54,47 @@ export default function EditNippoPage() {
     approverUserId?: string
     approvedAt?: string
     approver?: { name: string; position?: string }
+    rejectComment?: string
   }>>([])
+
+  // 承認/差戻し操作
+  const [approvalProcessing, setApprovalProcessing] = useState<string | null>(null)
+  const [rejectModalApprovalId, setRejectModalApprovalId] = useState<string | null>(null)
+  const [rejectComment, setRejectComment] = useState('')
+
+  const handleApprove = async (approvalId: string) => {
+    setApprovalProcessing(approvalId)
+    try {
+      const data = await apiPut<any>('/api/admin/approvals', { approvalId, action: 'approve' })
+      setApprovals(prev => prev.map(a => a.id === approvalId ? data.approval : a))
+    } catch (err: any) {
+      alert(err.message || '承認に失敗しました')
+    } finally {
+      setApprovalProcessing(null)
+    }
+  }
+
+  const submitReject = async () => {
+    if (!rejectModalApprovalId) return
+    const comment = rejectComment.trim()
+    if (!comment) {
+      alert('差戻しの理由（コメント）を入力してください')
+      return
+    }
+    setApprovalProcessing(rejectModalApprovalId)
+    try {
+      const data = await apiPut<any>('/api/admin/approvals', {
+        approvalId: rejectModalApprovalId, action: 'reject', rejectComment: comment,
+      })
+      setApprovals(prev => prev.map(a => a.id === rejectModalApprovalId ? data.approval : a))
+      setRejectModalApprovalId(null)
+      setRejectComment('')
+    } catch (err: any) {
+      alert(err.message || '差戻しに失敗しました')
+    } finally {
+      setApprovalProcessing(null)
+    }
+  }
 
   const [formData, setFormData] = useState({
     date: '',
@@ -622,6 +663,7 @@ export default function EditNippoPage() {
                         statusLabel = '承認待ち'
                         statusStyle = 'bg-yellow-50 border-yellow-200 text-yellow-800'
                     }
+                    const canAct = canActOnApproval(approval, currentUser)
                     return (
                       <div
                         key={approval.id}
@@ -651,10 +693,64 @@ export default function EditNippoPage() {
                             <span className="font-bold">差戻しコメント：</span>{(approval as any).rejectComment}
                           </div>
                         )}
+                        {canAct && (
+                          <div className="mt-3 pt-2 border-t border-gray-200 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(approval.id)}
+                              disabled={approvalProcessing === approval.id}
+                              className="flex-1 px-3 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {approvalProcessing === approval.id ? '処理中...' : '承認'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setRejectComment(''); setRejectModalApprovalId(approval.id) }}
+                              disabled={approvalProcessing === approval.id}
+                              className="flex-1 px-3 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                              差戻し
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )
                   })
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* 差戻しコメント入力モーダル */}
+          {rejectModalApprovalId && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">差戻しコメント</h3>
+                <p className="text-sm text-gray-600 mb-3">差戻しの理由を入力してください。提出者に通知されます。</p>
+                <textarea
+                  value={rejectComment}
+                  onChange={(e) => setRejectComment(e.target.value)}
+                  rows={5}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                  placeholder="例：訪問内容の記載が不足しています。"
+                />
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setRejectModalApprovalId(null); setRejectComment('') }}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitReject}
+                    disabled={approvalProcessing === rejectModalApprovalId}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-bold"
+                  >
+                    {approvalProcessing === rejectModalApprovalId ? '送信中...' : '差戻しする'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
