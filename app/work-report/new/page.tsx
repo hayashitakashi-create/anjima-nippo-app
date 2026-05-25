@@ -207,7 +207,7 @@ function WorkReportNewPageContent() {
       id: (i + 1).toString(),
       name: r.name || '',
       volume: r.volume || '',
-      volumeUnit: r.volumeUnit || 'ℓ',
+      volumeUnit: r.volumeUnit || '',
       quantity: r.quantity || 0,
       unitPrice: r.unitPrice || 0,
       subcontractor: r.subcontractor || '',

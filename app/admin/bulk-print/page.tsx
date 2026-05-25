@@ -672,7 +672,7 @@ function WorkReportPrint({ report, formatDate }: { report: Report; formatDate: (
                   <tr key={i}>
                     <td className="text-center">{i + 1}</td>
                     <td>{record?.name || ''}</td>
-                    <td className="text-center">{record?.volume || ''}{record?.volumeUnit || ''}</td>
+                    <td className="text-center">{record?.volume || ''}</td>
                     <td className="text-right">{record?.quantity || ''}</td>
                     <td className="text-right">{record?.unitPrice ? `¥${record.unitPrice.toLocaleString()}` : ''}</td>
                     <td className="text-right">{amt > 0 ? `¥${amt.toLocaleString()}` : ''}</td>

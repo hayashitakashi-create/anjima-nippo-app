@@ -275,7 +275,7 @@ export default function WorkReportPrintPage() {
                           <td className="text-center">{index + 1}</td>
                           <td>{record?.name || ''}</td>
                           <td className="text-center">
-                            {record?.volume || ''}{record?.volumeUnit || ''}
+                            {record?.volume || ''}
                           </td>
                           <td className="text-right">{record?.quantity || ''}</td>
                           <td className="text-right">

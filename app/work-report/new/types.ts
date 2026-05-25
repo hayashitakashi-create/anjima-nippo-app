@@ -110,7 +110,7 @@ export const INITIAL_MATERIAL_RECORD: MaterialRecord = {
   id: '1',
   name: '',
   volume: '',
-  volumeUnit: 'ℓ',
+  volumeUnit: '',
   quantity: 0,
   unitPrice: 0,
   subcontractor: ''

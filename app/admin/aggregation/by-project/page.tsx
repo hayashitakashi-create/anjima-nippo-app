@@ -280,7 +280,7 @@ export default function ByProjectAggregationPage() {
       csvContent += '\n[材料]\n'
       csvContent += '使用材料・消耗品,容量,単価,数量,金額\n'
       project.materials.forEach(item => {
-        const vol = item.volume ? `${item.volume}${item.volumeUnit}` : ''
+        const vol = item.volume || ''
         csvContent += `"${item.name}","${vol}",${item.unitPrice},${item.totalQuantity},${item.totalAmount}\n`
       })
       csvContent += `"小計",,,,${project.totals.materialAmount}\n`
@@ -849,7 +849,7 @@ export default function ByProjectAggregationPage() {
                                         <tr key={`${item.name}-${item.volume}-${item.unitPrice}-${i}`} className="hover:bg-gray-50 transition-colors">
                                           <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
                                           <td className="px-6 py-3 text-sm text-center text-gray-600">
-                                            {item.volume ? `${item.volume}${item.volumeUnit}` : '-'}
+                                            {item.volume || '-'}
                                           </td>
                                           <td className="px-6 py-3 text-sm text-right font-mono text-gray-600">
                                             {item.unitPrice ? formatCurrency(item.unitPrice) : '-'}
@@ -885,7 +885,7 @@ export default function ByProjectAggregationPage() {
                                       <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div>
                                           <span className="text-gray-500">容量: </span>
-                                          <span className="text-gray-700">{item.volume ? `${item.volume}${item.volumeUnit}` : '-'}</span>
+                                          <span className="text-gray-700">{item.volume || '-'}</span>
                                         </div>
                                         <div className="text-right">
                                           <span className="text-gray-500">単価: </span>

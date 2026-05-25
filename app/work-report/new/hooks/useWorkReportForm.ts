@@ -162,7 +162,7 @@ export function useWorkReportForm() {
             id: (i + 1).toString(),
             name: m.name || '',
             volume: m.volume || '',
-            volumeUnit: m.volumeUnit || 'ℓ',
+            volumeUnit: m.volumeUnit || '',
             quantity: m.quantity || 0,
             unitPrice: m.unitPrice || 0,
             subcontractor: m.subcontractor || '',
