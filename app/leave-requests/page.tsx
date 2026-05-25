@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Send,
   Paperclip,
-  FileText,
   Download,
   Clock,
   XCircle,
@@ -109,7 +108,6 @@ export default function LeaveRequestsPage() {
   const [formSpecialAdoptionDate, setFormSpecialAdoptionDate] = useState('')
   const [formCareReason, setFormCareReason] = useState('')
   const [formReason, setFormReason] = useState('')
-  const [formAttachment, setFormAttachment] = useState<{ data: string; name: string; type: string } | null>(null)
 
   const isCareLeaveType = formLeaveType === '看護' || formLeaveType === '介護'
 
@@ -209,9 +207,6 @@ export default function LeaveRequestsPage() {
         specialAdoptionDate: isCareLeaveType ? (formSpecialAdoptionDate || undefined) : undefined,
         careReason: isCareLeaveType ? (formCareReason || undefined) : undefined,
         reason: !isCareLeaveType ? (formReason || undefined) : undefined,
-        attachmentData: formAttachment?.data,
-        attachmentName: formAttachment?.name,
-        attachmentType: formAttachment?.type,
       })
 
       setMessage('休暇届を申請しました（承認待ち）')
@@ -228,7 +223,6 @@ export default function LeaveRequestsPage() {
       setFormSpecialAdoptionDate('')
       setFormCareReason('')
       setFormReason('')
-      setFormAttachment(null)
       const submittedDate = new Date(formDate)
       if (formatYearMonth(submittedDate) === currentMonth) {
         fetchLeaveRequests()
@@ -625,50 +619,6 @@ export default function LeaveRequestsPage() {
                 />
               </div>
             )}
-
-            {/* Attachment */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                添付ファイル <span className="text-gray-400 text-xs">(任意 / 看護・介護休暇申出書など)</span>
-              </label>
-              {formAttachment ? (
-                <div className="flex items-center gap-3 px-3 py-2.5 border border-slate-300 rounded-lg bg-blue-50">
-                  <FileText className="w-5 h-5 text-[#0E3091] flex-shrink-0" />
-                  <span className="text-sm text-gray-900 truncate flex-1">{formAttachment.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFormAttachment(null)}
-                    className="p-1 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex items-center gap-2 px-3 py-2.5 border border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <Paperclip className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-500">ファイルを選択（PDF・画像 / 5MB以下）</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      if (file.size > 5 * 1024 * 1024) {
-                        setError('ファイルサイズは5MB以下にしてください')
-                        return
-                      }
-                      const reader = new FileReader()
-                      reader.onload = () => {
-                        const base64 = (reader.result as string).split(',')[1]
-                        setFormAttachment({ data: base64, name: file.name, type: file.type })
-                      }
-                      reader.readAsDataURL(file)
-                    }}
-                  />
-                </label>
-              )}
-            </div>
 
             <div className="flex justify-end gap-2">
               <button
