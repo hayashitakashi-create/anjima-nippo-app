@@ -614,6 +614,7 @@ export default function EditNippoPage() {
             />
             <div className="text-xs text-gray-500 mt-1 text-right">{(formData.specialNotes || '').length} / 500文字</div>
           </div>
+          </fieldset>
 
           {/* 承認状況 */}
           {approvals.length > 0 && (
@@ -756,7 +757,6 @@ export default function EditNippoPage() {
           )}
 
           {/* フッター */}
-          </fieldset>
           <div className="bg-white shadow rounded-lg p-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-3">
