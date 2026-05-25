@@ -8,6 +8,7 @@ import {
   calculatePeriod,
   type LaborEntry,
 } from '@/lib/aggregation-utils'
+import { normalizeName } from '@/lib/name-normalize'
 
 // 月次集計API（21日～翌月20日）
 export async function GET(request: NextRequest) {
@@ -39,6 +40,15 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'asc' },
     })
 
+    // 表示名の正規化用: User マスタの「正規表記」を normalize キーで引けるようにする
+    const canonicalNameByKey = new Map<string, string>()
+    const allUsers = await prisma.user.findMany({ select: { name: true } })
+    for (const u of allUsers) {
+      if (!u.name) continue
+      const k = normalizeName(u.name)
+      if (k && !canonicalNameByKey.has(k)) canonicalNameByKey.set(k, u.name)
+    }
+
     // ① 労働時間集計: 作業員名でグループ化、曜日・時間帯別
     const laborMap = new Map<string, LaborEntry>()
 
@@ -57,11 +67,14 @@ export async function GET(request: NextRequest) {
 
       report.workerRecords.forEach(worker => {
         if (!worker.name || worker.name.trim() === '') return
-        const key = worker.name.trim()
+        const rawName = worker.name.trim()
+        const normKey = normalizeName(rawName)
+        const key = normKey || rawName
+        const displayName = canonicalNameByKey.get(normKey) || rawName
 
         if (!laborMap.has(key)) {
           laborMap.set(key, {
-            name: key,
+            name: displayName,
             weekdayNormal: 0, weekdayOvertime: 0, weekdayLateNight: 0, weekdaySubtotal: 0,
             sundayNormal: 0, sundayOvertime: 0, sundayLateNight: 0, sundaySubtotal: 0,
             total: 0, travelMinutes: 0,
@@ -223,13 +236,16 @@ export async function GET(request: NextRequest) {
 
     const leaveMap = new Map<string, Record<string, number> & { name: string; total: number }>()
     for (const lr of leaveRequests) {
-      const name = (lr.applicantName && lr.applicantName.trim()) || userNameMap.get(lr.userId) || '(不明)'
-      if (!leaveMap.has(name)) {
-        const init: any = { name, total: 0 }
+      const rawName = (lr.applicantName && lr.applicantName.trim()) || userNameMap.get(lr.userId) || '(不明)'
+      const normKey = normalizeName(rawName)
+      const key = normKey || rawName
+      const displayName = canonicalNameByKey.get(normKey) || rawName
+      if (!leaveMap.has(key)) {
+        const init: any = { name: displayName, total: 0 }
         LEAVE_TYPES.forEach(t => { init[t] = 0 })
-        leaveMap.set(name, init)
+        leaveMap.set(key, init)
       }
-      const entry = leaveMap.get(name)!
+      const entry = leaveMap.get(key)!
       const type = LEAVE_TYPES.includes(lr.leaveType) ? lr.leaveType : 'その他'
       let days = 1
       if (lr.leaveUnit === 'am' || lr.leaveUnit === 'pm') days = 0.5

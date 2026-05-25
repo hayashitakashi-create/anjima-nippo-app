@@ -8,6 +8,7 @@ import {
   calculatePeriod,
   type LaborEntry,
 } from '@/lib/aggregation-utils'
+import { normalizeName } from '@/lib/name-normalize'
 
 // 現場別月次集計API（21日～翌月20日）
 export async function GET(request: NextRequest) {
@@ -38,6 +39,15 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { date: 'asc' },
     })
+
+    // 表示名の正規化用: User マスタの「正規表記」を normalize キーで引けるようにする
+    const canonicalNameByKey = new Map<string, string>()
+    const allUsers = await prisma.user.findMany({ select: { name: true } })
+    for (const u of allUsers) {
+      if (!u.name) continue
+      const k = normalizeName(u.name)
+      if (k && !canonicalNameByKey.has(k)) canonicalNameByKey.set(k, u.name)
+    }
 
     // projectRefId（fallback: projectName）でグルーピング
     const projectGroups = new Map<string, {
@@ -80,11 +90,14 @@ export async function GET(request: NextRequest) {
 
         report.workerRecords.forEach(worker => {
           if (!worker.name || worker.name.trim() === '') return
-          const workerName = worker.name.trim()
+          const rawName = worker.name.trim()
+          const normKey = normalizeName(rawName)
+          const workerName = normKey || rawName
+          const displayName = canonicalNameByKey.get(normKey) || rawName
 
           if (!laborMap.has(workerName)) {
             laborMap.set(workerName, {
-              name: workerName,
+              name: displayName,
               weekdayNormal: 0, weekdayOvertime: 0, weekdayLateNight: 0, weekdaySubtotal: 0,
               sundayNormal: 0, sundayOvertime: 0, sundayLateNight: 0, sundaySubtotal: 0,
               total: 0, travelMinutes: 0,
