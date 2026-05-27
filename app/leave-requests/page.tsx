@@ -29,7 +29,10 @@ import { useAuth } from '@/hooks/useAuth'
 interface LeaveRequest {
   id: string
   userId: string
+  enteredById?: string | null
   applicantName: string | null
+  userName?: string | null
+  enteredByName?: string | null
   date: string
   leaveType: string
   leaveUnit: string
@@ -795,9 +798,14 @@ export default function LeaveRequestsPage() {
                             <p className="font-medium text-gray-900">
                               {formatDisplayDate(request.date)}
                             </p>
-                            {request.applicantName && (
+                            {(request.userName || request.applicantName) && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                                {request.applicantName}
+                                {request.userName || request.applicantName}
+                              </span>
+                            )}
+                            {request.enteredByName && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                代理入力: {request.enteredByName}
                               </span>
                             )}
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
