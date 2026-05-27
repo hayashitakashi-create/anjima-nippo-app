@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -13,26 +12,22 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
-  Filter,
   ArrowLeft,
   CheckCheck,
   Undo2,
   User,
   Calendar,
   Route,
-  Users,
   X,
   CheckSquare,
   Square,
   Shield,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { adminApi, apiGet, apiPut } from '@/lib/api'
+import { getMyAllowedRoles } from '@/lib/approval-permissions'
 import {
   Approval,
   DailyReport,
-  ManagedUser,
-  SubmissionStatus,
   LEAVE_TYPE_COLORS,
   LEAVE_TYPE_SHORT,
   getReportStatus,
@@ -41,6 +36,9 @@ import {
   formatDate,
 } from './types'
 import { useApprovalFilters } from './hooks/useApprovalFilters'
+import { useApprovalList } from './hooks/useApprovalList'
+import { useApprovalActions } from './hooks/useApprovalActions'
+import { useCalendarState } from './hooks/useCalendarState'
 import {
   StatusIcon,
   ApprovalsHeader,
@@ -57,20 +55,8 @@ export default function ApprovalsPage() {
   // 承認権限フラグ: 役職承認者 or 承認者枠のどちらかがON
   const canActAsApprover = !!(currentUser?.isApprover || currentUser?.isAuthorizer)
 
-  // ログインユーザーが操作できる approverRole を判定
-  const myAllowedRoles = (() => {
-    const roles: string[] = []
-    switch ((currentUser as any)?.position) {
-      case '部長': case '課長': roles.push('上長'); break
-      case '常務': roles.push('常務'); break
-      case '専務': roles.push('専務'); break
-      case '社長': roles.push('社長'); break
-    }
-    if (currentUser?.isAuthorizer && !['社長', '専務', '常務'].includes((currentUser as any)?.position || '')) {
-      roles.push('承認者')
-    }
-    return roles
-  })()
+  // ログインユーザーが操作できる approverRole を判定 (lib/approval-permissions 統合)
+  const myAllowedRoles = getMyAllowedRoles(currentUser as any)
 
   // 「自分が承認できる枠が全て承認済み」か判定
   const isMyApprovalDone = (report: any) => {
@@ -82,20 +68,6 @@ export default function ApprovalsPage() {
     if (myItems.length === 0) return false
     return myItems.every((a: any) => a.status === 'approved')
   }
-  const [reports, setReports] = useState<DailyReport[]>([])
-  const [users, setUsers] = useState<ManagedUser[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
-  const [expandedReport, setExpandedReport] = useState<string | null>(null)
-  const [processing, setProcessing] = useState<string | null>(null)
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-  const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus | null>(null)
-  const [showCalendar, setShowCalendar] = useState(false)
-  const [calendarOffset, setCalendarOffset] = useState(0) // 0: 今期, -1: 前期, -2: 前々期...
-  const [calendarNameFilter, setCalendarNameFilter] = useState('') // カレンダー氏名絞り込み
-  const [calendarDetail, setCalendarDetail] = useState<{ userName: string; dateKey: string; types?: { type: string; id: string }[]; leave?: { id: string; type: string; reason?: string; attachmentName?: string } } | null>(null)
-
   // 絞り込み条件
   const {
     selectedUserId, setSelectedUserId,
@@ -108,287 +80,49 @@ export default function ApprovalsPage() {
     hasActiveFilters,
   } = useApprovalFilters()
 
-  // チェックボックス
-  const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set())
+  // カレンダー
+  const {
+    showCalendar, setShowCalendar,
+    calendarOffset, setCalendarOffset,
+    calendarNameFilter, setCalendarNameFilter,
+    calendarDetail, setCalendarDetail,
+  } = useCalendarState()
 
-  // ユーザー一覧取得
-  useEffect(() => {
-    if (!currentUser) return
-    adminApi.fetchUsers()
-      .then(data => {
-        if (data.users) {
-          setUsers((data.users as any[]).filter((u: ManagedUser) => u.isActive !== false))
-        }
-      })
-      .catch(err => console.error('ユーザー一覧取得エラー:', err))
-  }, [currentUser])
+  // データ + fetch + 各種 useMemo
+  const {
+    reports, setReports,
+    users,
+    loading,
+    filter, setFilter,
+    expandedReport, setExpandedReport,
+    processing, setProcessing,
+    message, setMessage,
+    error, setError,
+    submissionStatus,
+    fetchReports,
+    filteredReports, pendingReports, stats, positionOptions,
+  } = useApprovalList(currentUser, calendarOffset, {
+    selectedUserId, selectedRole, selectedReportType, startDate, endDate,
+  })
 
-  // 日報一覧取得
-  useEffect(() => {
-    if (!currentUser) return
-    fetchReports()
-  }, [currentUser, filter])
-
-  // カレンダー期間変更時に再取得
-  useEffect(() => {
-    if (!currentUser) return
-    fetchCalendarData()
-  }, [currentUser, calendarOffset])
-
-  const fetchReports = async () => {
-    setLoading(true)
-    try {
-      const data = await apiGet<any>(`/api/admin/approvals?status=${filter}&includeSubmissionStatus=true&calendarOffset=${calendarOffset}`)
-      setReports(data.reports)
-      if (data.submissionStatus) {
-        setSubmissionStatus(data.submissionStatus)
-      }
-    } catch (err) {
-      console.error('承認一覧取得エラー:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchCalendarData = async () => {
-    try {
-      const data = await apiGet<any>(`/api/admin/approvals?status=all&includeSubmissionStatus=true&calendarOffset=${calendarOffset}`)
-      if (data.submissionStatus) {
-        setSubmissionStatus(data.submissionStatus)
-      }
-    } catch (err) {
-      console.error('カレンダーデータ取得エラー:', err)
-    }
-  }
-
-  // 絞り込み適用
-  const filteredReports = useMemo(() => {
-    let result = reports
-
-    // ユーザーIDで絞り込み
-    if (selectedUserId) {
-      result = result.filter(r => r.user.id === selectedUserId)
-    }
-
-    // 役職（権限）で絞り込み
-    if (selectedRole) {
-      result = result.filter(r => r.user.position === selectedRole)
-    }
-
-    // 期間で絞り込み
-    if (startDate) {
-      const start = new Date(startDate)
-      start.setHours(0, 0, 0, 0)
-      result = result.filter(r => new Date(r.date) >= start)
-    }
-    if (endDate) {
-      const end = new Date(endDate)
-      end.setHours(23, 59, 59, 999)
-      result = result.filter(r => new Date(r.date) <= end)
-    }
-
-    // 日報種別で絞り込み
-    if (selectedReportType) {
-      result = result.filter(r => ((r as any).reportType || 'sales') === selectedReportType)
-    }
-
-    return result
-  }, [reports, selectedUserId, selectedRole, startDate, endDate, selectedReportType])
-
-  // 承認待ちの日報のみを取得
-  const pendingReports = useMemo(() => {
-    return filteredReports.filter(r => {
-      const status = getReportStatus(r.approvals)
-      return status === 'pending' || status === 'partial'
-    })
-  }, [filteredReports])
-
-  // 全選択/全解除
-  const handleSelectAll = () => {
-    if (selectedReportIds.size === pendingReports.length) {
-      setSelectedReportIds(new Set())
-    } else {
-      setSelectedReportIds(new Set(pendingReports.map(r => r.id)))
-    }
-  }
-
-  // 個別選択
-  const handleToggleSelect = (reportId: string) => {
-    const newSet = new Set(selectedReportIds)
-    if (newSet.has(reportId)) {
-      newSet.delete(reportId)
-    } else {
-      newSet.add(reportId)
-    }
-    setSelectedReportIds(newSet)
-  }
-
-  // 一括承認（選択した複数日報）
-  const handleBulkApprove = async () => {
-    if (selectedReportIds.size === 0) {
-      alert('承認する日報を選択してください')
-      return
-    }
-    if (!confirm(`選択した${selectedReportIds.size}件の日報を承認しますか？`)) return
-
-    setProcessing('bulk')
-    setMessage('')
-    setError('')
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', {
-        reportIds: Array.from(selectedReportIds),
-        action: 'bulk_approve'
-      })
-      setMessage(data.message)
-      setSelectedReportIds(new Set())
-      fetchReports()
-    } catch (err: any) {
-      setError(err.message || '承認に失敗しました')
-    } finally {
-      setProcessing(null)
-    }
-  }
-
-  // 差戻しモーダル state
-  const [rejectModal, setRejectModal] = useState<
-    | null
-    | { kind: 'individual'; approvalId: string; reportId: string }
-    | { kind: 'all'; reportId: string }
-    | { kind: 'bulk'; reportIds: string[] }
-  >(null)
-  const [rejectComment, setRejectComment] = useState('')
-
-  // 差戻し送信
-  const submitReject = async () => {
-    if (!rejectModal) return
-    const comment = rejectComment.trim()
-    if (!comment) {
-      alert('差戻しの理由（コメント）を入力してください')
-      return
-    }
-    const processingKey = rejectModal.kind === 'individual' ? rejectModal.approvalId : rejectModal.kind === 'all' ? rejectModal.reportId : 'bulk'
-    setProcessing(processingKey)
-    setMessage('')
-    setError('')
-    try {
-      if (rejectModal.kind === 'individual') {
-        const data = await apiPut<any>('/api/admin/approvals', {
-          approvalId: rejectModal.approvalId, action: 'reject', rejectComment: comment,
-        })
-        setMessage(data.message)
-        const reportId = rejectModal.reportId
-        setReports(prev => prev.map(r => r.id === reportId ? { ...r, approvals: r.approvals.map(a => a.id === rejectModal.approvalId ? data.approval : a) } : r))
-      } else if (rejectModal.kind === 'all') {
-        const data = await apiPut<any>('/api/admin/approvals', {
-          reportId: rejectModal.reportId, action: 'reject_all', rejectComment: comment,
-        })
-        setMessage(data.message)
-        setReports(prev => prev.map(r => r.id === rejectModal.reportId && data.report ? { ...r, approvals: data.report.approvals } : r))
-      } else {
-        const data = await apiPut<any>('/api/admin/approvals', {
-          reportIds: rejectModal.reportIds, action: 'bulk_reject', rejectComment: comment,
-        })
-        setMessage(data.message)
-        setSelectedReportIds(new Set())
-        fetchReports()
-      }
-      setRejectModal(null)
-      setRejectComment('')
-    } catch (err: any) {
-      setError(err.message || '差戻しに失敗しました')
-    } finally {
-      setProcessing(null)
-    }
-  }
-
-  // 一括差戻し（選択した複数日報）
-  const handleBulkReject = async () => {
-    if (selectedReportIds.size === 0) {
-      alert('差戻しする日報を選択してください')
-      return
-    }
-    setRejectComment('')
-    setRejectModal({ kind: 'bulk', reportIds: Array.from(selectedReportIds) })
-  }
-
-  // 一括承認（単一日報）
-  const handleApproveAll = async (reportId: string) => {
-    setProcessing(reportId)
-    setMessage('')
-    setError('')
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', { reportId, action: 'approve_all' })
-      setMessage(data.message)
-      setReports(prev => prev.map(r => {
-        if (r.id === reportId && data.report) {
-          return { ...r, approvals: data.report.approvals }
-        }
-        return r
-      }))
-    } catch (err: any) {
-      setError(err.message || '承認に失敗しました')
-    } finally {
-      setProcessing(null)
-    }
-  }
-
-  // 一括差戻し（単一日報）
-  const handleRejectAll = async (reportId: string) => {
-    setRejectComment('')
-    setRejectModal({ kind: 'all', reportId })
-  }
-
-  // 個別承認
-  const handleApprove = async (approvalId: string, reportId: string) => {
-    setProcessing(approvalId)
-    setMessage('')
-    setError('')
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', { approvalId, action: 'approve' })
-      setMessage(data.message)
-      setReports(prev => prev.map(r => {
-        if (r.id === reportId) {
-          return {
-            ...r,
-            approvals: r.approvals.map(a =>
-              a.id === approvalId ? data.approval : a
-            ),
-          }
-        }
-        return r
-      }))
-    } catch (err: any) {
-      setError(err.message || '承認に失敗しました')
-    } finally {
-      setProcessing(null)
-    }
-  }
-
-  // 個別差戻し
-  const handleReject = async (approvalId: string, reportId: string) => {
-    setRejectComment('')
-    setRejectModal({ kind: 'individual', approvalId, reportId })
-  }
-
-
-
-  // 統計（絞り込み後）
-  const stats = useMemo(() => {
-    const all = filteredReports.length
-    const pending = filteredReports.filter(r => getReportStatus(r.approvals) === 'pending' || getReportStatus(r.approvals) === 'partial').length
-    const approved = filteredReports.filter(r => getReportStatus(r.approvals) === 'approved').length
-    const rejected = filteredReports.filter(r => getReportStatus(r.approvals) === 'rejected').length
-    return { all, pending, approved, rejected }
-  }, [filteredReports])
-
-  // 役職一覧（ユニーク）
-  const positionOptions = useMemo(() => {
-    const positions = new Set<string>()
-    users.forEach(u => {
-      if (u.position) positions.add(u.position)
-    })
-    return Array.from(positions).sort()
-  }, [users])
+  // 承認/差戻し/選択操作
+  const {
+    selectedReportIds, setSelectedReportIds,
+    rejectModal, setRejectModal,
+    rejectComment, setRejectComment,
+    handleSelectAll, handleToggleSelect,
+    handleBulkApprove, handleBulkReject,
+    handleApproveAll, handleRejectAll,
+    handleApprove, handleReject,
+    submitReject,
+  } = useApprovalActions({
+    pendingReportIds: pendingReports.map(r => r.id),
+    setReports,
+    setProcessing,
+    setMessage,
+    setError,
+    fetchReports,
+  })
 
   if (loading && !currentUser) {
     return (
