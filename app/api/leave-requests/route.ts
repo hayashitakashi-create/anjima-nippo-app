@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         userId: true,
+        enteredById: true,
         applicantName: true,
         date: true,
         leaveType: true,
@@ -85,13 +86,13 @@ export async function GET(request: NextRequest) {
         status: true,
         createdAt: true,
         updatedAt: true,
-      },
-    })
+      } as any,
+    }) as any[]
 
-    // 「自分の休暇届」判定: applicantName を空白除去して user.name と一致 or applicantName 未設定で userId 一致
+    // 「自分の休暇届」判定: userId 一致を優先 / 過去データ互換で applicantName 一致もカバー
     const isMine = (l: { applicantName: string | null; userId: string }) => {
+      if (l.userId === user.id) return true
       if (l.applicantName && normalize(l.applicantName) === normalizedUserName) return true
-      if (!l.applicantName && l.userId === user.id) return true
       return false
     }
 
@@ -102,19 +103,23 @@ export async function GET(request: NextRequest) {
       leaveRequests = allLeaveRequests.filter(l => !isMine(l))
     }
 
-    // 全ユーザー取得時はユーザー名もJOIN
-    if (allUsers || (userId && userId !== user.id) || postFilterScope === 'others' || postFilterScope === null) {
-      const userIds = [...new Set(leaveRequests.map(l => l.userId))]
-      const users = await prisma.user.findMany({
-        where: { id: { in: userIds } },
-        select: { id: true, name: true },
-      })
-      const userMap = Object.fromEntries(users.map(u => [u.id, u.name]))
-      const enriched = leaveRequests.map(l => ({ ...l, userName: userMap[l.userId] || '' }))
-      return NextResponse.json({ leaveRequests: enriched })
+    // userId / enteredById をユーザー名で JOIN
+    const userIds = new Set<string>()
+    for (const l of leaveRequests) {
+      if (l.userId) userIds.add(l.userId)
+      if (l.enteredById) userIds.add(l.enteredById)
     }
-
-    return NextResponse.json({ leaveRequests })
+    const users = await prisma.user.findMany({
+      where: { id: { in: [...userIds] } },
+      select: { id: true, name: true },
+    })
+    const userMap = Object.fromEntries(users.map(u => [u.id, u.name]))
+    const enriched = leaveRequests.map((l: any) => ({
+      ...l,
+      userName: userMap[l.userId] || l.applicantName || '',
+      enteredByName: l.enteredById ? (userMap[l.enteredById] || '') : null,
+    }))
+    return NextResponse.json({ leaveRequests: enriched })
   } catch (error) {
     console.error('休暇届取得エラー:', error)
     return NextResponse.json({ error: '休暇届の取得に失敗しました' }, { status: 500 })
@@ -136,8 +141,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
     const { applicantName, date, leaveType, leaveUnit, startTime, endTime, familyName, familyBirthdate, familyRelationship, adoptionDate, specialAdoptionDate, careReason, reason, attachmentData, attachmentName, attachmentType } = validation.data
+    const targetUserId = (body.targetUserId as string | undefined) || undefined
     const unit = leaveUnit
     const isCareLeave = leaveType === '看護' || leaveType === '介護'
+
+    // 申請者・代理入力者の判定
+    const ownerUserId = targetUserId || user.id
+    const isProxy = !!targetUserId && targetUserId !== user.id
+    const enteredById = isProxy ? user.id : null
+
+    // 申請者本人の表示名を取得（通知用）
+    let applicantDisplayName = applicantName || user.name
+    if (isProxy) {
+      const owner = await prisma.user.findUnique({ where: { id: ownerUserId } })
+      applicantDisplayName = owner?.name || applicantName || ''
+    }
 
     // 時間休の場合は開始・終了時刻が必須
     if (unit === 'hourly' && (!startTime || !endTime)) {
@@ -147,7 +165,7 @@ export async function POST(request: NextRequest) {
     // 同じ日に全日休暇が既にある場合はエラー
     const existingFullDay = await prisma.leaveRequest.findFirst({
       where: {
-        userId: user.id,
+        userId: ownerUserId,
         date: new Date(date),
         leaveUnit: 'full',
       },
@@ -159,7 +177,7 @@ export async function POST(request: NextRequest) {
     // 全日で申請する場合、同日に既存の休暇届があればエラー
     if (unit === 'full') {
       const existingAny = await prisma.leaveRequest.findFirst({
-        where: { userId: user.id, date: new Date(date) },
+        where: { userId: ownerUserId, date: new Date(date) },
       })
       if (existingAny) {
         return NextResponse.json({ error: 'この日付には既に休暇届が登録されています' }, { status: 409 })
@@ -169,7 +187,7 @@ export async function POST(request: NextRequest) {
     // 同じ時間帯（午前/午後）の重複チェック
     if (unit === 'am' || unit === 'pm') {
       const existingSameUnit = await prisma.leaveRequest.findFirst({
-        where: { userId: user.id, date: new Date(date), leaveUnit: unit },
+        where: { userId: ownerUserId, date: new Date(date), leaveUnit: unit },
       })
       if (existingSameUnit) {
         return NextResponse.json({ error: `この日付には既に${unit === 'am' ? '午前' : '午後'}半休が登録されています` }, { status: 409 })
@@ -183,8 +201,9 @@ export async function POST(request: NextRequest) {
 
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
-        userId: user.id,
-        applicantName: applicantName || null,
+        userId: ownerUserId,
+        enteredById,
+        applicantName: applicantName || applicantDisplayName || null,
         date: new Date(date),
         leaveType,
         leaveUnit: unit,
@@ -201,13 +220,14 @@ export async function POST(request: NextRequest) {
         attachmentName: attachmentName || null,
         attachmentType: attachmentType || null,
         status: 'pending',
-      },
+      } as any,
     })
 
-    // 管理者に通知（非同期）
+    // 管理者に通知（非同期）申請者名 + 代理入力者名（代理時のみ）
     const dateObj = new Date(date)
     const dateStr = `${dateObj.getFullYear()}/${dateObj.getMonth() + 1}/${dateObj.getDate()}`
-    notifyLeaveSubmitted(user.name, dateStr, leaveType).catch(() => {})
+    const proxySuffix = isProxy ? `（代理入力: ${user.name}）` : ''
+    notifyLeaveSubmitted(`${applicantDisplayName}${proxySuffix}`, dateStr, leaveType).catch(() => {})
 
     return NextResponse.json({ leaveRequest })
   } catch (error) {

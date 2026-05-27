@@ -29,7 +29,10 @@ import { useAuth } from '@/hooks/useAuth'
 interface LeaveRequest {
   id: string
   userId: string
+  enteredById?: string | null
   applicantName: string | null
+  userName?: string | null
+  enteredByName?: string | null
   date: string
   leaveType: string
   leaveUnit: string
@@ -113,6 +116,9 @@ export default function LeaveRequestsPage() {
 
   // 作業者名マスタ
   const [workerNames, setWorkerNames] = useState<string[]>([])
+  // ユーザーマスタ（対象社員セレクト用）
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([])
+  const [formTargetUserId, setFormTargetUserId] = useState('')
 
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date())
@@ -137,6 +143,19 @@ export default function LeaveRequestsPage() {
           if (user?.name && names.includes(user.name)) {
             setFormApplicantName(user.name)
           }
+        }
+      })
+      .catch(() => {})
+    // 対象社員セレクト用にユーザー一覧を取得
+    adminApi.fetchUsers()
+      .then(data => {
+        if (data?.users) {
+          const list = (data.users as any[])
+            .filter(u => u.isActive !== false)
+            .map(u => ({ id: u.id, name: u.name }))
+          setAllUsers(list)
+          // デフォルトは本人
+          if (user?.id) setFormTargetUserId(user.id)
         }
       })
       .catch(() => {})
@@ -193,8 +212,13 @@ export default function LeaveRequestsPage() {
     setMessage('')
 
     try {
+      // 代理入力判定: 対象社員がログイン者と異なる場合
+      const selectedTargetUser = allUsers.find(u => u.id === formTargetUserId)
+      const targetUserIdForPost = formTargetUserId && formTargetUserId !== user?.id ? formTargetUserId : undefined
+      const applicantNameForPost = formApplicantName || selectedTargetUser?.name || undefined
       await apiPost('/api/leave-requests', {
-        applicantName: formApplicantName || undefined,
+        targetUserId: targetUserIdForPost,
+        applicantName: applicantNameForPost,
         date: formDate,
         leaveType: formLeaveType,
         leaveUnit: formLeaveUnit,
@@ -407,22 +431,34 @@ export default function LeaveRequestsPage() {
             </h2>
           </div>
           <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
-            {/* 申請者名 */}
+            {/* 対象社員 (代理入力対応) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                申請者名 <span className="text-red-500">*</span>
+                対象社員 <span className="text-red-500">*</span>
               </label>
               <select
-                value={formApplicantName}
-                onChange={(e) => setFormApplicantName(e.target.value)}
+                value={formTargetUserId}
+                onChange={(e) => {
+                  const id = e.target.value
+                  setFormTargetUserId(id)
+                  const u = allUsers.find(x => x.id === id)
+                  if (u) setFormApplicantName(u.name)
+                }}
                 required
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
               >
                 <option value="">選択してください</option>
-                {workerNames.map(name => (
-                  <option key={name} value={name}>{name}</option>
+                {allUsers.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}{u.id === user?.id ? '（本人）' : ''}
+                  </option>
                 ))}
               </select>
+              {formTargetUserId && formTargetUserId !== user?.id && (
+                <p className="mt-1 text-xs text-amber-700">
+                  代理入力モード: あなた（{user?.name}）が {allUsers.find(u => u.id === formTargetUserId)?.name} さんの休暇届を申請します
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -795,9 +831,14 @@ export default function LeaveRequestsPage() {
                             <p className="font-medium text-gray-900">
                               {formatDisplayDate(request.date)}
                             </p>
-                            {request.applicantName && (
+                            {(request.userName || request.applicantName) && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                                {request.applicantName}
+                                {request.userName || request.applicantName}
+                              </span>
+                            )}
+                            {request.enteredByName && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                代理入力: {request.enteredByName}
                               </span>
                             )}
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
