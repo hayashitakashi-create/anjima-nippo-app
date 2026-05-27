@@ -12,7 +12,6 @@
  * 6. 連絡事項
  */
 
-import { useState, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import {
   Calendar,
@@ -27,19 +26,18 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useMasterData } from '@/hooks/useMasterData'
-import { adminApi, apiGet, apiPut, apiDelete } from '@/lib/api'
-import { canActOnApproval } from '@/lib/approval-permissions'
 import { calculateManHoursFromTime } from '../new/types'
 import { toHalfWidth } from '../new/utils'
 import { WEATHER_OPTIONS, TIME_OPTIONS } from '../new/constants'
-import type { WorkerRecord, MaterialRecord, SubcontractorRecord } from './types'
 import { formatDate } from './types'
+import { useWorkReportDetail } from './hooks/useWorkReportDetail'
 import {
   SuccessDialog,
   DeleteConfirmDialog,
   DetailHeader,
   DetailToolbar,
   ContactNotesCard,
+  ApprovalSection,
   RejectModal,
   EditFooter,
 } from './components'
@@ -55,86 +53,35 @@ export default function WorkReportDetailPage() {
 
   const { user: currentUser, logout: handleLogout } = useAuth()
   const { materialMasterList, projectTypesList, subcontractorMasterList, unitMasterList, workerNamesList } = useMasterData()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deleting, setDeleting] = useState(false)
 
-  // 基本情報
-  const [date, setDate] = useState('')
-  const [projectName, setProjectName] = useState('')
-  const [projectType, setProjectType] = useState('')
-  const [projectId, setProjectId] = useState('')
-  const [projectRefId, setProjectRefId] = useState<string | null>(null)
-  const [weather, setWeather] = useState('')
-  const [createdUserName, setCreatedUserName] = useState('')
-  const [reportOwner, setReportOwner] = useState<{ id: string; name: string; position?: string | null } | null>(null)
-  const [enteredBy, setEnteredBy] = useState<{ id: string; name: string; position?: string | null } | null>(null)
-
-  // 作業者記録
-  const [workerRecords, setWorkerRecords] = useState<WorkerRecord[]>([])
-
-  // 使用材料記録
-  const [materialRecords, setMaterialRecords] = useState<MaterialRecord[]>([])
-
-  // 外注先記録
-  const [subcontractorRecords, setSubcontractorRecords] = useState<SubcontractorRecord[]>([])
-
-  // 遠隔地・交通誘導警備員情報
-  const [remoteDepartureTime, setRemoteDepartureTime] = useState('')
-  const [remoteArrivalTime, setRemoteArrivalTime] = useState('')
-  const [remoteDepartureTime2, setRemoteDepartureTime2] = useState('')
-  const [remoteArrivalTime2, setRemoteArrivalTime2] = useState('')
-  const [trafficGuardCount, setTrafficGuardCount] = useState(0)
-  const [trafficGuardStart, setTrafficGuardStart] = useState('')
-  const [trafficGuardEnd, setTrafficGuardEnd] = useState('')
-
-  // 連絡事項
-  const [contactNotes, setContactNotes] = useState('')
-
-  // 承認状況
-  const [approvals, setApprovals] = useState<any[]>([])
-
-  // 承認/差戻し操作
-  const [approvalProcessing, setApprovalProcessing] = useState<string | null>(null)
-  const [rejectModalApprovalId, setRejectModalApprovalId] = useState<string | null>(null)
-  const [rejectComment, setRejectComment] = useState('')
-
-  const handleApprove = async (approvalId: string) => {
-    setApprovalProcessing(approvalId)
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', { approvalId, action: 'approve' })
-      setApprovals(prev => prev.map(a => a.id === approvalId ? data.approval : a))
-    } catch (err: any) {
-      alert(err.message || '承認に失敗しました')
-    } finally {
-      setApprovalProcessing(null)
-    }
-  }
-
-  const submitReject = async () => {
-    if (!rejectModalApprovalId) return
-    const comment = rejectComment.trim()
-    if (!comment) {
-      alert('差戻しの理由（コメント）を入力してください')
-      return
-    }
-    setApprovalProcessing(rejectModalApprovalId)
-    try {
-      const data = await apiPut<any>('/api/admin/approvals', {
-        approvalId: rejectModalApprovalId, action: 'reject', rejectComment: comment,
-      })
-      setApprovals(prev => prev.map(a => a.id === rejectModalApprovalId ? data.approval : a))
-      setRejectModalApprovalId(null)
-      setRejectComment('')
-    } catch (err: any) {
-      alert(err.message || '差戻しに失敗しました')
-    } finally {
-      setApprovalProcessing(null)
-    }
-  }
+  const {
+    loading, saving, isEditing, setIsEditing,
+    showSuccessDialog, setShowSuccessDialog,
+    showDeleteConfirm, setShowDeleteConfirm, deleting,
+    date, setDate, projectName, setProjectName,
+    projectType, setProjectType, projectId, setProjectId,
+    weather, setWeather,
+    reportOwner, enteredBy,
+    workerRecords, setWorkerRecords,
+    materialRecords, setMaterialRecords,
+    subcontractorRecords, setSubcontractorRecords,
+    remoteDepartureTime, setRemoteDepartureTime,
+    remoteArrivalTime, setRemoteArrivalTime,
+    remoteDepartureTime2, setRemoteDepartureTime2,
+    remoteArrivalTime2, setRemoteArrivalTime2,
+    trafficGuardCount, setTrafficGuardCount,
+    trafficGuardStart, setTrafficGuardStart,
+    trafficGuardEnd, setTrafficGuardEnd,
+    contactNotes, setContactNotes,
+    approvals, approvalProcessing,
+    rejectModalApprovalId, setRejectModalApprovalId,
+    rejectComment, setRejectComment,
+    handleApprove, submitReject,
+    handleAddWorkerRecord, handleDeleteWorkerRecord,
+    handleAddMaterialRecord, handleDeleteMaterialRecord,
+    handleAddSubcontractorRecord, handleDeleteSubcontractorRecord,
+    handleSubmit, handleDelete,
+  } = useWorkReportDetail(reportId, currentUser as any)
 
   // 閲覧専用判定: preview=1 OR ログインユーザーが対象社員/代理入力者でない場合
   const isOwnerOrEntrant = !!currentUser && (
@@ -142,245 +89,6 @@ export default function WorkReportDetailPage() {
     (enteredBy && currentUser.id === enteredBy.id)
   )
   const isPreview = isPreviewParam || !currentUser || !reportOwner || !isOwnerOrEntrant
-
-  // 初期データ読み込み: 作業日報データ
-  useEffect(() => {
-    // 作業日報データ取得
-    apiGet<any>(`/api/work-report/${reportId}`)
-      .then(data => {
-        const dateObj = new Date(data.date)
-        setDate(dateObj.toISOString().split('T')[0])
-        if (data.user) setReportOwner({ id: data.userId, name: data.user.name, position: data.user.position })
-        if (data.enteredBy) setEnteredBy(data.enteredBy)
-        setProjectName(data.projectName || '')
-        setProjectType(data.projectType || '')
-        setProjectId(data.projectId || '')
-        setProjectRefId(data.projectRefId || null)
-        setWeather(data.weather || '')
-        setContactNotes(data.contactNotes || '')
-        setRemoteDepartureTime(data.remoteDepartureTime || '')
-        setRemoteArrivalTime(data.remoteArrivalTime || '')
-        setRemoteDepartureTime2(data.remoteDepartureTime2 || '')
-        setRemoteArrivalTime2(data.remoteArrivalTime2 || '')
-        setTrafficGuardCount(data.trafficGuardCount || 0)
-        setTrafficGuardStart(data.trafficGuardStart || '')
-        setTrafficGuardEnd(data.trafficGuardEnd || '')
-        setApprovals(data.approvals || [])
-
-        // 作業者記録
-        if (data.workerRecords && data.workerRecords.length > 0) {
-          setWorkerRecords(data.workerRecords.map((r: any, i: number) => {
-            const startTime = r.startTime || '08:00'
-            const endTime = r.endTime || '17:00'
-            // DB保存値が0の場合は作業時間から再計算する
-            const manHours = r.workHours || calculateManHours(startTime, endTime)
-            return {
-              id: r.id || (i + 1).toString(),
-              name: r.name || '',
-              startTime,
-              endTime,
-              manHours,
-              workType: r.workType || '',
-              details: r.details || '',
-              dailyHours: r.dailyHours || 0,
-              totalHours: r.totalHours || 0,
-            }
-          }))
-        }
-
-        // 使用材料記録
-        if (data.materialRecords && data.materialRecords.length > 0) {
-          setMaterialRecords(data.materialRecords.map((r: any, i: number) => ({
-            id: r.id || (i + 1).toString(),
-            name: r.name || '',
-            volume: r.volume || '',
-            volumeUnit: r.volumeUnit || '',
-            quantity: r.quantity || 0,
-            unitPrice: r.unitPrice || 0,
-            subcontractor: r.subcontractor || '',
-          })))
-        }
-
-        // 外注先記録
-        if (data.subcontractorRecords && data.subcontractorRecords.length > 0) {
-          setSubcontractorRecords(data.subcontractorRecords.map((r: any, i: number) => ({
-            id: r.id || (i + 1).toString(),
-            name: r.name || '',
-            workerCount: r.workerCount || 0,
-            workContent: r.workContent || '',
-          })))
-        }
-
-        setLoading(false)
-      })
-      .catch(error => {
-        console.error('作業日報取得エラー:', error)
-        alert('作業日報の取得に失敗しました')
-        router.push('/dashboard')
-      })
-  }, [router, reportId])
-
-  // 作業者記録の追加
-  const handleAddWorkerRecord = () => {
-    if (workerRecords.length >= 50) {
-      alert('作業者記録は最大50件までです')
-      return
-    }
-    const newId = Date.now().toString()
-    setWorkerRecords(prev => [
-      ...prev,
-      {
-        id: newId,
-        name: '',
-        startTime: '08:00',
-        endTime: '17:00',
-        manHours: calculateManHours('08:00', '17:00'),
-        workType: '',
-        details: '',
-        dailyHours: 0,
-        totalHours: 0,
-      }
-    ])
-  }
-
-  const handleDeleteWorkerRecord = (id: string) => {
-    if (workerRecords.length === 1) {
-      alert('作業者記録は最低1件必要です')
-      return
-    }
-    setWorkerRecords(prev => prev.filter(r => r.id !== id))
-  }
-
-  // 使用材料記録の追加
-  const handleAddMaterialRecord = () => {
-    if (materialRecords.length >= 5) {
-      alert('使用材料記録は最大5件までです')
-      return
-    }
-    const newId = Date.now().toString()
-    setMaterialRecords(prev => [
-      ...prev,
-      {
-        id: newId,
-        name: '',
-        volume: '',
-        volumeUnit: '',
-        quantity: 0,
-        unitPrice: 0,
-        subcontractor: '',
-      }
-    ])
-  }
-
-  const handleDeleteMaterialRecord = (id: string) => {
-    setMaterialRecords(prev => prev.filter(r => r.id !== id))
-  }
-
-  // 外注先記録の追加
-  const handleAddSubcontractorRecord = () => {
-    if (subcontractorRecords.length >= 10) {
-      alert('外注先記録は最大10件までです')
-      return
-    }
-    const newId = Date.now().toString()
-    setSubcontractorRecords(prev => [
-      ...prev,
-      {
-        id: newId,
-        name: '',
-        workerCount: 0,
-        workContent: '',
-      }
-    ])
-  }
-
-  const handleDeleteSubcontractorRecord = (id: string) => {
-    setSubcontractorRecords(prev => prev.filter(r => r.id !== id))
-  }
-
-  // 更新送信
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!projectName.trim()) {
-      alert('工事名を入力してください')
-      return
-    }
-
-    setSaving(true)
-
-    try {
-      await apiPut(`/api/work-report/${reportId}`, {
-        date: new Date(date),
-        userId: currentUser?.id,
-        projectRefId: projectRefId || undefined,
-        projectName,
-        projectType,
-        projectId,
-        weather,
-        contactNotes,
-        remoteDepartureTime,
-        remoteArrivalTime,
-        remoteDepartureTime2,
-        remoteArrivalTime2,
-        trafficGuardCount,
-        trafficGuardStart,
-        trafficGuardEnd,
-        workerRecords: workerRecords.map((record, index) => ({
-          name: record.name,
-          startTime: record.startTime,
-          endTime: record.endTime,
-          workHours: record.manHours,
-          workType: record.workType,
-          details: record.details,
-          dailyHours: record.dailyHours,
-          totalHours: record.totalHours,
-          order: index,
-        })),
-        materialRecords: materialRecords.map((record, index) => ({
-          name: record.name,
-          volume: record.volume,
-          volumeUnit: record.volumeUnit,
-          quantity: record.quantity,
-          unitPrice: record.unitPrice,
-          amount: record.quantity * record.unitPrice,
-          subcontractor: record.subcontractor,
-          order: index,
-        })),
-        subcontractorRecords: subcontractorRecords
-          .filter(record => record.name.trim() !== '')
-          .map((record, index) => ({
-            name: record.name,
-            workerCount: record.workerCount,
-            workContent: record.workContent,
-            order: index,
-          })),
-      })
-
-      setShowSuccessDialog(true)
-    } catch (error) {
-      console.error('更新エラー:', error)
-      alert('作業日報の更新に失敗しました')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-
-
-  const handleDelete = async () => {
-    setDeleting(true)
-    try {
-      await apiDelete(`/api/work-report/${reportId}`)
-      router.push('/dashboard')
-    } catch (error: any) {
-      console.error('削除エラー:', error)
-      alert(error.message || '作業日報の削除に失敗しました')
-    } finally {
-      setDeleting(false)
-      setShowDeleteConfirm(false)
-    }
-  }
 
   // 金額合計を計算
   const totalAmount = materialRecords.reduce((sum, r) => sum + (r.quantity * r.unitPrice), 0)
@@ -1217,90 +925,13 @@ export default function WorkReportDetailPage() {
             isEditing={isEditing}
           />
 
-          {/* 承認状況 */}
-          {approvals && approvals.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200/50">
-              <div className="bg-gradient-to-r from-emerald-50 to-green-50 px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg border-b border-emerald-100">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">承認状況</h2>
-              </div>
-              <div className="p-4 sm:p-6">
-                {/* バッジ */}
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  {['承認者', '上長', '常務', '専務', '社長'].map(role => {
-                    const items = approvals.filter((a: any) => a.approverRole === role)
-                    if (items.length === 0) return null
-                    const anyRejected = items.some((a: any) => a.status === 'rejected')
-                    const allApproved = items.every((a: any) => a.status === 'approved')
-                    const st = anyRejected ? 'rejected' : allApproved ? 'approved' : 'pending'
-                    const style = st === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
-                      : st === 'rejected' ? 'bg-red-100 text-red-700 border-red-300'
-                      : 'bg-yellow-50 text-yellow-700 border-yellow-300'
-                    return (
-                      <span key={role} className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold border ${style}`}>
-                        {role}{items.length > 1 ? ` (${items.filter((a: any) => a.status === 'approved').length}/${items.length})` : ''}
-                      </span>
-                    )
-                  })}
-                </div>
-                {/* 詳細 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {['承認者', '上長', '常務', '専務', '社長'].flatMap(role => {
-                    const items = approvals.filter((a: any) => a.approverRole === role)
-                    return items.map((approval: any) => {
-                      const statusLabel = approval.status === 'approved' ? '承認済み' : approval.status === 'rejected' ? '差戻し' : '承認待ち'
-                      const statusStyle = approval.status === 'approved' ? 'bg-green-50 border-green-200 text-green-800'
-                        : approval.status === 'rejected' ? 'bg-red-50 border-red-200 text-red-800'
-                        : 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                      const canAct = canActOnApproval(approval, currentUser)
-                      return (
-                        <div key={approval.id} className={`p-3 rounded-lg border ${statusStyle}`}>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-bold text-sm">{role}</div>
-                              {approval.approver && (
-                                <div className="text-xs opacity-75">
-                                  {approval.approver.name}
-                                  {approval.approvedAt && (
-                                    <span className="ml-2">({new Date(approval.approvedAt).toLocaleDateString('ja-JP')})</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs font-medium">{statusLabel}</span>
-                          </div>
-                          {approval.status === 'rejected' && approval.rejectComment && (
-                            <div className="mt-2 pt-2 border-t border-red-200 text-xs bg-white/60 rounded p-2 whitespace-pre-wrap text-red-900">
-                              <span className="font-bold">差戻しコメント：</span>{approval.rejectComment}
-                            </div>
-                          )}
-                          {canAct && (
-                            <div className="mt-3 pt-2 border-t border-gray-200 flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleApprove(approval.id)}
-                                disabled={approvalProcessing === approval.id}
-                                className="flex-1 px-3 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                              >
-                                {approvalProcessing === approval.id ? '処理中...' : '承認'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => { setRejectComment(''); setRejectModalApprovalId(approval.id) }}
-                                disabled={approvalProcessing === approval.id}
-                                className="flex-1 px-3 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                              >
-                                差戻し
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+          <ApprovalSection
+            approvals={approvals}
+            currentUser={currentUser}
+            approvalProcessing={approvalProcessing}
+            onApprove={handleApprove}
+            onOpenReject={(id) => { setRejectComment(''); setRejectModalApprovalId(id) }}
+          />
 
           <RejectModal
             open={!!rejectModalApprovalId}
