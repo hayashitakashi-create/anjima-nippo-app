@@ -14,29 +14,16 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import Image from 'next/image'
 import {
-  FileText,
   Calendar,
   User,
   Building2,
   Clock,
-  MessageSquare,
   Plus,
-  Save,
-  X,
-  LogOut,
   Trash2,
   Users,
   Package,
   Briefcase,
-  Home,
-  Settings,
-  Shield,
-  Edit3,
-  ArrowLeft,
-  Printer
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useMasterData } from '@/hooks/useMasterData'
@@ -45,35 +32,17 @@ import { canActOnApproval } from '@/lib/approval-permissions'
 import { calculateManHoursFromTime } from '../new/types'
 import { toHalfWidth } from '../new/utils'
 import { WEATHER_OPTIONS, TIME_OPTIONS } from '../new/constants'
-
-interface WorkerRecord {
-  id: string
-  name: string
-  startTime: string
-  endTime: string
-  manHours: number
-  workType: string
-  details: string
-  dailyHours: number
-  totalHours: number
-}
-
-interface MaterialRecord {
-  id: string
-  name: string
-  volume: string
-  volumeUnit: string
-  quantity: number
-  unitPrice: number
-  subcontractor: string
-}
-
-interface SubcontractorRecord {
-  id: string
-  name: string
-  workerCount: number
-  workContent: string
-}
+import type { WorkerRecord, MaterialRecord, SubcontractorRecord } from './types'
+import { formatDate } from './types'
+import {
+  SuccessDialog,
+  DeleteConfirmDialog,
+  DetailHeader,
+  DetailToolbar,
+  ContactNotesCard,
+  RejectModal,
+  EditFooter,
+} from './components'
 
 const calculateManHours = calculateManHoursFromTime
 
@@ -413,13 +382,6 @@ export default function WorkReportDetailPage() {
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return ''
-    const d = new Date(dateStr)
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土']
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${weekdays[d.getDay()]}）`
-  }
-
   // 金額合計を計算
   const totalAmount = materialRecords.reduce((sum, r) => sum + (r.quantity * r.unitPrice), 0)
 
@@ -433,177 +395,40 @@ export default function WorkReportDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* 更新成功ダイアログ */}
-      {showSuccessDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
-            <div className="bg-white pt-8 pb-2 px-8 rounded-t-2xl">
-              <div className="mx-auto w-36 h-36 mb-4">
-                <Image
-                  src="/character.png"
-                  alt="保存完了キャラクター"
-                  width={144}
-                  height={144}
-                  className="object-contain object-top"
-                  priority
-                />
-              </div>
-            </div>
-            <div className="h-8 bg-white"></div>
-            <div className="bg-white px-6 pb-6 rounded-b-2xl">
-              <div className="bg-[#0E3091] rounded-lg py-3 px-4 mb-4">
-                <p className="text-sm text-white font-bold text-center">作業日報が正常に更新されました</p>
-              </div>
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setShowSuccessDialog(false)
-                    setIsEditing(false)
-                  }}
-                  className="w-full px-8 py-3 bg-[#0E3091] text-white text-base rounded-xl hover:bg-[#0a2470] font-bold transition-colors shadow-lg"
-                >
-                  詳細に戻る
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSuccessDialog(false)
-                    router.push('/dashboard')
-                  }}
-                  className="w-full px-8 py-3 bg-gray-800 text-white text-base rounded-xl hover:bg-gray-900 font-bold transition-colors shadow-lg"
-                >
-                  TOP画面に戻る
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SuccessDialog
+        show={showSuccessDialog}
+        onBackToDetail={() => {
+          setShowSuccessDialog(false)
+          setIsEditing(false)
+        }}
+        onBackToTop={() => {
+          setShowSuccessDialog(false)
+          router.push('/dashboard')
+        }}
+      />
 
-      {/* 削除確認ダイアログ */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6">
-            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
-              <Trash2 className="w-7 h-7 text-red-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
-              作業日報を削除しますか？
-            </h3>
-            <p className="text-sm text-gray-500 text-center mb-6">
-              この操作は取り消せません。作業者記録・材料記録なども全て削除されます。
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="w-full px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                {deleting ? '削除中...' : '削除する'}
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleting}
-                className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmDialog
+        show={showDeleteConfirm}
+        deleting={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
 
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/dashboard" className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-[#0E3091] to-[#1a4ab8] flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-lg sm:text-2xl font-semibold text-gray-900">
-                {isEditing ? '作業日報 編集' : '作業日報 詳細'}
-              </h1>
-            </Link>
-            <div className="flex items-center space-x-1 sm:space-x-3">
-              <Link
-                href="/dashboard"
-                className="p-2 text-[#0E3091] hover:bg-blue-50 rounded-lg transition-colors"
-                title="TOP画面"
-              >
-                <Home className="h-5 w-5" />
-              </Link>
-              {currentUser?.permissions?.manage_users && (
-                <Link
-                  href="/admin"
-                  className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                  title="管理画面"
-                >
-                  <Shield className="h-5 w-5" />
-                </Link>
-              )}
-              <Link
-                href="/settings"
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title="設定"
-              >
-                <Settings className="h-5 w-5" />
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="ログアウト"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <DetailHeader
+        isEditing={isEditing}
+        currentUser={currentUser as any}
+        onLogout={handleLogout}
+      />
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        {/* 戻るボタン + 削除 + 編集ボタン */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push(isPreview ? '/admin/approvals' : '/dashboard')}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {isPreview ? '承認管理に戻る' : '戻る'}
-            </button>
-            <Link
-              href={`/work-report/${reportId}/print`}
-              target="_blank"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#0E3091] bg-white hover:bg-blue-50 border border-blue-300 rounded-lg transition-colors"
-            >
-              <Printer className="h-4 w-4" />
-              印刷 / PDF
-            </Link>
-            {!isPreview && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-white hover:bg-red-50 border border-red-300 rounded-lg transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-                削除
-              </button>
-            )}
-          </div>
-          {!isEditing && !isPreview && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] hover:from-[#0a2470] hover:to-[#0E3091] rounded-lg shadow-md transition-all"
-            >
-              <Edit3 className="h-4 w-4" />
-              編集する
-            </button>
-          )}
-          {isPreview && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded-full">
-              閲覧専用モード
-            </span>
-          )}
-        </div>
+        <DetailToolbar
+          isEditing={isEditing}
+          isPreview={isPreview}
+          reportId={reportId}
+          onBack={() => router.push(isPreview ? '/admin/approvals' : '/dashboard')}
+          onEdit={() => setIsEditing(true)}
+          onDelete={() => setShowDeleteConfirm(true)}
+        />
 
         <form
           onSubmit={handleSubmit}
@@ -1386,38 +1211,11 @@ export default function WorkReportDetailPage() {
             </div>
           </div>
 
-          {/* 連絡事項カード */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200/50">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg border-b border-blue-100">
-              <div className="flex items-center gap-3">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0E3091]/10 flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-[#0E3091]" />
-                </div>
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">連絡事項</h2>
-              </div>
-            </div>
-            <div className="p-4 sm:p-6">
-              {isEditing ? (
-                <>
-                  <textarea
-                    value={contactNotes}
-                    onChange={(e) => setContactNotes(e.target.value)}
-                    maxLength={500}
-                    rows={4}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] resize-none transition-all"
-                    placeholder="その他の連絡事項・特記事項などを入力してください"
-                  />
-                  <div className="text-xs sm:text-sm text-gray-500 mt-2 text-right">
-                    {contactNotes.length} / 500文字
-                  </div>
-                </>
-              ) : (
-                <p className="text-base text-gray-900 whitespace-pre-wrap">
-                  {contactNotes || '連絡事項はありません'}
-                </p>
-              )}
-            </div>
-          </div>
+          <ContactNotesCard
+            contactNotes={contactNotes}
+            setContactNotes={setContactNotes}
+            isEditing={isEditing}
+          />
 
           {/* 承認状況 */}
           {approvals && approvals.length > 0 && (
@@ -1504,63 +1302,20 @@ export default function WorkReportDetailPage() {
             </div>
           )}
 
-          {/* 差戻しコメント入力モーダル */}
-          {rejectModalApprovalId && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">差戻しコメント</h3>
-                <p className="text-sm text-gray-600 mb-3">差戻しの理由を入力してください。提出者に通知されます。</p>
-                <textarea
-                  value={rejectComment}
-                  onChange={(e) => setRejectComment(e.target.value)}
-                  rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                  placeholder="例：使用材料の容量が誤っています。"
-                />
-                <div className="mt-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setRejectModalApprovalId(null); setRejectComment('') }}
-                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
-                  >
-                    キャンセル
-                  </button>
-                  <button
-                    type="button"
-                    onClick={submitReject}
-                    disabled={approvalProcessing === rejectModalApprovalId}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-bold"
-                  >
-                    {approvalProcessing === rejectModalApprovalId ? '送信中...' : '差戻しする'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <RejectModal
+            open={!!rejectModalApprovalId}
+            rejectComment={rejectComment}
+            setRejectComment={setRejectComment}
+            processing={approvalProcessing === rejectModalApprovalId}
+            onSubmit={submitReject}
+            onCancel={() => { setRejectModalApprovalId(null); setRejectComment('') }}
+          />
 
-          {/* フッター */}
-          {isEditing && (
-            <div className="mt-6 sm:mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#0E3091] to-[#1a4ab8] text-white rounded-xl hover:from-[#0a2470] hover:to-[#0E3091] disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-base sm:text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                >
-                  <Save className="w-5 h-5" />
-                  <span>{saving ? '更新中...' : '更新'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 text-base sm:text-lg font-bold transition-all shadow-sm"
-                >
-                  <X className="w-5 h-5" />
-                  <span>キャンセル</span>
-                </button>
-              </div>
-            </div>
-          )}
+          <EditFooter
+            isEditing={isEditing}
+            saving={saving}
+            onCancel={() => setIsEditing(false)}
+          />
         </form>
       </main>
     </div>
