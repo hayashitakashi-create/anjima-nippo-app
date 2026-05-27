@@ -4,10 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Home,
-  Settings,
-  LogOut,
-  Shield,
   CheckCircle,
   XCircle,
   Clock,
@@ -24,11 +20,11 @@ import {
   User,
   Calendar,
   Route,
-  Search,
   Users,
   X,
   CheckSquare,
   Square,
+  Shield,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { adminApi, apiGet, apiPut } from '@/lib/api'
@@ -44,16 +40,16 @@ import {
   getStatusStyle,
   formatDate,
 } from './types'
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'approved': return <CheckCircle className="w-4 h-4" />
-    case 'rejected': return <XCircle className="w-4 h-4" />
-    case 'partial': return <Clock className="w-4 h-4" />
-    case 'pending': return <Clock className="w-4 h-4" />
-    default: return <Clock className="w-4 h-4" />
-  }
-}
+import { useApprovalFilters } from './hooks/useApprovalFilters'
+import {
+  StatusIcon,
+  ApprovalsHeader,
+  ApprovalFilters,
+  StatsBadges,
+  BulkActionsBar,
+  CalendarDetailModal,
+  RejectModal,
+} from './components'
 
 export default function ApprovalsPage() {
   const router = useRouter()
@@ -101,12 +97,16 @@ export default function ApprovalsPage() {
   const [calendarDetail, setCalendarDetail] = useState<{ userName: string; dateKey: string; types?: { type: string; id: string }[]; leave?: { id: string; type: string; reason?: string; attachmentName?: string } } | null>(null)
 
   // 絞り込み条件
-  const [selectedUserId, setSelectedUserId] = useState('')
-  const [selectedRole, setSelectedRole] = useState('')
-  const [selectedReportType, setSelectedReportType] = useState<'' | 'sales' | 'work'>('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [showFilters, setShowFilters] = useState(true)
+  const {
+    selectedUserId, setSelectedUserId,
+    selectedRole, setSelectedRole,
+    selectedReportType, setSelectedReportType,
+    startDate, setStartDate,
+    endDate, setEndDate,
+    showFilters, setShowFilters,
+    clearFilters,
+    hasActiveFilters,
+  } = useApprovalFilters()
 
   // チェックボックス
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set())
@@ -372,15 +372,6 @@ export default function ApprovalsPage() {
 
 
 
-  // 絞り込みクリア
-  const clearFilters = () => {
-    setSelectedUserId('')
-    setSelectedRole('')
-    setSelectedReportType('')
-    setStartDate('')
-    setEndDate('')
-  }
-
   // 統計（絞り込み後）
   const stats = useMemo(() => {
     const all = filteredReports.length
@@ -399,9 +390,6 @@ export default function ApprovalsPage() {
     return Array.from(positions).sort()
   }, [users])
 
-  // 絞り込みが適用されているか
-  const hasActiveFilters = selectedUserId || selectedRole || startDate || endDate || selectedReportType
-
   if (loading && !currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -412,52 +400,7 @@ export default function ApprovalsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
-          <div className="flex justify-between items-center">
-            <Link href="/admin" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-600 flex items-center justify-center">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">承認管理</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">営業日報・作業日報の承認・差戻し</p>
-              </div>
-            </Link>
-            <div className="flex items-center space-x-1 sm:space-x-3">
-              <Link
-                href="/dashboard"
-                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                title="TOP画面"
-              >
-                <Home className="h-5 w-5" />
-              </Link>
-              <Link
-                href="/admin"
-                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                title="管理画面"
-              >
-                <Shield className="h-5 w-5" />
-              </Link>
-              <Link
-                href="/settings"
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title="設定"
-              >
-                <Settings className="h-5 w-5" />
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="ログアウト"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <ApprovalsHeader onLogout={handleLogout} />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6">
         {/* 戻るボタン */}
@@ -491,201 +434,36 @@ export default function ApprovalsPage() {
           </div>
         )}
 
-        {/* 絞り込みパネル */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Search className="w-5 h-5 text-purple-600" />
-              <h3 className="font-semibold text-gray-900">絞り込み条件</h3>
-              {hasActiveFilters && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                  適用中
-                </span>
-              )}
-            </div>
-            {showFilters ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-          </button>
+        <ApprovalFilters
+          users={users}
+          positionOptions={positionOptions}
+          selectedUserId={selectedUserId}
+          setSelectedUserId={setSelectedUserId}
+          selectedRole={selectedRole}
+          setSelectedRole={setSelectedRole}
+          selectedReportType={selectedReportType}
+          setSelectedReportType={setSelectedReportType}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          hasActiveFilters={hasActiveFilters}
+          clearFilters={clearFilters}
+        />
 
-          {showFilters && (
-            <div className="border-t border-gray-200 p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                {/* ユーザー選択 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <User className="w-4 h-4 text-gray-500" />
-                    氏名
-                  </label>
-                  <select
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  >
-                    <option value="">全てのユーザー</option>
-                    {users.map(user => (
-                      <option key={user.id} value={user.id}>{user.name}</option>
-                    ))}
-                  </select>
-                </div>
+        <StatsBadges filter={filter} setFilter={setFilter} stats={stats} />
 
-                {/* 役職選択 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <Users className="w-4 h-4 text-gray-500" />
-                    役職
-                  </label>
-                  <select
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  >
-                    <option value="">全ての役職</option>
-                    {positionOptions.map(pos => (
-                      <option key={pos} value={pos}>{pos}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 日報種別 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <FileText className="w-4 h-4 text-gray-500" />
-                    日報種別
-                  </label>
-                  <select
-                    value={selectedReportType}
-                    onChange={(e) => setSelectedReportType(e.target.value as '' | 'sales' | 'work')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  >
-                    <option value="">両方</option>
-                    <option value="sales">営業日報</option>
-                    <option value="work">作業日報</option>
-                  </select>
-                </div>
-
-                {/* 開始日 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    開始日
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* 終了日 */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    終了日
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {hasActiveFilters && (
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={clearFilters}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    絞り込みをクリア
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* フィルタータブ */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            { key: 'pending' as const, label: '承認待ち', count: stats.pending, color: 'orange' },
-            { key: 'all' as const, label: 'すべて', count: stats.all, color: 'gray' },
-            { key: 'approved' as const, label: '承認済み', count: stats.approved, color: 'emerald' },
-            { key: 'rejected' as const, label: '差戻し', count: stats.rejected, color: 'red' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                filter === tab.key
-                  ? tab.color === 'orange' ? 'bg-orange-100 text-orange-700 border-2 border-orange-300'
-                    : tab.color === 'emerald' ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-300'
-                    : tab.color === 'red' ? 'bg-red-100 text-red-700 border-2 border-red-300'
-                    : 'bg-purple-100 text-purple-700 border-2 border-purple-300'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              {tab.label}
-              <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold ${
-                filter === tab.key ? 'bg-white/50' : 'bg-gray-100'
-              }`}>
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* 一括操作バー */}
-        {pendingReports.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleSelectAll}
-                  className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors"
-                >
-                  {selectedReportIds.size === pendingReports.length ? (
-                    <CheckSquare className="w-5 h-5 text-purple-600" />
-                  ) : (
-                    <Square className="w-5 h-5" />
-                  )}
-                  {selectedReportIds.size === pendingReports.length ? '全解除' : '全選択'}
-                </button>
-                <span className="text-sm text-gray-500">
-                  {selectedReportIds.size > 0 && `${selectedReportIds.size}件選択中`}
-                </span>
-              </div>
-
-              {selectedReportIds.size > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleBulkApprove}
-                    disabled={processing === 'bulk' || !canActAsApprover}
-                    title={!canActAsApprover ? '承認権限がありません（役職または承認者の設定が必要）' : ''}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 transition-colors"
-                  >
-                    <CheckCheck className="w-4 h-4" />
-                    選択した{selectedReportIds.size}件を承認
-                  </button>
-                  <button
-                    onClick={handleBulkReject}
-                    disabled={processing === 'bulk' || !canActAsApprover}
-                    title={!canActAsApprover ? '承認権限がありません（役職または承認者の設定が必要）' : ''}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors"
-                  >
-                    <Undo2 className="w-4 h-4" />
-                    差戻し
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <BulkActionsBar
+          pendingCount={pendingReports.length}
+          selectedSize={selectedReportIds.size}
+          canActAsApprover={canActAsApprover}
+          processing={processing}
+          onSelectAll={handleSelectAll}
+          onBulkApprove={handleBulkApprove}
+          onBulkReject={handleBulkReject}
+        />
 
         {/* 提出状況カレンダー */}
         {submissionStatus && (
@@ -947,101 +725,7 @@ export default function ApprovalsPage() {
           </div>
         )}
 
-        {/* ③ カレンダー詳細モーダル */}
-        {calendarDetail && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setCalendarDetail(null)}>
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">提出状況 詳細</h3>
-                <button onClick={() => setCalendarDetail(null)} className="p-1 hover:bg-gray-100 rounded-full">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium">{calendarDetail.userName}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span>{calendarDetail.dateKey.replace(/-/g, '/')}</span>
-                </div>
-                <hr className="border-gray-200" />
-
-                {/* 日報提出状況 */}
-                {calendarDetail.types && calendarDetail.types.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700">日報提出</p>
-                    <div className="flex flex-col gap-2">
-                      {calendarDetail.types.filter(e => e.type === 'sales').map((e, i) => (
-                        <a
-                          key={`sales-${i}`}
-                          href={`/nippo/${e.id}`}
-                          className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-800 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"
-                        >
-                          <FileText className="w-4 h-4" />
-                          営業日報 提出済み
-                          <span className="ml-auto text-emerald-500">→</span>
-                        </a>
-                      ))}
-                      {calendarDetail.types.filter(e => e.type === 'work').map((e, i) => (
-                        <a
-                          key={`work-${i}`}
-                          href={`/work-report/${e.id}`}
-                          className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-800 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
-                        >
-                          <FileText className="w-4 h-4" />
-                          作業日報 提出済み
-                          <span className="ml-auto text-blue-500">→</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 休暇情報 */}
-                {calendarDetail.leave && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700">休暇届</p>
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${LEAVE_TYPE_COLORS[calendarDetail.leave.type]?.bg || 'bg-gray-500'} text-white`}>
-                          {calendarDetail.leave.type}
-                        </span>
-                      </div>
-                      {calendarDetail.leave.reason && (
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">理由:</span> {calendarDetail.leave.reason}
-                        </p>
-                      )}
-                      {calendarDetail.leave.attachmentName && (
-                        <a
-                          href={`/api/leave-requests/${calendarDetail.leave.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm text-[#0E3091] hover:underline"
-                        >
-                          <FileText className="w-4 h-4" />
-                          {calendarDetail.leave.attachmentName}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!calendarDetail.types && !calendarDetail.leave && (
-                  <p className="text-sm text-gray-500">情報がありません</p>
-                )}
-              </div>
-              <button
-                onClick={() => setCalendarDetail(null)}
-                className="mt-5 w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-              >
-                閉じる
-              </button>
-            </div>
-          </div>
-        )}
+        <CalendarDetailModal detail={calendarDetail} onClose={() => setCalendarDetail(null)} />
 
         {/* 日報リスト */}
         {loading ? (
@@ -1093,7 +777,7 @@ export default function ApprovalsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-2">
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(status)}`}>
-                                {getStatusIcon(status)}
+                                <StatusIcon status={status} />
                                 {getStatusLabel(status)}
                               </span>
                               <span className="text-sm font-medium text-gray-900">
@@ -1305,7 +989,7 @@ export default function ApprovalsPage() {
                             const status = anyRejected ? 'rejected' : allApproved ? 'approved' : 'pending'
                             return (
                               <span key={role} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusStyle(status)}`}>
-                                {getStatusIcon(status)}
+                                <StatusIcon status={status} />
                                 {role}{items.length > 1 ? ` (${items.filter(a => a.status === 'approved').length}/${items.length})` : ''}
                               </span>
                             )
@@ -1326,7 +1010,7 @@ export default function ApprovalsPage() {
                                 <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(approval.status)}`}>
-                                    {getStatusIcon(approval.status)}
+                                    <StatusIcon status={approval.status} />
                                     {getStatusLabel(approval.status)}
                                   </span>
                                   <span className="text-sm font-bold text-gray-900">{approval.approverRole}</span>
@@ -1384,48 +1068,14 @@ export default function ApprovalsPage() {
         )}
       </main>
 
-      {/* 差戻しコメント入力モーダル */}
-      {rejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRejectModal(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <Undo2 className="w-5 h-5 text-red-600" />
-                {rejectModal.kind === 'individual' ? '差戻し（個別）' : rejectModal.kind === 'all' ? '差戻し（この日報の全段階）' : `差戻し（${rejectModal.reportIds.length}件まとめて）`}
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">差戻しの理由を入力してください（提出者へ通知されます）</p>
-            </div>
-            <div className="px-6 py-4">
-              <textarea
-                value={rejectComment}
-                onChange={(e) => setRejectComment(e.target.value)}
-                placeholder="例：訪問記録の記載が不足しています。詳細を追記してください。"
-                maxLength={500}
-                rows={5}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none resize-none"
-                autoFocus
-              />
-              <p className="text-xs text-gray-400 mt-1 text-right">{rejectComment.length}/500</p>
-            </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
-              <button
-                onClick={() => { setRejectModal(null); setRejectComment('') }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={submitReject}
-                disabled={!rejectComment.trim() || processing !== null}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg inline-flex items-center gap-1.5"
-              >
-                <Undo2 className="w-4 h-4" />
-                差戻し
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RejectModal
+        modal={rejectModal}
+        comment={rejectComment}
+        setComment={setRejectComment}
+        processing={processing}
+        onSubmit={submitReject}
+        onClose={() => { setRejectModal(null); setRejectComment('') }}
+      />
     </div>
   )
 }
