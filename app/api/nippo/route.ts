@@ -107,6 +107,9 @@ export async function POST(request: NextRequest) {
     // 実際の入力者（認証ユーザー）。代理入力時はtargetUserIdと異なる。
     const enteredById = authResult.user.id
 
+    // 承認枠（営業日報: 常務・専務・社長 固定）田邊様5/28 FB①
+    const approverSpecs = await buildApproverSpecs({ reportType: 'sales' })
+
     const dailyReport = await prisma.dailyReport.create({
       data: {
         date: new Date(body.date),
@@ -125,12 +128,11 @@ export async function POST(request: NextRequest) {
           })),
         },
         approvals: {
-          create: [
-            { approverRole: '上長', status: 'pending', },
-            { approverRole: '常務', status: 'pending', },
-            { approverRole: '専務', status: 'pending', },
-            { approverRole: '社長', status: 'pending', },
-          ],
+          create: approverSpecs.map((s) => ({
+            approverRole: s.approverRole,
+            approverUserId: s.approverUserId,
+            status: 'pending',
+          })),
         },
       },
       include: {
