@@ -90,8 +90,10 @@ export async function GET(request: NextRequest) {
     }) as any[]
 
     // 「自分の休暇届」判定: userId 一致を優先 / 過去データ互換で applicantName 一致もカバー
-    const isMine = (l: { applicantName: string | null; userId: string }) => {
+    // 共通アカウント(塗装等)で代理入力した分も「自分が入力した休暇届」として含める(田邊様5/28 FB⑥)
+    const isMine = (l: { applicantName: string | null; userId: string; enteredById?: string | null }) => {
       if (l.userId === user.id) return true
+      if (l.enteredById && l.enteredById === user.id) return true
       if (l.applicantName && normalize(l.applicantName) === normalizedUserName) return true
       return false
     }
