@@ -924,9 +924,9 @@ export default function AdminPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ユーザー名（メールアドレス） <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ユーザー名 <span className="text-red-500">*</span></label>
                 <input type="text" value={createForm.username} onChange={e => setCreateForm({ ...createForm, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="yamada@example.com" />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="ユーザー名（メールアドレス可）" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">パスワード <span className="text-red-500">*</span></label>
