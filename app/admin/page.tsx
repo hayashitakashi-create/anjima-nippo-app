@@ -869,6 +869,9 @@ export default function AdminPage() {
                     </div>
                     <div className="flex items-center space-x-1">
                       <button onClick={() => handleEdit(user)} className="text-xs font-medium text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100">編集</button>
+                      <button onClick={() => setResetTarget(user)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="パスワードリセット">
+                        <KeyRound className="w-4 h-4" />
+                      </button>
                       {user.id !== currentUser.id && (
                         <>
                           <button onClick={() => user.isActive !== false ? setDeactivateTarget(user) : handleToggleActive(user)}
