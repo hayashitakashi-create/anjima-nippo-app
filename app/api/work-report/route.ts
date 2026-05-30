@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { notifyReportSubmitted } from '@/lib/notifications'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
 import { getUserPermissions } from '@/lib/permissions'
+import { buildApproverSpecs } from '@/lib/approval-builder'
 
 export interface WorkReportInput {
   date: string | Date

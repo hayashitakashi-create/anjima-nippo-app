@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { DailyReportInput } from '@/lib/types'
 import { notifyReportSubmitted } from '@/lib/notifications'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
+import { buildApproverSpecs } from '@/lib/approval-builder'
 
 // 日報一覧を取得（ページネーション対応）
 export async function GET(request: NextRequest) {
