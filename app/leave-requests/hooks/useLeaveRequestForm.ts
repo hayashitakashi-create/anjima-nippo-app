@@ -36,6 +36,7 @@ export function useLeaveRequestForm({ userId, userName, currentMonth, onSubmitte
   const [workerNames, setWorkerNames] = useState<string[]>([])
   const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([])
   const [formTargetUserId, setFormTargetUserId] = useState('')
+  const [formProxyWriterName, setFormProxyWriterName] = useState('')
 
   const isCareLeaveType = formLeaveType === '看護' || formLeaveType === '介護'
 
@@ -66,6 +67,7 @@ export function useLeaveRequestForm({ userId, userName, currentMonth, onSubmitte
 
   const resetForm = () => {
     setFormTargetUserId(userId || '')
+    setFormProxyWriterName('')
     setFormApplicantName(userName && workerNames.includes(userName) ? userName : '')
     setFormDate(toDateString(new Date()))
     setFormLeaveType('有給')
@@ -92,10 +94,12 @@ export function useLeaveRequestForm({ userId, userName, currentMonth, onSubmitte
       const selectedTargetUser = allUsers.find(u => u.id === formTargetUserId)
       const targetUserIdForPost = !isUnregistered && formTargetUserId && formTargetUserId !== userId ? formTargetUserId : undefined
       const applicantNameForPost = isUnregistered ? (formApplicantName || undefined) : (formApplicantName || selectedTargetUser?.name || undefined)
+      const isProxy = isUnregistered || (!!formTargetUserId && formTargetUserId !== userId)
       await apiPost('/api/leave-requests', {
         targetUserId: targetUserIdForPost,
         applicantName: applicantNameForPost,
         proxyForUnregistered: isUnregistered,
+        proxyWriterName: isProxy ? (formProxyWriterName || userName || undefined) : undefined,
         date: formDate,
         leaveType: formLeaveType,
         leaveUnit: formLeaveUnit,
@@ -137,6 +141,8 @@ export function useLeaveRequestForm({ userId, userName, currentMonth, onSubmitte
     allUsers,
     formTargetUserId,
     setFormTargetUserId,
+    formProxyWriterName,
+    setFormProxyWriterName,
     formApplicantName,
     setFormApplicantName,
     formDate,

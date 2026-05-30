@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
         id: true,
         userId: true,
         enteredById: true,
+        proxyWriterName: true,
         applicantName: true,
         date: true,
         leaveType: true,
@@ -119,10 +120,12 @@ export async function GET(request: NextRequest) {
     const enriched = leaveRequests.map((l: any) => {
       // 未登録者の代理申請(userId=代理記入者本人)は applicantName を申請者名として優先表示
       const isUnregisteredProxy = l.enteredById && l.enteredById === l.userId
+      // 代理記入者名: 手入力の実名(proxyWriterName)を優先、無ければ enteredById のユーザー名
+      const enteredByName = l.proxyWriterName || (l.enteredById ? (userMap[l.enteredById] || '') : null)
       return {
         ...l,
         userName: isUnregisteredProxy ? (l.applicantName || '') : (userMap[l.userId] || l.applicantName || ''),
-        enteredByName: l.enteredById ? (userMap[l.enteredById] || '') : null,
+        enteredByName,
       }
     })
     return NextResponse.json({ leaveRequests: enriched })
@@ -146,7 +149,7 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { applicantName, date, leaveType, leaveUnit, startTime, endTime, familyName, familyBirthdate, familyRelationship, adoptionDate, specialAdoptionDate, careReason, reason, attachmentData, attachmentName, attachmentType } = validation.data
+    const { applicantName, proxyWriterName, date, leaveType, leaveUnit, startTime, endTime, familyName, familyBirthdate, familyRelationship, adoptionDate, specialAdoptionDate, careReason, reason, attachmentData, attachmentName, attachmentType } = validation.data
     const targetUserId = (body.targetUserId as string | undefined) || undefined
     // アカウント未登録者（実習生など）の代理申請: userId=代理記入者本人 / applicantName=手入力の申請者名
     const proxyForUnregistered = !!body.proxyForUnregistered
@@ -214,6 +217,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: ownerUserId,
         enteredById,
+        proxyWriterName: isProxy ? (proxyWriterName || user.name) : null,
         applicantName: applicantName || applicantDisplayName || null,
         date: new Date(date),
         leaveType,
@@ -237,7 +241,7 @@ export async function POST(request: NextRequest) {
     // 管理者に通知（非同期）申請者名 + 代理入力者名（代理時のみ）
     const dateObj = new Date(date)
     const dateStr = `${dateObj.getFullYear()}/${dateObj.getMonth() + 1}/${dateObj.getDate()}`
-    const proxySuffix = isProxy ? `（代理記入: ${user.name}）` : ''
+    const proxySuffix = isProxy ? `（代理記入: ${proxyWriterName || user.name}）` : ''
     notifyLeaveSubmitted(`${applicantDisplayName}${proxySuffix}`, dateStr, leaveType).catch(() => {})
 
     return NextResponse.json({ leaveRequest })

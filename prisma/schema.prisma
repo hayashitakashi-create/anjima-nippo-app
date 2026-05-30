@@ -372,6 +372,7 @@ model LeaveRequest {
   id             String   @id @default(cuid())
   userId         String   // 申請者本人（休暇取得対象）
   enteredById    String?  // 実際に入力した人（代理入力時はuserIdと異なる）
+  proxyWriterName String? // 代理記入者の実名（共有アカウントで誰が記入したか手入力・冗長保持）
   applicantName  String?  // 申請対象者名（作業者名マスタから選択・冗長保持）
   date           DateTime // 休暇日
   leaveType      String   // 有給, 振替, 代休, 看護, 介護, 特別休暇, その他

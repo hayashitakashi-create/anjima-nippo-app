@@ -8,6 +8,8 @@ interface Props {
   setFormTargetUserId: (id: string) => void
   formApplicantName: string
   setFormApplicantName: (name: string) => void
+  formProxyWriterName: string
+  setFormProxyWriterName: (name: string) => void
   userId?: string
   userName?: string
 }
@@ -18,11 +20,14 @@ export function ApplicantField({
   setFormTargetUserId,
   formApplicantName,
   setFormApplicantName,
+  formProxyWriterName,
+  setFormProxyWriterName,
   userId,
   userName,
 }: Props) {
   const isUnregistered = formTargetUserId === UNREGISTERED_APPLICANT
   const isProxyRegistered = !!formTargetUserId && !isUnregistered && formTargetUserId !== userId
+  const isProxy = isUnregistered || isProxyRegistered
 
   const handleSelect = (id: string) => {
     setFormTargetUserId(id)
@@ -65,15 +70,33 @@ export function ApplicantField({
             className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900"
           />
           <p className="mt-1 text-xs text-amber-700">
-            アカウント未登録者の代理申請です。代理記入者: {userName}
+            アカウント未登録者の代理申請です。
           </p>
         </div>
       )}
 
       {isProxyRegistered && (
         <p className="mt-1 text-xs text-amber-700">
-          代理記入者: あなた（{userName}）が {allUsers.find(u => u.id === formTargetUserId)?.name} さんの休暇届を申請します
+          {allUsers.find(u => u.id === formTargetUserId)?.name} さんの休暇届を代理で申請します
         </p>
+      )}
+
+      {isProxy && (
+        <div className="mt-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            代理記入者 <span className="text-gray-400 text-xs">(実際に記入した方)</span>
+          </label>
+          <input
+            type="text"
+            value={formProxyWriterName}
+            onChange={(e) => setFormProxyWriterName(e.target.value)}
+            placeholder={userName ? `例: ${userName}` : '記入した方の氏名'}
+            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            共有アカウントの場合は、実際に記入した方の氏名を入力してください（未入力時はログイン名「{userName}」で記録）
+          </p>
+        </div>
       )}
     </div>
   )

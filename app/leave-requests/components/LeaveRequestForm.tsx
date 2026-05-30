@@ -23,6 +23,8 @@ export function LeaveRequestForm({ form, userId, userName, onPreview }: Props) {
     allUsers,
     formTargetUserId,
     setFormTargetUserId,
+    formProxyWriterName,
+    setFormProxyWriterName,
     formApplicantName,
     setFormApplicantName,
     formDate,
@@ -72,6 +74,8 @@ export function LeaveRequestForm({ form, userId, userName, onPreview }: Props) {
           setFormTargetUserId={setFormTargetUserId}
           formApplicantName={formApplicantName}
           setFormApplicantName={setFormApplicantName}
+          formProxyWriterName={formProxyWriterName}
+          setFormProxyWriterName={setFormProxyWriterName}
           userId={userId}
           userName={userName}
         />

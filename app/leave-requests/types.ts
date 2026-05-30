@@ -2,6 +2,7 @@ export interface LeaveRequest {
   id: string
   userId: string
   enteredById?: string | null
+  proxyWriterName?: string | null
   applicantName: string | null
   userName?: string | null
   enteredByName?: string | null
