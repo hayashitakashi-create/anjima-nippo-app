@@ -428,7 +428,7 @@ export default function EditNippoPage() {
               </div>
               <div>
                 <label className="block text-xs font-normal text-gray-600 mb-2">
-                  氏名（対象社員）
+                  氏名（記入者）
                 </label>
                 <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50">
                   {reportOwner ? (

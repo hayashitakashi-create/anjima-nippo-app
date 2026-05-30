@@ -116,11 +116,11 @@ export function BasicInfoCard({
             )}
           </div>
 
-          {/* 氏名（対象社員） */}
+          {/* 氏名（記入者） */}
           <div className="lg:col-span-2">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <UserIcon className="w-4 h-4 text-gray-500" />
-              <span>氏名（対象社員）</span>
+              <span>氏名（記入者）</span>
             </label>
             {setTargetUserId ? (
               <>

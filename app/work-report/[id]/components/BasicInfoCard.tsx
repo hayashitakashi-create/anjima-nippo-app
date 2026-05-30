@@ -110,11 +110,11 @@ export function BasicInfoCard({
             )}
           </div>
 
-          {/* 氏名（対象社員） */}
+          {/* 氏名（記入者） */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <User className="w-4 h-4 text-gray-500" />
-              <span>氏名（対象社員）</span>
+              <span>氏名（記入者）</span>
             </label>
             <div className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border border-gray-200 rounded-lg bg-gray-50">
               {reportOwner ? (
