@@ -33,7 +33,7 @@ interface RecentReport {
   id: string
   date: string
   destination?: string
-  status: 'draft' | 'submitted' | 'approved'
+  status: 'draft' | 'submitted' | 'approved' | 'rejected'
   type: 'sales' | 'work'
 }
 
@@ -48,6 +48,14 @@ interface Stats {
 interface UnsubmittedData {
   salesUnsubmitted: Array<{ id: string; name: string }>
   workUnsubmitted: Array<{ id: string; name: string }>
+}
+
+// approvals から表示用ステータスを算出（差戻し優先 → 全承認 → 承認待ち）
+function computeReportStatus(approvals: Array<{ status: string }> | undefined): RecentReport['status'] {
+  if (!approvals || approvals.length === 0) return 'submitted'
+  if (approvals.some(a => a.status === 'rejected')) return 'rejected'
+  if (approvals.every(a => a.status === 'approved')) return 'approved'
+  return 'submitted'
 }
 
 export default function DashboardPage() {
@@ -105,7 +113,7 @@ export default function DashboardPage() {
               id: report.id,
               date: report.date,
               destination: report.visitRecords?.[0]?.destination,
-              status: 'submitted' as const,
+              status: computeReportStatus(report.approvals),
               type: 'sales' as const
             }))
             setSalesReports(recent)
@@ -169,7 +177,7 @@ export default function DashboardPage() {
             id: report.id,
             date: report.date,
             destination: report.projectName || '',
-            status: 'submitted' as const,
+            status: computeReportStatus(report.approvals),
             type: 'work' as const
           }))
           setWorkReports(recent)
@@ -237,6 +245,13 @@ export default function DashboardPage() {
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
             <Clock className="w-3 h-3 mr-1" />
             承認待ち
+          </span>
+        )
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            差戻し
           </span>
         )
       default:
@@ -743,15 +758,18 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* 差戻し（あれば赤強調） */}
+                  {/* 差戻し（あれば赤強調）— クリックで日報一覧へ */}
                   {stats.rejected > 0 && (
-                    <div className="bg-red-50 border-2 border-red-400 rounded-lg p-3 -mx-1">
+                    <Link
+                      href="/nippo"
+                      className="block bg-red-50 border-2 border-red-400 rounded-lg p-3 -mx-1 hover:bg-red-100 transition-colors"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-red-700">⚠ 差戻し（要対応）</span>
                         <span className="text-2xl font-bold text-red-600">{stats.rejected}</span>
                       </div>
-                      <p className="text-xs text-red-600 mt-1">該当日報を修正のうえ、再申請してください</p>
-                    </div>
+                      <p className="text-xs text-red-600 mt-1">日報一覧で「差戻し」の日報を修正のうえ、再申請してください →</p>
+                    </Link>
                   )}
                 </div>
               </motion.div>
