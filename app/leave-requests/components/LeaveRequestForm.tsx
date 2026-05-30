@@ -5,6 +5,7 @@ import { Plus, Send, Eye } from 'lucide-react'
 import { LEAVE_TYPES, LEAVE_UNITS, TIME_OPTIONS } from '../types'
 import { useLeaveRequestForm } from '../hooks/useLeaveRequestForm'
 import { FamilyInfoSection } from './FamilyInfoSection'
+import { ApplicantField } from './ApplicantField'
 
 type FormApi = ReturnType<typeof useLeaveRequestForm>
 
@@ -22,6 +23,7 @@ export function LeaveRequestForm({ form, userId, userName, onPreview }: Props) {
     allUsers,
     formTargetUserId,
     setFormTargetUserId,
+    formApplicantName,
     setFormApplicantName,
     formDate,
     setFormDate,
@@ -64,34 +66,15 @@ export function LeaveRequestForm({ form, userId, userName, onPreview }: Props) {
         </h2>
       </div>
       <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            対象社員 <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={formTargetUserId}
-            onChange={(e) => {
-              const id = e.target.value
-              setFormTargetUserId(id)
-              const u = allUsers.find(x => x.id === id)
-              if (u) setFormApplicantName(u.name)
-            }}
-            required
-            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
-          >
-            <option value="">選択してください</option>
-            {allUsers.map(u => (
-              <option key={u.id} value={u.id}>
-                {u.name}{u.id === userId ? '（本人）' : ''}
-              </option>
-            ))}
-          </select>
-          {formTargetUserId && formTargetUserId !== userId && (
-            <p className="mt-1 text-xs text-amber-700">
-              代理入力モード: あなた（{userName}）が {allUsers.find(u => u.id === formTargetUserId)?.name} さんの休暇届を申請します
-            </p>
-          )}
-        </div>
+        <ApplicantField
+          allUsers={allUsers}
+          formTargetUserId={formTargetUserId}
+          setFormTargetUserId={setFormTargetUserId}
+          formApplicantName={formApplicantName}
+          setFormApplicantName={setFormApplicantName}
+          userId={userId}
+          userName={userName}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

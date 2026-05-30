@@ -17,6 +17,9 @@ export interface LeaveRequest {
   createdAt: string
 }
 
+// 申請者セレクトで「アカウント未登録者（直接入力）」を表す sentinel 値
+export const UNREGISTERED_APPLICANT = '__unregistered__'
+
 export const LEAVE_UNITS = [
   { value: 'full', label: '全日' },
   { value: 'am', label: '午前半休' },

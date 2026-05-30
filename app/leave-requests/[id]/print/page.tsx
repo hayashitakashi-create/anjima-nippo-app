@@ -179,7 +179,7 @@ export default function LeaveRequestPrintPage() {
             <p className="text-[11px] text-gray-700">申請者</p>
             <p className="text-base font-bold leading-tight">{data.applicantName || data.userName}</p>
             {data.applicantName && data.applicantName !== data.userName && (
-              <p className="text-[10px] text-gray-700">（入力者: {data.userName}）</p>
+              <p className="text-[10px] text-gray-700">（代理記入者: {data.userName}）</p>
             )}
             {data.userPosition && (
               <p className="text-[10px] text-gray-700">{data.userPosition}</p>

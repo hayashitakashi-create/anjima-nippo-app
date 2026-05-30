@@ -82,7 +82,7 @@ export function LeaveRequestList({ month, leaveRequests, isAdmin, scope, setScop
                         )}
                         {request.enteredByName && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                            代理入力: {request.enteredByName}
+                            代理記入者: {request.enteredByName}
                           </span>
                         )}
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

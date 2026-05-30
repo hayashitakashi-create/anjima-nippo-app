@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { adminApi, apiPost, ApiError } from '@/lib/api'
 import { toDateString, formatYearMonth } from '../utils'
+import { UNREGISTERED_APPLICANT } from '../types'
 
 interface UseLeaveRequestFormParams {
   userId?: string
@@ -64,6 +65,7 @@ export function useLeaveRequestForm({ userId, userName, currentMonth, onSubmitte
   }, [userId, userName])
 
   const resetForm = () => {
+    setFormTargetUserId(userId || '')
     setFormApplicantName(userName && workerNames.includes(userName) ? userName : '')
     setFormDate(toDateString(new Date()))
     setFormLeaveType('有給')
@@ -86,12 +88,14 @@ export function useLeaveRequestForm({ userId, userName, currentMonth, onSubmitte
     setMessage('')
 
     try {
+      const isUnregistered = formTargetUserId === UNREGISTERED_APPLICANT
       const selectedTargetUser = allUsers.find(u => u.id === formTargetUserId)
-      const targetUserIdForPost = formTargetUserId && formTargetUserId !== userId ? formTargetUserId : undefined
-      const applicantNameForPost = formApplicantName || selectedTargetUser?.name || undefined
+      const targetUserIdForPost = !isUnregistered && formTargetUserId && formTargetUserId !== userId ? formTargetUserId : undefined
+      const applicantNameForPost = isUnregistered ? (formApplicantName || undefined) : (formApplicantName || selectedTargetUser?.name || undefined)
       await apiPost('/api/leave-requests', {
         targetUserId: targetUserIdForPost,
         applicantName: applicantNameForPost,
+        proxyForUnregistered: isUnregistered,
         date: formDate,
         leaveType: formLeaveType,
         leaveUnit: formLeaveUnit,
