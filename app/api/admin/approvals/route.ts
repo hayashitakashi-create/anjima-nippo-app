@@ -116,6 +116,10 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'desc' },
       ...(usePagination ? { skip: (page - 1) * limit, take: limit } : {}),
       include: {
+        workerRecords: {
+          orderBy: { order: 'asc' },
+          select: { id: true, name: true, workType: true, startTime: true, endTime: true, details: true },
+        },
         approvals: {
           include: {
             approver: {
@@ -139,7 +143,7 @@ export async function GET(request: NextRequest) {
 
     // 統合: 種別マーキングして date 降順で合体
     const reports = [
-      ...salesReports.map(r => ({ ...r, reportType: 'sales' as const })),
+      ...salesReports.map(r => ({ ...r, reportType: 'sales' as const, workerRecords: [] as any[] })),
       ...workReportsRaw.map(r => ({
         ...r,
         reportType: 'work' as const,

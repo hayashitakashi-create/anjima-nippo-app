@@ -5,6 +5,7 @@ import {
   CheckCircle, XCircle, FileText, MapPin, CheckCheck, Undo2, Shield,
 } from 'lucide-react'
 import { StatusIcon } from './StatusIcon'
+import { WorkerRecordsPreview } from './WorkerRecordsPreview'
 import { DailyReport, getReportStatus, getStatusLabel, getStatusStyle } from '../types'
 
 interface Props {
@@ -100,6 +101,15 @@ export function ReportCardDetail({
               ))}
             </div>
           </>
+        )}
+
+        {/* 作業記録（作業日報のみ）— 田邊様5/28 FB③: その場で内容を表示 */}
+        {(report as any).reportType === 'work' && (
+          <WorkerRecordsPreview
+            reportId={report.id}
+            projectName={report.projectName}
+            workerRecords={report.workerRecords}
+          />
         )}
 
         {/* 特記事項 */}

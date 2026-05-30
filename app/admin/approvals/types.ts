@@ -21,6 +21,15 @@ export interface VisitRecord {
   expense?: number
 }
 
+export interface WorkerRecord {
+  id: string
+  name: string
+  workType?: string
+  startTime?: string
+  endTime?: string
+  details?: string
+}
+
 export interface DailyReport {
   id: string
   date: string
@@ -31,6 +40,9 @@ export interface DailyReport {
     position?: string
   }
   visitRecords: VisitRecord[]
+  workerRecords?: WorkerRecord[]
+  projectName?: string
+  reportType?: 'sales' | 'work'
   approvals: Approval[]
   approvalRoute?: {
     id: string
