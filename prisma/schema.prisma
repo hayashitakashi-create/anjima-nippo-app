@@ -31,6 +31,7 @@ model User {
   dailyReports  DailyReport[]
   approvals     Approval[]
   workReportApprovals WorkReportApproval[] @relation("WorkReportApprovals")
+  projectTypeApprovers ProjectTypeApprover[] @relation("ProjectTypeApprovers")
   notifications Notification[]
 
   @@index([role])
@@ -331,8 +332,26 @@ model ProjectType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  approvers ProjectTypeApprover[]
+
   @@index([isActive])
   @@index([order])
+}
+
+// 工種別の承認者割り当て（田邊様5/28 FB①）
+// 作業日報は projectType に紐づくこの承認者で承認ルートを生成する
+model ProjectTypeApprover {
+  id            String      @id @default(cuid())
+  projectTypeId String
+  projectType   ProjectType @relation(fields: [projectTypeId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation("ProjectTypeApprovers", fields: [userId], references: [id], onDelete: Cascade)
+  approverRole  String      // 社長/専務/常務/上長 等（承認状況の役職枠表示に使用）
+  order         Int         @default(0) // 承認順序・表示順
+  createdAt     DateTime    @default(now())
+
+  @@unique([projectTypeId, userId])
+  @@index([projectTypeId])
 }
 
 // 単位マスタ
