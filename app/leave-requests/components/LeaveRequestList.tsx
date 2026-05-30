@@ -28,7 +28,7 @@ export function LeaveRequestList({ month, leaveRequests, isAdmin, scope, setScop
         <h2 className="text-lg font-bold text-gray-900">
           {month}月の休暇届 ({leaveRequests.length}件)
         </h2>
-        {isAdmin && (
+        {isAdmin ? (
           <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-sm">
             <button
               type="button"
@@ -45,6 +45,10 @@ export function LeaveRequestList({ month, leaveRequests, isAdmin, scope, setScop
               自分以外の休暇届
             </button>
           </div>
+        ) : (
+          <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-50 text-[#0E3091] text-sm font-medium border border-blue-100">
+            自分の休暇届
+          </span>
         )}
       </div>
 
