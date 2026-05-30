@@ -189,14 +189,14 @@ export default function SettingsPage() {
           <form onSubmit={handleUsernameUpdate} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                新しいユーザー名（メールアドレス）
+                新しいユーザー名
               </label>
               <input
-                type="email"
+                type="text"
                 value={usernameForm.username}
                 onChange={(e) => setUsernameForm({ username: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="例: t-yasujima@yasujimakougyou.co.jp"
+                placeholder="ユーザー名（メールアドレス可）"
                 required
               />
             </div>
