@@ -14,6 +14,7 @@ import {
   Save,
   X,
   ArrowLeft,
+  UserCheck,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { adminApi, ApiError } from '@/lib/api'
@@ -284,6 +285,14 @@ export default function ProjectTypesPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end space-x-2">
                           <button
+                            onClick={() => setApproverTarget(projectType)}
+                            className="px-3 py-1 text-xs font-medium rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors inline-flex items-center"
+                            title="工種別の承認者を設定"
+                          >
+                            <UserCheck className="w-3.5 h-3.5 mr-1" />
+                            承認者設定
+                          </button>
+                          <button
                             onClick={() => handleToggleActive(projectType.id, projectType.isActive)}
                             className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
                               projectType.isActive
@@ -310,6 +319,14 @@ export default function ProjectTypesPage() {
           </div>
         </div>
       </main>
+
+      {approverTarget && (
+        <ProjectTypeApproverModal
+          projectTypeId={approverTarget.id}
+          projectTypeName={approverTarget.name}
+          onClose={() => setApproverTarget(null)}
+        />
+      )}
     </div>
   )
 }
