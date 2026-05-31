@@ -18,19 +18,12 @@ export async function PUT(request: NextRequest) {
 
     if (!username) {
       return NextResponse.json(
-        { error: 'ユーザー名（メールアドレス）を入力してください' },
+        { error: 'ユーザー名を入力してください' },
         { status: 400 }
       )
     }
 
-    // メールアドレスの簡単なバリデーション
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(username)) {
-      return NextResponse.json(
-        { error: '有効なメールアドレスを入力してください' },
-        { status: 400 }
-      )
-    }
+    // ユーザー名はメール形式に限定しない（任意文字列・一意であればOK / 田邊様5/28 FB⑧）
 
     // ユーザー名の重複チェック（自分以外）
     const existingUser = await prisma.user.findUnique({

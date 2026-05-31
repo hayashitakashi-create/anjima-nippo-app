@@ -70,6 +70,10 @@ export default function ApprovalsPage() {
     if (myItems.length === 0) return false
     return myItems.every((a: any) => a.status === 'approved')
   }
+  // ② 承認したら承認待ちから消える: pending 表示時、自分の承認枠が全て承認済みの日報は隠す
+  //    (承認権限がない管理者は myAllowedRoles が空のため除外されず全件表示される)
+  const hideMyDone = (reports: any[]) =>
+    filter === 'pending' ? reports.filter(r => !isMyApprovalDone(r)) : reports
   // 絞り込み条件
   const {
     selectedUserId, setSelectedUserId,
@@ -118,13 +122,16 @@ export default function ApprovalsPage() {
     handleApprove, handleReject,
     submitReject,
   } = useApprovalActions({
-    pendingReportIds: pendingReports.map(r => r.id),
+    pendingReportIds: hideMyDone(pendingReports).map(r => r.id),
     setReports,
     setProcessing,
     setMessage,
     setError,
     fetchReports,
   })
+
+  // ② pending 表示時は自分のボールが残る日報だけを一覧に出す
+  const visibleReports = hideMyDone(filteredReports)
 
   if (loading && !currentUser) {
     return (
@@ -220,14 +227,14 @@ export default function ApprovalsPage() {
         {/* 日報リスト */}
         {loading ? (
           <div className="text-center py-12 text-gray-500">読み込み中...</div>
-        ) : filteredReports.length === 0 ? (
+        ) : visibleReports.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">該当する日報はありません</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredReports.map(report => (
+            {visibleReports.map(report => (
               <ReportCard
                 key={report.id}
                 report={report}

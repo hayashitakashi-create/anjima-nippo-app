@@ -1,358 +1,50 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { motion, AnimatePresence } from 'motion/react'
-import {
-  Home,
-  CalendarDays,
-  Plus,
-  Trash2,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Palmtree,
-  CheckCircle,
-  CheckCircle2,
-  Send,
-  Paperclip,
-  Download,
-  Clock,
-  XCircle,
-  Printer,
-  Eye,
-} from 'lucide-react'
-import { adminApi, apiGet, apiPost, apiDelete, ApiError } from '@/lib/api'
+import { useState } from 'react'
+import { motion } from 'motion/react'
 import { useAuth } from '@/hooks/useAuth'
-
-interface LeaveRequest {
-  id: string
-  userId: string
-  enteredById?: string | null
-  applicantName: string | null
-  userName?: string | null
-  enteredByName?: string | null
-  date: string
-  leaveType: string
-  leaveUnit: string
-  startTime: string | null
-  endTime: string | null
-  reason: string | null
-  attachmentName: string | null
-  attachmentType: string | null
-  status: string
-  createdAt: string
-}
-
-const LEAVE_UNITS = [
-  { value: 'full', label: '全日' },
-  { value: 'am', label: '午前半休' },
-  { value: 'pm', label: '午後半休' },
-  { value: 'hourly', label: '時間休' },
-]
-
-function leaveUnitLabel(unit: string): string {
-  return LEAVE_UNITS.find(u => u.value === unit)?.label || '全日'
-}
-
-const LEAVE_TYPES = ['有給', '振替', '代休', '看護', '介護', '特別休暇', '慶弔', 'その他']
-
-const LEAVE_TYPE_COLORS: Record<string, string> = {
-  '有給': 'bg-blue-100 text-blue-800',
-  '振替': 'bg-purple-100 text-purple-800',
-  '代休': 'bg-teal-100 text-teal-800',
-  '看護': 'bg-pink-100 text-pink-800',
-  '介護': 'bg-orange-100 text-orange-800',
-  '特別休暇': 'bg-amber-100 text-amber-800',
-  '慶弔': 'bg-rose-100 text-rose-800',
-  'その他': 'bg-gray-100 text-gray-800',
-}
-
-const TIME_OPTIONS: string[] = []
-for (let h = 0; h < 24; h++) {
-  TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:00`)
-}
-
-function formatYearMonth(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function toDateString(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+import { LeaveRequest } from './types'
+import { useLeaveRequests } from './hooks/useLeaveRequests'
+import { useLeaveRequestForm } from './hooks/useLeaveRequestForm'
+import { PageHeader } from './components/PageHeader'
+import { MessageBanner } from './components/MessageBanner'
+import { LeaveRequestForm } from './components/LeaveRequestForm'
+import { LeaveCalendar } from './components/LeaveCalendar'
+import { LeaveRequestList } from './components/LeaveRequestList'
+import { DeleteConfirmModal } from './components/DeleteConfirmModal'
+import { PreviewModal } from './components/PreviewModal'
 
 export default function LeaveRequestsPage() {
-  const router = useRouter()
   const { user } = useAuth({ required: true })
-  const [loading, setLoading] = useState(true)
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
-  const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const list = useLeaveRequests('mine')
+  const form = useLeaveRequestForm({
+    userId: user?.id,
+    userName: user?.name,
+    currentMonth: list.currentMonth,
+    onSubmitted: list.fetchLeaveRequests,
+  })
+
   const [deleteTarget, setDeleteTarget] = useState<LeaveRequest | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
 
-  // Form state
-  const [formApplicantName, setFormApplicantName] = useState('')
-  const [formDate, setFormDate] = useState(toDateString(new Date()))
-  const [formLeaveType, setFormLeaveType] = useState('有給')
-  const [formLeaveUnit, setFormLeaveUnit] = useState('full')
-  const [formStartTime, setFormStartTime] = useState('')
-  const [formEndTime, setFormEndTime] = useState('')
-  const [formFamilyName, setFormFamilyName] = useState('')
-  const [formFamilyBirthdate, setFormFamilyBirthdate] = useState('')
-  const [formFamilyRelationship, setFormFamilyRelationship] = useState('')
-  const [formAdoptionDate, setFormAdoptionDate] = useState('')
-  const [formSpecialAdoptionDate, setFormSpecialAdoptionDate] = useState('')
-  const [formCareReason, setFormCareReason] = useState('')
-  const [formReason, setFormReason] = useState('')
-
-  const isCareLeaveType = formLeaveType === '看護' || formLeaveType === '介護'
-
-  // 作業者名マスタ
-  const [workerNames, setWorkerNames] = useState<string[]>([])
-  // ユーザーマスタ（対象社員セレクト用）
-  const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([])
-  const [formTargetUserId, setFormTargetUserId] = useState('')
-
-  // Calendar state
-  const [calendarDate, setCalendarDate] = useState(new Date())
-
-  // 管理者の表示切替: 'mine' / 'others'
-  const [scope, setScope] = useState<'mine' | 'others'>('mine')
-
-  const currentMonth = formatYearMonth(calendarDate)
   const isAdmin = user?.role === 'admin'
 
-  useEffect(() => {
-    fetchLeaveRequests()
-  }, [currentMonth, scope])
-
-  useEffect(() => {
-    adminApi.fetchWorkers()
-      .then(data => {
-        if (data?.workers) {
-          const names = data.workers.filter((w: any) => w.isActive).map((w: any) => w.name)
-          setWorkerNames(names)
-          // ログインユーザー名がworkerリストにあれば自動セット
-          if (user?.name && names.includes(user.name)) {
-            setFormApplicantName(user.name)
-          }
-        }
-      })
-      .catch(() => {})
-    // 対象社員セレクト用にユーザー一覧を取得
-    adminApi.fetchUsers()
-      .then(data => {
-        if (data?.users) {
-          const list = (data.users as any[])
-            .filter(u => u.isActive !== false)
-            .map(u => ({ id: u.id, name: u.name }))
-          setAllUsers(list)
-          // デフォルトは本人
-          if (user?.id) setFormTargetUserId(user.id)
-        }
-      })
-      .catch(() => {})
-  }, [user])
-
-  const fetchLeaveRequests = async () => {
-    try {
-      const data = await apiGet<any>(`/api/leave-requests?month=${currentMonth}&scope=${scope}`)
-      setLeaveRequests(data.leaveRequests)
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        router.push('/login')
-      } else {
-        console.error('休暇届取得エラー:', err)
-        setError('休暇届の取得に失敗しました')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="w-3 h-3" />
-            承認待ち
-          </span>
-        )
-      case 'approved':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-            <CheckCircle2 className="w-3 h-3" />
-            承認済み
-          </span>
-        )
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircle className="w-3 h-3" />
-            差戻し
-          </span>
-        )
-      default:
-        return null
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-    setError('')
-    setMessage('')
-
-    try {
-      // 代理入力判定: 対象社員がログイン者と異なる場合
-      const selectedTargetUser = allUsers.find(u => u.id === formTargetUserId)
-      const targetUserIdForPost = formTargetUserId && formTargetUserId !== user?.id ? formTargetUserId : undefined
-      const applicantNameForPost = formApplicantName || selectedTargetUser?.name || undefined
-      await apiPost('/api/leave-requests', {
-        targetUserId: targetUserIdForPost,
-        applicantName: applicantNameForPost,
-        date: formDate,
-        leaveType: formLeaveType,
-        leaveUnit: formLeaveUnit,
-        startTime: formLeaveUnit === 'hourly' ? formStartTime : undefined,
-        endTime: formLeaveUnit === 'hourly' ? formEndTime : undefined,
-        familyName: isCareLeaveType ? (formFamilyName || undefined) : undefined,
-        familyBirthdate: isCareLeaveType ? (formFamilyBirthdate || undefined) : undefined,
-        familyRelationship: isCareLeaveType ? (formFamilyRelationship || undefined) : undefined,
-        adoptionDate: isCareLeaveType ? (formAdoptionDate || undefined) : undefined,
-        specialAdoptionDate: isCareLeaveType ? (formSpecialAdoptionDate || undefined) : undefined,
-        careReason: isCareLeaveType ? (formCareReason || undefined) : undefined,
-        reason: !isCareLeaveType ? (formReason || undefined) : undefined,
-      })
-
-      setMessage('休暇届を申請しました（承認待ち）')
-      setFormApplicantName(user?.name && workerNames.includes(user.name) ? user.name : '')
-      setFormDate(toDateString(new Date()))
-      setFormLeaveType('有給')
-      setFormLeaveUnit('full')
-      setFormStartTime('')
-      setFormEndTime('')
-      setFormFamilyName('')
-      setFormFamilyBirthdate('')
-      setFormFamilyRelationship('')
-      setFormAdoptionDate('')
-      setFormSpecialAdoptionDate('')
-      setFormCareReason('')
-      setFormReason('')
-      const submittedDate = new Date(formDate)
-      if (formatYearMonth(submittedDate) === currentMonth) {
-        fetchLeaveRequests()
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        router.push('/login')
-      } else {
-        setError(err instanceof Error ? err.message : '登録に失敗しました')
-      }
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleDelete = async () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return
     setDeleting(true)
-    try {
-      await apiDelete(`/api/leave-requests/${deleteTarget.id}`)
-      setLeaveRequests(prev => prev.filter(r => r.id !== deleteTarget.id))
-      setMessage('休暇届を削除しました')
+    const ok = await list.deleteRequest(deleteTarget.id)
+    if (ok) {
+      form.setMessage('休暇届を削除しました')
       setDeleteTarget(null)
-    } catch {
-      setError('削除に失敗しました')
-    } finally {
-      setDeleting(false)
     }
+    setDeleting(false)
   }
 
-  // Build calendar data
-  const calendarData = useMemo(() => {
-    const year = calendarDate.getFullYear()
-    const month = calendarDate.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const startDayOfWeek = firstDay.getDay() // 0=Sun
-
-    // Leave dates set for quick lookup (multiple per day possible)
-    const leaveDates = new Map<string, LeaveRequest[]>()
-    leaveRequests.forEach(lr => {
-      const d = new Date(lr.date)
-      const key = toDateString(d)
-      const existing = leaveDates.get(key) || []
-      existing.push(lr)
-      leaveDates.set(key, existing)
-    })
-
-    const weeks: Array<Array<{ day: number | null; dateStr: string; leaves: LeaveRequest[]; isToday: boolean }>> = []
-    let currentWeek: Array<{ day: number | null; dateStr: string; leaves: LeaveRequest[]; isToday: boolean }> = []
-
-    // Fill blanks before first day
-    for (let i = 0; i < startDayOfWeek; i++) {
-      currentWeek.push({ day: null, dateStr: '', leaves: [], isToday: false })
-    }
-
-    const today = toDateString(new Date())
-
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-      currentWeek.push({
-        day: d,
-        dateStr,
-        leaves: leaveDates.get(dateStr) || [],
-        isToday: dateStr === today,
-      })
-      if (currentWeek.length === 7) {
-        weeks.push(currentWeek)
-        currentWeek = []
-      }
-    }
-
-    // Fill blanks after last day
-    if (currentWeek.length > 0) {
-      while (currentWeek.length < 7) {
-        currentWeek.push({ day: null, dateStr: '', leaves: [], isToday: false })
-      }
-      weeks.push(currentWeek)
-    }
-
-    return weeks
-  }, [calendarDate, leaveRequests])
-
-  const prevMonth = () => {
-    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))
-  }
-
-  const nextMonth = () => {
-    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))
-  }
-
-  const dayNames = ['日', '月', '火', '水', '木', '金', '土']
-
-  const formatDisplayDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return `${date.getMonth() + 1}月${date.getDate()}日(${dayNames[date.getDay()]})`
-  }
-
-  if (loading) {
+  if (list.loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-gray-600"
-        >
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-gray-600">
           読み込み中...
         </motion.p>
       </div>
@@ -361,726 +53,68 @@ export default function LeaveRequestsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3">
-          <div className="flex justify-between items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[#0E3091] flex items-center justify-center">
-                <Palmtree className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">休暇届</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">休暇の申請・管理</p>
-              </div>
-            </Link>
-            <Link href="/dashboard" className="p-2 text-[#0E3091] hover:bg-blue-50 rounded-lg transition-colors" title="TOP画面">
-              <Home className="h-5 w-5" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PageHeader />
 
       <main className="max-w-4xl mx-auto px-3 sm:px-6 py-6 space-y-6">
-        {/* Messages */}
-        <AnimatePresence>
-          {message && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex justify-between items-center"
-            >
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>{message}</span>
-              </div>
-              <button onClick={() => setMessage('')} className="text-green-500 hover:text-green-700">
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex justify-between items-center"
-            >
-              <span>{error}</span>
-              <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <MessageBanner
+          message={form.message}
+          error={form.error || list.error}
+          onCloseMessage={() => form.setMessage('')}
+          onCloseError={() => {
+            form.setError('')
+            list.setError('')
+          }}
+        />
 
-        {/* Submit form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
-        >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-[#0E3091] to-[#1a4ab8]">
-            <h2 className="text-lg font-bold text-white flex items-center">
-              <Plus className="w-5 h-5 mr-2" />
-              新規休暇届
-            </h2>
-          </div>
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
-            {/* 対象社員 (代理入力対応) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                対象社員 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formTargetUserId}
-                onChange={(e) => {
-                  const id = e.target.value
-                  setFormTargetUserId(id)
-                  const u = allUsers.find(x => x.id === id)
-                  if (u) setFormApplicantName(u.name)
-                }}
-                required
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
-              >
-                <option value="">選択してください</option>
-                {allUsers.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}{u.id === user?.id ? '（本人）' : ''}
-                  </option>
-                ))}
-              </select>
-              {formTargetUserId && formTargetUserId !== user?.id && (
-                <p className="mt-1 text-xs text-amber-700">
-                  代理入力モード: あなた（{user?.name}）が {allUsers.find(u => u.id === formTargetUserId)?.name} さんの休暇届を申請します
-                </p>
-              )}
-            </div>
+        <LeaveRequestForm
+          form={form}
+          userId={user?.id}
+          userName={user?.name}
+          onPreview={() => setShowPreview(true)}
+        />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  休暇日 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900"
-                />
-              </div>
+        <LeaveCalendar
+          calendarDate={list.calendarDate}
+          leaveRequests={list.leaveRequests}
+          onPrevMonth={list.prevMonth}
+          onNextMonth={list.nextMonth}
+        />
 
-              {/* Leave type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  休暇種別 <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formLeaveType}
-                  onChange={(e) => setFormLeaveType(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
-                >
-                  {LEAVE_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Leave unit */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                休暇単位 <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {LEAVE_UNITS.map(unit => (
-                  <button
-                    key={unit.value}
-                    type="button"
-                    onClick={() => setFormLeaveUnit(unit.value)}
-                    className={`px-2 py-2 rounded-lg text-xs sm:text-sm font-medium border transition-all ${
-                      formLeaveUnit === unit.value
-                        ? 'bg-[#0E3091] text-white border-[#0E3091]'
-                        : 'bg-white text-gray-700 border-slate-300 hover:border-[#0E3091] hover:text-[#0E3091]'
-                    }`}
-                  >
-                    {unit.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Time inputs for hourly leave */}
-            {formLeaveUnit === 'hourly' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    開始時刻 <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formStartTime}
-                    onChange={(e) => setFormStartTime(e.target.value)}
-                    required
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
-                  >
-                    <option value="">選択</option>
-                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    終了時刻 <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formEndTime}
-                    onChange={(e) => setFormEndTime(e.target.value)}
-                    required
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 bg-white"
-                  >
-                    <option value="">選択</option>
-                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* 育児・介護: 家族情報（看護/介護選択時のみ） */}
-            {isCareLeaveType && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-amber-900">
-                    対象家族の情報（{formLeaveType === '看護' ? '子の看護等休暇' : '介護休暇'}）
-                  </h3>
-                  <span className="text-[10px] text-amber-700">様式7</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">(1) 氏名</label>
-                    <input
-                      type="text"
-                      value={formFamilyName}
-                      onChange={(e) => setFormFamilyName(e.target.value)}
-                      placeholder="対象家族の氏名"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-sm text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">(2) 生年月日</label>
-                    <input
-                      type="text"
-                      value={formFamilyBirthdate}
-                      onChange={(e) => setFormFamilyBirthdate(e.target.value)}
-                      placeholder="例: 昭和60年4月1日 / 1985/4/1"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-sm text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">(3) 本人との続柄</label>
-                    <input
-                      type="text"
-                      value={formFamilyRelationship}
-                      onChange={(e) => setFormFamilyRelationship(e.target.value)}
-                      placeholder="例: 子、父、母"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-sm text-gray-900"
-                    />
-                  </div>
-                  {formLeaveType === '看護' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">(4) 縁組成立の年月日 <span className="text-gray-400">(養子の場合)</span></label>
-                        <input
-                          type="text"
-                          value={formAdoptionDate}
-                          onChange={(e) => setFormAdoptionDate(e.target.value)}
-                          placeholder="例: 2020/4/1"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-sm text-gray-900"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          (5) 手続完了の年月日 <span className="text-gray-400">(特別養子縁組監護中・里親委託の場合)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={formSpecialAdoptionDate}
-                          onChange={(e) => setFormSpecialAdoptionDate(e.target.value)}
-                          placeholder="例: 2020/4/1"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-sm text-gray-900"
-                        />
-                      </div>
-                    </>
-                  )}
-                  {isCareLeaveType && (
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        (6) {formLeaveType === '看護' ? '看護' : '介護'}を必要とする理由
-                      </label>
-                      <textarea
-                        value={formCareReason}
-                        onChange={(e) => setFormCareReason(e.target.value)}
-                        rows={2}
-                        placeholder={`${formLeaveType === '看護' ? '看護' : '介護'}を必要とする理由`}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-sm text-gray-900 resize-none"
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="text-[11px] text-gray-600 leading-relaxed pt-2 border-t border-amber-200/70 space-y-1.5">
-                  <p>（注１）当日、電話などで申し出た場合は、出勤後すみやかに提出してください。3については、複数の日を一括して申し出る場合には、申し出る日をすべて記入してください。</p>
-                  <p>（注２）子の看護等休暇の場合、取得できる日数は、小学校第３学年修了までの子が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
-                  <p className="pl-[3.5em] -indent-[3.5em]">介護休暇の場合、取得できる日数は、対象となる家族が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
-                </div>
-              </div>
-            )}
-
-            {/* Reason (看護・介護時は非表示) */}
-            {!isCareLeaveType && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  理由 <span className="text-gray-400 text-xs">(任意)</span>
-                </label>
-                <textarea
-                  value={formReason}
-                  onChange={(e) => setFormReason(e.target.value)}
-                  rows={2}
-                  placeholder="休暇の理由を入力（任意）"
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E3091] focus:border-transparent text-gray-900 resize-none"
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPreview(true)}
-                className="inline-flex items-center px-5 py-2.5 bg-white text-[#0E3091] font-medium rounded-lg border border-[#0E3091] hover:bg-blue-50 transition-colors"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                プレビュー
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center px-5 py-2.5 bg-[#0E3091] text-white font-medium rounded-lg hover:bg-[#0a2470] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {submitting ? '申請中...' : '休暇届を申請'}
-              </button>
-            </div>
-          </form>
-        </motion.div>
-
-        {/* Calendar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
-        >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                <CalendarDays className="w-5 h-5 mr-2 text-[#0E3091]" />
-                休暇届カレンダー
-              </h2>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={prevMonth}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <span className="text-sm font-bold text-gray-900 min-w-[100px] text-center">
-                  {calendarDate.getFullYear()}年{calendarDate.getMonth() + 1}月
-                </span>
-                <button
-                  onClick={nextMonth}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-2 sm:p-4">
-            {/* Day headers */}
-            <div className="grid grid-cols-7 mb-1">
-              {dayNames.map((name, i) => (
-                <div
-                  key={name}
-                  className={`text-center text-xs font-medium py-2 ${
-                    i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-500'
-                  }`}
-                >
-                  {name}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar grid */}
-            {calendarData.map((week, wi) => (
-              <div key={wi} className="grid grid-cols-7">
-                {week.map((cell, di) => (
-                  <div
-                    key={di}
-                    className={`relative min-h-[48px] sm:min-h-[56px] p-1 border border-slate-100 ${
-                      cell.day === null ? 'bg-gray-50/50' : 'bg-white'
-                    } ${cell.isToday ? 'ring-2 ring-[#0E3091] ring-inset' : ''}`}
-                  >
-                    {cell.day !== null && (
-                      <>
-                        <span className={`text-xs font-medium ${
-                          di === 0 ? 'text-red-500' : di === 6 ? 'text-blue-500' : 'text-gray-700'
-                        }`}>
-                          {cell.day}
-                        </span>
-                        {cell.leaves.length > 0 && (
-                          <div className="mt-0.5 space-y-0.5">
-                            {cell.leaves.map(leave => (
-                              <span key={leave.id} className={`inline-block text-[10px] sm:text-xs px-1 py-0.5 rounded font-medium leading-tight ${
-                                LEAVE_TYPE_COLORS[leave.leaveType] || 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {leave.applicantName ? `${leave.applicantName} ` : ''}{leave.leaveUnit === 'full' ? leave.leaveType : leave.leaveUnit === 'am' ? '午前' : leave.leaveUnit === 'pm' ? '午後' : '時間'}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div className="px-4 sm:px-6 py-3 border-t border-slate-100 bg-gray-50/50">
-            <div className="flex flex-wrap gap-2">
-              {LEAVE_TYPES.map(type => (
-                <span key={type} className={`text-[10px] sm:text-xs px-2 py-0.5 rounded font-medium ${LEAVE_TYPE_COLORS[type]}`}>
-                  {type}
-                </span>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Leave request list */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
-        >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-lg font-bold text-gray-900">
-              {calendarDate.getMonth() + 1}月の休暇届 ({leaveRequests.length}件)
-            </h2>
-            {isAdmin && (
-              <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-sm">
-                <button
-                  type="button"
-                  onClick={() => setScope('mine')}
-                  className={`px-3 py-1.5 font-medium transition-colors ${scope === 'mine' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}
-                >
-                  自分の休暇届
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScope('others')}
-                  className={`px-3 py-1.5 font-medium transition-colors ${scope === 'others' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-slate-50'}`}
-                >
-                  自分以外の休暇届
-                </button>
-              </div>
-            )}
-          </div>
-
-          {leaveRequests.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Palmtree className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>この月の休暇届はありません</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              <AnimatePresence>
-                {leaveRequests.map((request, index) => (
-                  <motion.div
-                    key={request.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3, delay: index * 0.03 }}
-                    className="p-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#0E3091] flex items-center justify-center flex-shrink-0">
-                          <CalendarDays className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                            <p className="font-medium text-gray-900">
-                              {formatDisplayDate(request.date)}
-                            </p>
-                            {(request.userName || request.applicantName) && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                                {request.userName || request.applicantName}
-                              </span>
-                            )}
-                            {request.enteredByName && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                                代理入力: {request.enteredByName}
-                              </span>
-                            )}
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              LEAVE_TYPE_COLORS[request.leaveType] || 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {request.leaveType}
-                            </span>
-                            {request.leaveUnit && request.leaveUnit !== 'full' && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                {leaveUnitLabel(request.leaveUnit)}
-                                {request.leaveUnit === 'hourly' && request.startTime && request.endTime && (
-                                  <span className="ml-1">{request.startTime}〜{request.endTime}</span>
-                                )}
-                              </span>
-                            )}
-                            {statusBadge(request.status)}
-                          </div>
-                          {request.reason && (
-                            <p className="text-sm text-gray-500 mt-0.5">{request.reason}</p>
-                          )}
-                          {request.attachmentName && (
-                            <a
-                              href={`/api/leave-requests/${request.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 mt-1 text-xs text-[#0E3091] hover:underline"
-                            >
-                              <Paperclip className="w-3 h-3" />
-                              {request.attachmentName}
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-1 flex-shrink-0">
-                        <Link
-                          href={`/leave-requests/${request.id}/print`}
-                          target="_blank"
-                          className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="印刷"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </Link>
-                        {(request.status === 'pending' || request.status === 'rejected') && (
-                          <button
-                            onClick={() => setDeleteTarget(request)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="削除"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </motion.div>
+        <LeaveRequestList
+          month={list.calendarDate.getMonth() + 1}
+          leaveRequests={list.leaveRequests}
+          isAdmin={isAdmin}
+          scope={list.scope}
+          setScope={list.setScope}
+          onDeleteClick={setDeleteTarget}
+        />
       </main>
 
-      {/* Delete confirmation modal */}
-      <AnimatePresence>
-        {deleteTarget && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-sm"
-            >
-              <div className="px-6 py-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">休暇届の削除</h3>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium text-gray-900">
-                    {formatDisplayDate(deleteTarget.date)}
-                  </span>
-                  の{deleteTarget.leaveType}を削除しますか？
-                </p>
-                <p className="text-xs text-red-600 mt-2">この操作は取り消せません</p>
-              </div>
-              <div className="px-6 py-4 border-t border-slate-200 flex justify-end space-x-2">
-                <button
-                  onClick={() => setDeleteTarget(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400"
-                >
-                  {deleting ? '削除中...' : '削除する'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteConfirmModal
+        target={deleteTarget}
+        deleting={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirm}
+      />
 
-      {/* プレビューモーダル */}
-      <AnimatePresence>
-        {showPreview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 overflow-y-auto"
-            onClick={() => setShowPreview(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-lg shadow-2xl my-8 relative"
-              style={{ width: '210mm', maxWidth: '95vw' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setShowPreview(false)}
-                className="absolute top-3 right-3 p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors z-10"
-                title="閉じる"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <div className="px-[15mm] py-[12mm] font-sans text-gray-900">
-                <div className="text-center mb-4">
-                  <h1 className="text-xl font-bold tracking-widest border-b-2 border-gray-900 inline-block pb-1 px-6">
-                    休 暇 届
-                  </h1>
-                </div>
-                <div className="text-right mb-3 text-xs">
-                  申請日: {new Date().getFullYear()}年{new Date().getMonth() + 1}月{new Date().getDate()}日
-                </div>
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-sm">安島工業株式会社 御中</p>
-                  <div className="text-right">
-                    <p className="text-[11px] text-gray-700">申請者</p>
-                    <p className="text-base font-bold leading-tight">
-                      {formApplicantName || <span className="text-gray-400">(未入力)</span>}
-                    </p>
-                  </div>
-                </div>
-                <table className="w-full border-collapse text-xs mb-3">
-                  <tbody>
-                    <tr>
-                      <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium w-1/4">休暇日</th>
-                      <td className="border border-gray-400 px-3 py-1.5">
-                        {formDate ? formatDisplayDate(formDate) : <span className="text-gray-400">(未入力)</span>}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium">休暇種別</th>
-                      <td className="border border-gray-400 px-3 py-1.5">{formLeaveType}</td>
-                    </tr>
-                    <tr>
-                      <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium">休暇単位</th>
-                      <td className="border border-gray-400 px-3 py-1.5">
-                        {leaveUnitLabel(formLeaveUnit)}
-                        {formLeaveUnit === 'hourly' && formStartTime && formEndTime && (
-                          <span className="ml-2">（{formStartTime} 〜 {formEndTime}）</span>
-                        )}
-                      </td>
-                    </tr>
-                    {isCareLeaveType && (
-                      <tr>
-                        <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top">対象家族</th>
-                        <td className="border border-gray-400 px-3 py-1.5">
-                          <div className="space-y-0.5">
-                            {formFamilyName && <div>氏名：{formFamilyName}</div>}
-                            {formFamilyBirthdate && <div>生年月日：{formFamilyBirthdate}</div>}
-                            {formFamilyRelationship && <div>続柄：{formFamilyRelationship}</div>}
-                            {formLeaveType === '看護' && formAdoptionDate && <div>縁組成立年月日：{formAdoptionDate}</div>}
-                            {formLeaveType === '看護' && formSpecialAdoptionDate && <div>手続完了年月日：{formSpecialAdoptionDate}</div>}
-                            {!formFamilyName && !formFamilyBirthdate && !formFamilyRelationship && !formAdoptionDate && !formSpecialAdoptionDate && (
-                              <span className="text-gray-400">（未入力）</span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    {isCareLeaveType && (
-                      <tr>
-                        <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top">申出理由</th>
-                        <td className="border border-gray-400 px-3 py-1.5 h-16 whitespace-pre-wrap align-top">{formCareReason}</td>
-                      </tr>
-                    )}
-                    {!isCareLeaveType && (
-                      <tr>
-                        <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium align-top">理由</th>
-                        <td className="border border-gray-400 px-3 py-1.5 h-20 whitespace-pre-wrap align-top">{formReason}</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <th className="border border-gray-400 bg-gray-100 px-3 py-1.5 text-left font-medium">承認状況</th>
-                      <td className="border border-gray-400 px-3 py-1.5 text-gray-500">未申請（プレビュー）</td>
-                    </tr>
-                  </tbody>
-                </table>
-                {isCareLeaveType && (
-                  <div className="text-[10px] text-gray-700 leading-relaxed space-y-1 mb-3">
-                    <p>（注１）当日、電話などで申し出た場合は、出勤後すみやかに提出してください。取得する日については、複数の日を一括して申し出る場合には、申し出る日をすべて記入してください。</p>
-                    <p>（注２）子の看護等休暇の場合、取得できる日数は、小学校第３学年修了までの子が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
-                    <p className="pl-[3.5em] -indent-[3.5em]">介護休暇の場合、取得できる日数は、対象となる家族が１人の場合は年５日、２人以上の場合は年１０日となります。時間単位で取得できます。</p>
-                  </div>
-                )}
-                <div className="mt-6">
-                  <table className="ml-auto border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="border border-gray-400 bg-gray-100 px-6 py-1.5 text-[10px] font-medium">承認者</th>
-                        <th className="border border-gray-400 bg-gray-100 px-6 py-1.5 text-[10px] font-medium">申請者</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className="border border-gray-400 w-24 h-16"></td>
-                        <td className="border border-gray-400 w-24 h-16"></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div className="mt-3 text-center text-[10px] text-gray-700">安島工業株式会社</div>
-                </div>
-              </div>
-              <div className="px-6 py-3 border-t border-slate-200 flex justify-end bg-gray-50 rounded-b-lg">
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
-                >
-                  閉じる
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <PreviewModal
+        show={showPreview}
+        onClose={() => setShowPreview(false)}
+        formApplicantName={form.formApplicantName}
+        formDate={form.formDate}
+        formLeaveType={form.formLeaveType}
+        formLeaveUnit={form.formLeaveUnit}
+        formStartTime={form.formStartTime}
+        formEndTime={form.formEndTime}
+        isCareLeaveType={form.isCareLeaveType}
+        formFamilyName={form.formFamilyName}
+        formFamilyBirthdate={form.formFamilyBirthdate}
+        formFamilyRelationship={form.formFamilyRelationship}
+        formAdoptionDate={form.formAdoptionDate}
+        formSpecialAdoptionDate={form.formSpecialAdoptionDate}
+        formCareReason={form.formCareReason}
+        formReason={form.formReason}
+      />
     </div>
   )
 }

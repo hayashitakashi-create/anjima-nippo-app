@@ -255,7 +255,7 @@ export default function NewNippoPage() {
               </div>
               <div>
                 <label className="block text-xs font-normal text-gray-600 mb-2">
-                  氏名（対象社員）
+                  氏名（記入者）
                 </label>
                 <select
                   value={formData.userId}

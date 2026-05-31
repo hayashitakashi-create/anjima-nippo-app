@@ -187,6 +187,51 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+// パスワードリセット（管理者が他ユーザーのパスワードを変更）田邊様5/28 FB⑨
+export async function PATCH(request: NextRequest) {
+  try {
+    const authResult = await requirePermission(request, 'manage_users')
+    if ('error' in authResult) {
+      return authErrorResponse(authResult)
+    }
+
+    const body = await request.json()
+    const { id, password } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'ユーザーIDが必要です' }, { status: 400 })
+    }
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json({ error: 'パスワードは8文字以上で入力してください' }, { status: 400 })
+    }
+
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, name: true } })
+    if (!target) {
+      return NextResponse.json({ error: '対象ユーザーが見つかりません' }, { status: 404 })
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+    await prisma.user.update({
+      where: { id },
+      // リセット後は本人に再設定を促す
+      data: { password: hashedPassword, mustChangePassword: true },
+    })
+
+    logAuditEvent({
+      userId: authResult.user.id,
+      action: 'password_reset',
+      targetType: 'user',
+      targetId: id,
+      details: { name: target.name },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('パスワードリセットエラー:', error)
+    return NextResponse.json({ error: 'パスワードのリセットに失敗しました' }, { status: 500 })
+  }
+}
+
 // ユーザー削除
 export async function DELETE(request: NextRequest) {
   try {

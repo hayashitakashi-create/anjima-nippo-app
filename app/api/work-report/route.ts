@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { notifyReportSubmitted } from '@/lib/notifications'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
 import { getUserPermissions } from '@/lib/permissions'
+import { buildApproverSpecs } from '@/lib/approval-builder'
 
 export interface WorkReportInput {
   date: string | Date
@@ -352,32 +353,17 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 承認レコード作成（営業日報と同仕様: 承認者×isAuthorizer + 上長/常務/専務/社長）
-    // 「承認者」枠は社長/専務/常務 以外の isAuthorizer ユーザーのみ
-    const authorizers = await prisma.user.findMany({
-      where: {
-        isAuthorizer: true,
-        isActive: true,
-        NOT: { position: { in: ['社長', '専務', '常務'] } },
-      },
-      select: { id: true },
+    // 承認枠（作業日報: 常務・専務・社長 + 工種別承認者）田邊様5/28 FB①
+    const specs = await buildApproverSpecs({
+      reportType: 'work',
+      projectTypeName: body.projectType || null,
     })
-    const approvalRecords: { workReportId: string; approverRole: string; status: string; approverUserId?: string }[] = []
-    for (const a of authorizers) {
-      approvalRecords.push({
-        workReportId: workReport.id,
-        approverRole: '承認者',
-        status: 'pending',
-        approverUserId: a.id,
-      })
-    }
-    for (const role of ['上長', '常務', '専務', '社長']) {
-      approvalRecords.push({
-        workReportId: workReport.id,
-        approverRole: role,
-        status: 'pending',
-      })
-    }
+    const approvalRecords = specs.map((s) => ({
+      workReportId: workReport.id,
+      approverRole: s.approverRole,
+      status: 'pending',
+      approverUserId: s.approverUserId,
+    }))
     if (approvalRecords.length > 0) {
       await prisma.workReportApproval.createMany({ data: approvalRecords })
     }

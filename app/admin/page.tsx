@@ -33,10 +33,12 @@ import {
   Building2,
   Clock,
   CalendarOff,
+  KeyRound,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { adminApi, ApiError } from '@/lib/api'
 import type { ClientUser } from '@/lib/types'
+import { ResetPasswordModal } from './components/ResetPasswordModal'
 
 interface ManagedUser extends ClientUser {
   username: string
@@ -82,6 +84,9 @@ export default function AdminPage() {
   // 削除確認
   const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // パスワードリセット対象 (田邊様5/28 FB⑨)
+  const [resetTarget, setResetTarget] = useState<ManagedUser | null>(null)
 
   // 無効化確認
   const [deactivateTarget, setDeactivateTarget] = useState<ManagedUser | null>(null)
@@ -749,6 +754,9 @@ export default function AdminPage() {
                           <button onClick={() => handleEdit(user)} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="編集">
                             <FileText className="w-4 h-4" />
                           </button>
+                          <button onClick={() => setResetTarget(user)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="パスワードリセット">
+                            <KeyRound className="w-4 h-4" />
+                          </button>
                           {user.id !== currentUser.id && (
                             <>
                               <button onClick={() => {
@@ -861,6 +869,9 @@ export default function AdminPage() {
                     </div>
                     <div className="flex items-center space-x-1">
                       <button onClick={() => handleEdit(user)} className="text-xs font-medium text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100">編集</button>
+                      <button onClick={() => setResetTarget(user)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="パスワードリセット">
+                        <KeyRound className="w-4 h-4" />
+                      </button>
                       {user.id !== currentUser.id && (
                         <>
                           <button onClick={() => user.isActive !== false ? setDeactivateTarget(user) : handleToggleActive(user)}
@@ -924,9 +935,9 @@ export default function AdminPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ユーザー名（メールアドレス） <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ユーザー名 <span className="text-red-500">*</span></label>
                 <input type="text" value={createForm.username} onChange={e => setCreateForm({ ...createForm, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="yamada@example.com" />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="ユーザー名（メールアドレス可）" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">パスワード <span className="text-red-500">*</span></label>
@@ -983,6 +994,15 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* パスワードリセットモーダル (田邊様5/28 FB⑨) */}
+      {resetTarget && (
+        <ResetPasswordModal
+          userId={resetTarget.id}
+          userName={resetTarget.name}
+          onClose={() => setResetTarget(null)}
+        />
       )}
 
       {/* 削除確認モーダル */}

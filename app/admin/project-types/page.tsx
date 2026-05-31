@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { adminApi, ApiError } from '@/lib/api'
+import { ProjectTypeApproverModal } from './ProjectTypeApproverModal'
 
 interface ProjectType {
   id: string
@@ -39,6 +40,8 @@ export default function ProjectTypesPage() {
   // 新規工事種別追加フォーム
   const [newProjectType, setNewProjectType] = useState('')
   const [addingNew, setAddingNew] = useState(false)
+  // 工種別承認者設定モーダルの対象 (田邊様5/28 FB①)
+  const [approverTarget, setApproverTarget] = useState<ProjectType | null>(null)
 
   useEffect(() => {
     if (!currentUser) return

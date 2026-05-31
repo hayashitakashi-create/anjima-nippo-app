@@ -31,6 +31,7 @@ model User {
   dailyReports  DailyReport[]
   approvals     Approval[]
   workReportApprovals WorkReportApproval[] @relation("WorkReportApprovals")
+  projectTypeApprovers ProjectTypeApprover[] @relation("ProjectTypeApprovers")
   notifications Notification[]
 
   @@index([role])
@@ -331,8 +332,26 @@ model ProjectType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  approvers ProjectTypeApprover[]
+
   @@index([isActive])
   @@index([order])
+}
+
+// 工種別の承認者割り当て（田邊様5/28 FB①）
+// 作業日報は projectType に紐づくこの承認者で承認ルートを生成する
+model ProjectTypeApprover {
+  id            String      @id @default(cuid())
+  projectTypeId String
+  projectType   ProjectType @relation(fields: [projectTypeId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation("ProjectTypeApprovers", fields: [userId], references: [id], onDelete: Cascade)
+  approverRole  String      // 社長/専務/常務/上長 等（承認状況の役職枠表示に使用）
+  order         Int         @default(0) // 承認順序・表示順
+  createdAt     DateTime    @default(now())
+
+  @@unique([projectTypeId, userId])
+  @@index([projectTypeId])
 }
 
 // 単位マスタ
@@ -353,6 +372,7 @@ model LeaveRequest {
   id             String   @id @default(cuid())
   userId         String   // 申請者本人（休暇取得対象）
   enteredById    String?  // 実際に入力した人（代理入力時はuserIdと異なる）
+  proxyWriterName String? // 代理記入者の実名（共有アカウントで誰が記入したか手入力・冗長保持）
   applicantName  String?  // 申請対象者名（作業者名マスタから選択・冗長保持）
   date           DateTime // 休暇日
   leaveType      String   // 有給, 振替, 代休, 看護, 介護, 特別休暇, その他

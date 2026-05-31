@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
+import { buildApproverSpecs } from '@/lib/approval-builder'
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,35 +56,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 「承認者」枠は isAuthorizer=true のユーザー数分作成（社長/専務/常務 以外）
-    const authorizers = await prisma.user.findMany({
-      where: {
-        isAuthorizer: true,
-        isActive: true,
-        NOT: { position: { in: ['社長', '専務', '常務'] } },
-      },
-      select: { id: true },
-    })
-
-    // 各日報に対して承認レコードを作成（承認者×N + 上長 + 常務 + 専務 + 社長）
-    const fixedRoles = ['上長', '常務', '専務', '社長']
+    // 承認枠（営業日報: 常務・専務・社長 固定）田邊様5/28 FB①
+    const specs = await buildApproverSpecs({ reportType: 'sales' })
     const approvalRecords: { dailyReportId: string; approverRole: string; status: string; approverUserId?: string }[] = []
     for (const reportId of reportIds) {
-      // 承認者枠（人数分・approverUserId 事前セット）
-      for (const a of authorizers) {
+      for (const s of specs) {
         approvalRecords.push({
           dailyReportId: reportId,
-          approverRole: '承認者',
+          approverRole: s.approverRole,
           status: 'pending',
-          approverUserId: a.id,
-        })
-      }
-      // 固定4段階
-      for (const role of fixedRoles) {
-        approvalRecords.push({
-          dailyReportId: reportId,
-          approverRole: role,
-          status: 'pending',
+          approverUserId: s.approverUserId,
         })
       }
     }

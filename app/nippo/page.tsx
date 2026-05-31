@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { apiGet } from '@/lib/api'
+import { MySubmissionCalendar } from './components/MySubmissionCalendar'
 
 interface Approval {
   id: string
@@ -583,6 +584,9 @@ export default function NippoListPage() {
             </button>
           )}
         </div>
+
+        {/* 自分の提出状況カレンダー (田邊様5/28 FB⑤) — カレンダー表示モード時のみ */}
+        {viewMode !== 'search' && <MySubmissionCalendar />}
 
         {/* 検索結果表示 */}
         {viewMode === 'search' && (

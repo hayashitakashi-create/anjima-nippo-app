@@ -63,6 +63,15 @@ export function deleteProjectType(data: { id: string }) {
   return apiDelete(`/api/admin/project-types?id=${data.id}`)
 }
 
+// 工種別承認者 (田邊様5/28 FB①)
+export function fetchProjectTypeApprovers(id: string) {
+  return apiGet<{ approvers: any[] }>(`/api/admin/project-types/${id}/approvers`)
+}
+
+export function saveProjectTypeApprovers(id: string, approvers: { userId: string; approverRole: string; order?: number }[]) {
+  return apiPut(`/api/admin/project-types/${id}/approvers`, { approvers })
+}
+
 // --- Subcontractors ---
 export function fetchSubcontractors() {
   return apiGet<{ subcontractors: any[] }>('/api/admin/subcontractors')
