@@ -58,10 +58,11 @@ export default function AdminPage() {
   const [sortAsc, setSortAsc] = useState(true)
   const [editingUser, setEditingUser] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<{
+    username: string
     role: string
     defaultReportType: string
     position: string
-  }>({ role: '', defaultReportType: '', position: '' })
+  }>({ username: '', role: '', defaultReportType: '', position: '' })
 
   // 新規作成モーダル
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -147,6 +148,7 @@ export default function AdminPage() {
   const handleEdit = (user: ManagedUser) => {
     setEditingUser(user.id)
     setEditForm({
+      username: user.username,
       role: user.role,
       defaultReportType: user.defaultReportType || 'work',
       position: user.position || '',
@@ -162,6 +164,7 @@ export default function AdminPage() {
     try {
       const data = await adminApi.updateUser({
         userId,
+        username: editForm.username,
         role: editForm.role,
         defaultReportType: editForm.defaultReportType,
         position: editForm.position || null,
@@ -647,7 +650,13 @@ export default function AdminPage() {
                       <span className="font-medium text-gray-900">{user.name}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">{user.username}</span>
+                      {editingUser === user.id ? (
+                        <input type="text" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })}
+                          className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                          placeholder="ユーザー名（メールアドレス可）" />
+                      ) : (
+                        <span className="text-sm text-gray-600">{user.username}</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingUser === user.id ? (
@@ -822,6 +831,12 @@ export default function AdminPage() {
 
                 {editingUser === user.id ? (
                   <div className="mt-3 space-y-3 bg-gray-50 rounded-lg p-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">ユーザー名</label>
+                      <input type="text" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                        placeholder="ユーザー名（メールアドレス可）" />
+                    </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">役職</label>
                       <select value={editForm.position} onChange={e => setEditForm({ ...editForm, position: e.target.value })}

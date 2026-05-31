@@ -135,7 +135,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId, role, defaultReportType, position, isActive, isApprover, isAuthorizer } = body
+    const { userId, username, role, defaultReportType, position, isActive, isApprover, isAuthorizer } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -146,6 +146,17 @@ export async function PUT(request: NextRequest) {
 
 
     const updateData: any = {}
+    if (username !== undefined) {
+      const trimmed = String(username).trim()
+      if (!trimmed) {
+        return NextResponse.json({ error: 'ユーザー名は空にできません' }, { status: 400 })
+      }
+      const dup = await prisma.user.findFirst({ where: { username: trimmed, NOT: { id: userId } } })
+      if (dup) {
+        return NextResponse.json({ error: 'このユーザー名は既に使用されています' }, { status: 400 })
+      }
+      updateData.username = trimmed
+    }
     if (role !== undefined) updateData.role = role
     if (defaultReportType !== undefined) updateData.defaultReportType = defaultReportType
     if (position !== undefined) updateData.position = position
