@@ -696,7 +696,7 @@ export default function AdminPage() {
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                               user.isApprover ? 'bg-purple-600' : 'bg-gray-300'
                             } ${togglingApprover === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
-                            title={user.isApprover ? '役職承認者を解除' : '役職承認者に設定（上長/常務/専務/社長）'}
+                            title={user.isApprover ? '役職承認者を解除' : '役職承認者に設定（常務/専務/社長）'}
                           >
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                               user.isApprover ? 'translate-x-6' : 'translate-x-1'

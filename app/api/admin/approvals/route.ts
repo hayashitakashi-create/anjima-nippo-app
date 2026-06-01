@@ -9,10 +9,6 @@ import { normalizeName } from '@/lib/name-normalize'
 function getApprovalRolesForUser(user: { position?: string | null; isAuthorizer?: boolean | null }): string[] {
   const roles: string[] = []
   switch (user.position) {
-    case '部長':
-    case '課長':
-      roles.push('上長')
-      break
     case '常務':
       roles.push('常務')
       break

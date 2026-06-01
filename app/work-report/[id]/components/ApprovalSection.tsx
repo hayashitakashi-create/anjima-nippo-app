@@ -20,7 +20,7 @@ export function ApprovalSection({ approvals, currentUser, approvalProcessing, on
       <div className="p-4 sm:p-6">
         {/* バッジ */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          {['承認者', '上長', '常務', '専務', '社長'].map(role => {
+          {['承認者', '常務', '専務', '社長'].map(role => {
             const items = approvals.filter((a: any) => a.approverRole === role)
             if (items.length === 0) return null
             const anyRejected = items.some((a: any) => a.status === 'rejected')
@@ -38,7 +38,7 @@ export function ApprovalSection({ approvals, currentUser, approvalProcessing, on
         </div>
         {/* 詳細 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {['承認者', '上長', '常務', '専務', '社長'].flatMap(role => {
+          {['承認者', '常務', '専務', '社長'].flatMap(role => {
             const items = approvals.filter((a: any) => a.approverRole === role)
             return items.map((approval: any) => {
               const statusLabel = approval.status === 'approved' ? '承認済み' : approval.status === 'rejected' ? '差戻し' : '承認待ち'

@@ -198,7 +198,7 @@ export default function NippoPrintPage() {
                 </td>
                 <th style={{ width: '60px' }}>承認</th>
                 {/* 4段階承認欄 */}
-                {['社長', '専務', '常務', '上長', '承認者'].map(role => {
+                {['社長', '専務', '常務', '承認者'].map(role => {
                   const items = report.approvals.filter((a: any) => a.approverRole === role)
                   if (items.length === 0) return null
                   const anyRejected = items.some((a: any) => a.status === 'rejected')

@@ -139,7 +139,7 @@ export function ReportCardDetail({
           </Link>
         </div>
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          {['承認者', '上長', '常務', '専務', '社長'].map((role) => {
+          {['承認者', '常務', '専務', '社長'].map((role) => {
             const items = report.approvals.filter(a => a.approverRole === role)
             if (items.length === 0) return null
             const anyRejected = items.some(a => a.status === 'rejected')
@@ -154,7 +154,7 @@ export function ReportCardDetail({
           })}
         </div>
         <div className="space-y-2">
-          {['承認者', '上長', '常務', '専務', '社長'].flatMap(role => {
+          {['承認者', '常務', '専務', '社長'].flatMap(role => {
             const items = report.approvals.filter(a => a.approverRole === role)
             return items.map(approval => (
               <div

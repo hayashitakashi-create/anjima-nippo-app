@@ -622,7 +622,7 @@ export default function EditNippoPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">承認状況</h2>
               {/* 承認バッジ（承認者は全員承認で approved になる） */}
               <div className="flex flex-wrap items-center gap-2 mb-6">
-                {['承認者', '上長', '常務', '専務', '社長'].map((role) => {
+                {['承認者', '常務', '専務', '社長'].map((role) => {
                   const items = approvals.filter(a => a.approverRole === role)
                   if (items.length === 0) return null
                   const anyRejected = items.some(a => a.status === 'rejected')
@@ -644,7 +644,7 @@ export default function EditNippoPage() {
               </div>
               {/* 各段階の詳細（承認者は複数枠を個別表示） */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {['承認者', '上長', '常務', '専務', '社長'].flatMap(role => {
+                {['承認者', '常務', '専務', '社長'].flatMap(role => {
                   const items = approvals.filter(a => a.approverRole === role)
                   return items.map(approval => {
                     let statusIcon, statusLabel, statusStyle
