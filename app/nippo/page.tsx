@@ -138,9 +138,9 @@ export default function NippoListPage() {
   useEffect(() => {
     if (!currentUser) return
 
-    // 営業日報取得（salesユーザー or 管理者）
+    // 営業日報取得（この画面は「自分の」日報一覧なので、管理者でも常に本人分のみ取得）
     if (currentUser.defaultReportType === 'sales' || currentUser.defaultReportType === 'both' || canViewAll) {
-      apiGet<any>('/api/nippo/list')
+      apiGet<any>(`/api/nippo/list?userId=${currentUser.id}&limit=100`)
         .then(data => {
           if (data?.reports) {
             setSalesReports(data.reports)
@@ -151,8 +151,8 @@ export default function NippoListPage() {
         })
     }
 
-    // 作業日報取得（管理者は全件、それ以外は自分の分）
-    const workUrl = canViewAll ? '/api/work-report?limit=100' : `/api/work-report?userId=${currentUser.id}&limit=100`
+    // 作業日報取得（この画面は「自分の」日報一覧なので、管理者でも常に本人分のみ取得）
+    const workUrl = `/api/work-report?userId=${currentUser.id}&limit=100`
     apiGet<any>(workUrl)
       .then(data => {
         if (data && data.reports) {
