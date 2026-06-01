@@ -239,7 +239,7 @@ export default function BulkPrintPage() {
           @media print {
             .no-print { display: none !important; }
             body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            @page { size: A4 landscape; margin: 6mm; }
+            @page { size: B5 landscape; margin: 6mm; }
             .page-break { page-break-before: always; }
           }
           @media screen { body { background: #f3f4f6; } }
