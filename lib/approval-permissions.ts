@@ -4,10 +4,6 @@ export function getMyAllowedRoles(user: ClientUser | null | undefined): string[]
   if (!user) return []
   const roles: string[] = []
   switch (user.position) {
-    case '部長':
-    case '課長':
-      roles.push('上長')
-      break
     case '常務':
       roles.push('常務')
       break

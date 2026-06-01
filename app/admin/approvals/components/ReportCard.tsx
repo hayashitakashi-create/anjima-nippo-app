@@ -96,7 +96,7 @@ export function ReportCard({
                 </div>
                 {/* 承認状況バッジ（未承認者がひと目でわかる） */}
                 <div className="flex items-center gap-1.5 mt-1">
-                  {['承認者', '上長', '常務', '専務', '社長'].map(role => {
+                  {['承認者', '常務', '専務', '社長'].map(role => {
                     const items = report.approvals.filter((a: Approval) => a.approverRole === role)
                     if (items.length === 0) return null
                     const anyRejected = items.some(a => a.status === 'rejected')
