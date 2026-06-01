@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { toReportDate } from '@/lib/report-date'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
 import { getUserPermissions } from '@/lib/permissions'
 import { notifyLeaveSubmitted } from '@/lib/notifications'
@@ -172,8 +173,8 @@ export async function POST(request: NextRequest) {
     // 重複チェックの単位: 未登録者は applicantName で区別、それ以外は userId
     const dupWhere: { date: Date } & ({ userId: string } | { applicantName: string }) =
       proxyForUnregistered
-        ? { applicantName: applicantName ?? '', date: new Date(date) }
-        : { userId: ownerUserId, date: new Date(date) }
+        ? { applicantName: applicantName ?? '', date: toReportDate(date) }
+        : { userId: ownerUserId, date: toReportDate(date) }
 
     // 時間休の場合は開始・終了時刻が必須
     if (unit === 'hourly' && (!startTime || !endTime)) {
@@ -219,7 +220,7 @@ export async function POST(request: NextRequest) {
         enteredById,
         proxyWriterName: isProxy ? (proxyWriterName || user.name) : null,
         applicantName: applicantName || applicantDisplayName || null,
-        date: new Date(date),
+        date: toReportDate(date),
         leaveType,
         leaveUnit: unit,
         startTime: unit === 'hourly' ? startTime : null,
@@ -239,7 +240,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 管理者に通知（非同期）申請者名 + 代理入力者名（代理時のみ）
-    const dateObj = new Date(date)
+    const dateObj = toReportDate(date)
     const dateStr = `${dateObj.getFullYear()}/${dateObj.getMonth() + 1}/${dateObj.getDate()}`
     const proxySuffix = isProxy ? `（代理記入: ${proxyWriterName || user.name}）` : ''
     notifyLeaveSubmitted(`${applicantDisplayName}${proxySuffix}`, dateStr, leaveType).catch(() => {})
