@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { toReportDate } from '@/lib/report-date'
 import { getAuthFromRequest } from '@/lib/auth'
 
 // 一括日報作成
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     const createdReports = []
 
     for (const dateStr of newDates) {
-      const reportDate = new Date(dateStr)
+      const reportDate = toReportDate(dateStr)
 
       // 日報を作成
       const report = await prisma.workReport.create({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { toReportDate } from '@/lib/report-date'
 import { getAuthFromRequest } from '@/lib/auth'
 import { getUserPermissions } from '@/lib/permissions'
 import { DailyReportInput } from '@/lib/types'
@@ -132,7 +133,7 @@ export async function PUT(
       return tx.dailyReport.update({
         where: { id },
         data: {
-          date: new Date(body.date),
+          date: toReportDate(body.date),
           specialNotes: body.specialNotes,
           visitRecords: {
             create: body.visitRecords.map((record: any) => ({

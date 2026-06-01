@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { toReportDate } from '@/lib/report-date'
 import { DailyReportInput } from '@/lib/types'
 import { notifyReportSubmitted } from '@/lib/notifications'
 import { requireAuth, authErrorResponse } from '@/lib/auth'
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     const dailyReport = await prisma.dailyReport.create({
       data: {
-        date: new Date(body.date),
+        date: toReportDate(body.date),
         userId: targetUserId,
         enteredById,
         specialNotes: body.specialNotes,
