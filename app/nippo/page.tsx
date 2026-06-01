@@ -100,6 +100,7 @@ export default function NippoListPage() {
   const { user: currentUser, loading: authLoading, logout: handleLogout } = useAuth()
   const [salesReports, setSalesReports] = useState<DailyReport[]>([])
   const [workReports, setWorkReports] = useState<WorkReport[]>([])
+  const [leaveDates, setLeaveDates] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [reportType, setReportType] = useState<'sales' | 'work'>('work')
 
@@ -163,6 +164,21 @@ export default function NippoListPage() {
       })
       .catch(error => {
         console.error('作業日報取得エラー:', error)
+      })
+
+    // 休暇届取得（カレンダーに赤●で表示。提出状況カレンダーと揃え本人分のみ）
+    apiGet<any>(`/api/leave-requests?userId=${currentUser.id}`)
+      .then(data => {
+        const list = data?.leaveRequests || []
+        const set = new Set<string>()
+        list.forEach((l: any) => {
+          const d = new Date(l.date)
+          set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
+        })
+        setLeaveDates(set)
+      })
+      .catch(error => {
+        console.error('休暇届取得エラー:', error)
       })
   }, [currentUser, canViewAll])
 
@@ -803,6 +819,7 @@ export default function NippoListPage() {
               const dateKey = getDateKey(date)
               const hasSales = salesReportDates.has(dateKey)
               const hasWork = workReportDates.has(dateKey)
+              const hasLeave = leaveDates.has(dateKey)
               const isApproved = salesApprovedDates.has(dateKey)
               const dayOfWeek = date.getDay()
               const today = isToday(date)
@@ -853,6 +870,11 @@ export default function NippoListPage() {
                     {hasWork && (
                       <span className={`w-1.5 h-1.5 rounded-full ${
                         selected ? 'bg-white/70' : 'bg-[#0E3091]'
+                      }`} />
+                    )}
+                    {hasLeave && (
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        selected ? 'bg-white' : 'bg-rose-500'
                       }`} />
                     )}
                   </div>
