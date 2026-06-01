@@ -141,7 +141,7 @@ export default function WorkReportPrintPage() {
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          @page { size: A4 landscape; margin: 6mm; }
+          @page { size: B5 landscape; margin: 6mm; }
         }
         @media screen {
           body { background: #f3f4f6; }

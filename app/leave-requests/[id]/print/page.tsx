@@ -112,7 +112,7 @@ export default function LeaveRequestPrintPage() {
     <>
       <style jsx global>{`
         @page {
-          size: A4 portrait;
+          size: B5 portrait;
           margin: 0;
         }
         @media print {

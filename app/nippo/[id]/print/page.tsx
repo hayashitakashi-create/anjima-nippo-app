@@ -135,7 +135,7 @@ export default function NippoPrintPage() {
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          @page { size: A4 landscape; margin: 8mm; }
+          @page { size: B5 landscape; margin: 8mm; }
           .print-page { page-break-after: always; }
         }
         @media screen {
