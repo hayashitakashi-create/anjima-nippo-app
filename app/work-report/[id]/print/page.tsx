@@ -141,7 +141,7 @@ export default function WorkReportPrintPage() {
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          @page { size: B5 landscape; margin: 6mm; }
+          @page { size: B5 landscape; margin: 4mm; }
         }
         @media screen {
           body { background: #f3f4f6; }
@@ -356,7 +356,7 @@ export default function WorkReportPrintPage() {
             <tbody>
               <tr>
                 <th style={{ width: '80px' }}>連絡事項</th>
-                <td style={{ minHeight: '100px', height: '100px', whiteSpace: 'pre-wrap', fontSize: '10px', padding: '4px 6px', verticalAlign: 'top' }}>
+                <td style={{ minHeight: '32px', height: '32px', whiteSpace: 'pre-wrap', fontSize: '10px', padding: '4px 6px', verticalAlign: 'top' }}>
                   {report.contactNotes || ''}
                 </td>
               </tr>
